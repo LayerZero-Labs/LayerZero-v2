@@ -1,0 +1,6 @@
+# Compiler files
+cache/
+out/
+
+# Dotenv file
+.env

@@ -1,0 +1,51 @@
+{
+  "name": "@layerzerolabs/lz-evm-messagelib-v2",
+  "private": true,
+  "license": "LZBL-1.2",
+  "scripts": {
+    "clean": "rimraf cache out",
+    "build": "forge build",
+    "test": "forge test"
+  },
+  "dependencies": {
+    "@layerzerolabs/lz-evm-protocol-v2": "workspace:^",
+    "@layerzerolabs/lz-evm-v1-0.7": "^2.0.1",
+    "@openzeppelin/contracts": "^4.8.1",
+    "@openzeppelin/contracts-upgradeable": "^4.8.1",
+    "solidity-bytes-utils": "^0.8.0"
+  },
+  "devDependencies": {
+    "@axelar-network/axelar-gmp-sdk-solidity": "^5.6.3",
+    "@chainlink/contracts-ccip": "^0.7.6",
+    "hardhat-deploy": "^0.11.44",
+    "rimraf": "^5.0.5"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "lzVersions": {
+    "default": [
+      "v2"
+    ],
+    "v1": [
+      "Executor",
+      "ExecutorFeeLib",
+      "PriceFeed",
+      "DVNFeeLib",
+      "DVN",
+      "SendUln301",
+      "ReceiveUln301",
+      "Treasury"
+    ],
+    "v2": [
+      "Executor",
+      "ExecutorFeeLib",
+      "PriceFeed",
+      "DVNFeeLib",
+      "DVN",
+      "SendUln302",
+      "ReceiveUln302",
+      "Treasury"
+    ]
+  }
+}

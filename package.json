@@ -1,0 +1,64 @@
+{
+  "name": "@layerzerolabs/layerzero-v2",
+  "version": "2.0.2",
+  "private": true,
+  "workspaces": [
+    "protocol",
+    "messagelib",
+    "oapp"
+  ],
+  "scripts": {
+    "clean": "$npm_execpath workspaces foreach --all run clean",
+    "build": "$npm_execpath workspaces foreach --all run build",
+    "test": "$npm_execpath workspaces foreach --all run test"
+  },
+  "resolutions": {
+    "@typechain/hardhat": "^9.1.0",
+    "aptos": "^1.19.0",
+    "ethereumjs-abi": "0.6.8",
+    "hardhat-deploy": "0.11.27",
+    "solhint": "^4.0.0",
+    "turbo": "1.9.3",
+    "typescript": "~5.1.3"
+  },
+  "devDependencies": {
+    "@layerzerolabs/prettier-config-next": "^2.0.1",
+    "@layerzerolabs/solhint-config": "^2.0.1",
+    "prettier": "^3.1.0",
+    "rimraf": "^5.0.5",
+    "solhint": "^4.0.0"
+  },
+  "dependenciesMeta": {
+    "@axelar-network/axelar-gmp-sdk-solidity": {
+      "unplugged": true
+    },
+    "@chainlink/contracts-ccip": {
+      "unplugged": true
+    },
+    "@layerzerolabs/lz-evm-v1-0.7": {
+      "unplugged": true
+    },
+    "@layerzerolabs/solidity-examples": {
+      "unplugged": true
+    },
+    "@openzeppelin/contracts": {
+      "unplugged": true
+    },
+    "@openzeppelin/contracts-upgradeable": {
+      "unplugged": true
+    },
+    "hardhat-deploy": {
+      "unplugged": true
+    },
+    "solidity-bytes-utils": {
+      "unplugged": true
+    },
+    "solidity-stringutils": {
+      "unplugged": true
+    }
+  },
+  "packageManager": "yarn@4.0.2",
+  "engines": {
+    "node": ">=18.12.0"
+  }
+}

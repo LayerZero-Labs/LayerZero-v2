@@ -1,0 +1,33 @@
+name: Lint, Build & Test
+
+on:
+  push:
+    branches: [$default-branch, main]
+  pull_request:
+    branches: [$default-branch, main]
+  
+jobs:
+  lint-build-test:
+    name: Lint, Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+      - name: Install foundry
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash && \
+          eval "$(sed -n '/foundry/p' ~/.bashrc)" && \
+          echo $PATH | tee -a $GITHUB_PATH
+      - name: Install chain tools
+        run: |
+          foundryup
+      - name: Yarn install
+        run: |
+          yarn install --immutable
+      - name: Build
+        run: |
+          yarn build
+      - name: Test
+        run: |
+          yarn test
+  
