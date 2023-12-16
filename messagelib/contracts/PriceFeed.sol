@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Proxied } from "hardhat-deploy/solc_0.8/proxy/Proxied.sol";
