@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import { IDVNAdapterFeeLib } from "../../interfaces/IDVNAdapterFeeLib.sol";
 
