@@ -51,8 +51,19 @@ contract TestHelper is Test, OptionsHelper {
 
     uint256 public constant TREASURY_GAS_CAP = 1000000000000;
     uint256 public constant TREASURY_GAS_FOR_FEE_CAP = 100000;
+    
+    uint128 public executorValueCap = 0.1 ether;
 
     function setUp() public virtual {}
+
+    /**
+     * @dev set executorValueCap if more than 0.1 ether is necessary
+     * @dev this must be called prior to setUpEndpoints() if the value is to be used
+     * @param _valueCap amount executor can pass as msg.value to lzReceive()
+     */
+    function setExecutorValueCap(uint128 _valueCap) public {
+        executorValueCap = _valueCap;
+    }
 
     /**
      * @dev setup the endpoints
@@ -173,7 +184,7 @@ contract TestHelper is Test, OptionsHelper {
                         baseGas: 5000,
                         multiplierBps: 10000,
                         floorMarginUSD: 1e10,
-                        nativeCap: 1 gwei
+                        nativeCap: executorValueCap
                     });
 
                     uint128 denominator = priceFeed.getPriceRatioDenominator();
