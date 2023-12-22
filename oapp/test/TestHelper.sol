@@ -394,13 +394,13 @@ contract TestHelper is Test, OptionsHelper {
                 100
             );
             {
-                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), verifyCalldata, 1000);
+                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), verifyCalldata, block.timestamp + 1000);
                 bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
                 (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // matches dvn signer
                 signatures = abi.encodePacked(r, s, v);
             }
             ExecuteParam[] memory params = new ExecuteParam[](1);
-            params[0] = ExecuteParam(dstEid, address(dstUln), verifyCalldata, 1000, signatures);
+            params[0] = ExecuteParam(dstEid, address(dstUln), verifyCalldata, block.timestamp + 1000, signatures);
             dvn.execute(params);
 
             // commit verification
@@ -410,12 +410,12 @@ contract TestHelper is Test, OptionsHelper {
                 payloadHash
             );
             {
-                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), callData, 1000);
+                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), callData, block.timestamp + 1000);
                 bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
                 (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // matches dvn signer
                 signatures = abi.encodePacked(r, s, v);
             }
-            params[0] = ExecuteParam(dstEid, address(dstUln), callData, 1000, signatures);
+            params[0] = ExecuteParam(dstEid, address(dstUln), callData, block.timestamp + 1000, signatures);
             dvn.execute(params);
         } else {
             SimpleMessageLibMock(payable(receiveLib)).validatePacket(_packetBytes);
