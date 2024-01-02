@@ -21,7 +21,7 @@ abstract contract OAppUpgradeable is OAppSenderUpgradeable, OAppReceiverUpgradea
      * @param _endpoint The address of the LOCAL LayerZero endpoint.
      * @param _owner The address of the owner of the OApp.
      */
-    function initialize(address _endpoint, address _owner) public virtual initializer {
+    function _initializeOApp(address _endpoint, address _owner) internal virtual onlyInitializing {
         _initializeOAppCore(_endpoint, _owner);
     }
 
