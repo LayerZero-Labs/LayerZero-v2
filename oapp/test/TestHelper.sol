@@ -51,7 +51,7 @@ contract TestHelper is Test, OptionsHelper {
 
     uint256 public constant TREASURY_GAS_CAP = 1000000000000;
     uint256 public constant TREASURY_GAS_FOR_FEE_CAP = 100000;
-    
+
     uint128 public executorValueCap = 0.1 ether;
 
     function setUp() public virtual {}

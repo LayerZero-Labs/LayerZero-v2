@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 /// @dev simply a container of endpoint address and local eid
 abstract contract MessageLibBase {
