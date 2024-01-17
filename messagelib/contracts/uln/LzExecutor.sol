@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -47,7 +47,7 @@ contract LzExecutor is Ownable {
     function commitAndExecute(
         address _receiveLib,
         LzReceiveParam calldata _lzReceiveParam,
-        NativeDropParam calldata _nativeDropParam
+        NativeDropParam[] calldata _nativeDropParams
     ) external payable {
         /// 1. check if executable, revert if executed
         ExecutionState executionState = endpoint.executable(_lzReceiveParam.origin, _lzReceiveParam.receiver);
@@ -76,8 +76,9 @@ contract LzExecutor is Ownable {
         }
 
         /// 3. native drop
-        if (_nativeDropParam._amount > 0 && _nativeDropParam._receiver != address(0x0)) {
-            Transfer.native(_nativeDropParam._receiver, _nativeDropParam._amount);
+        for (uint256 i = 0; i < _nativeDropParams.length; i++) {
+            NativeDropParam calldata param = _nativeDropParams[i];
+            Transfer.native(param._receiver, param._amount);
         }
 
         /// 4. try execute, will revert if not executable

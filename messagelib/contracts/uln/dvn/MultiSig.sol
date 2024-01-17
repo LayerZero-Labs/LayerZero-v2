@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 /// @dev copied from https://github.com/nomad-xyz/ExcessivelySafeCall/blob/main/src/ExcessivelySafeCall.sol.
 library SafeCall {

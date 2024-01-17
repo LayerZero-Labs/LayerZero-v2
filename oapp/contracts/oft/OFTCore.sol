@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { OApp, Origin } from "../oapp/OApp.sol";
 import { OAppOptionsType3 } from "../oapp/libs/OAppOptionsType3.sol";
@@ -314,7 +314,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
     }
 
     /**
-     * @dev Internal function to check if peer is considered 'trusted' by the OApp.
+     * @dev Check if the peer is considered 'trusted' by the OApp.
      * @param _eid The endpoint ID to check.
      * @param _peer The peer to check.
      * @return Whether the peer passed is considered 'trusted' by the OApp.
