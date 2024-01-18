@@ -158,9 +158,8 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         uint32 _eid,
         address _newLib
     ) external onlyOwner onlyRegistered(_newLib) isSendLib(_newLib) onlySupportedEid(_newLib, _eid) {
-        address oldLib = defaultSendLibrary[_eid];
         // must provide a different value
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (defaultSendLibrary[_eid] == _newLib) revert Errors.SameValue();
         defaultSendLibrary[_eid] = _newLib;
         emit DefaultSendLibrarySet(_eid, _newLib);
     }
@@ -179,7 +178,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         if (oldLib == _newLib) revert Errors.SameValue();
 
         defaultReceiveLibrary[_eid] = _newLib;
-        emit DefaultReceiveLibrarySet(_eid, oldLib, _newLib);
+        emit DefaultReceiveLibrarySet(_eid, _newLib);
 
         if (_gracePeriod > 0) {
             // override the current default timeout to the [old_lib + new expiry]
@@ -232,9 +231,8 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     ) external onlyRegisteredOrDefault(_newLib) isSendLib(_newLib) onlySupportedEid(_newLib, _eid) {
         _assertAuthorized(_oapp);
 
-        address oldLib = sendLibrary[_oapp][_eid];
         // must provide a different value
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (sendLibrary[_oapp][_eid] == _newLib) revert Errors.SameValue();
         sendLibrary[_oapp][_eid] = _newLib;
         emit SendLibrarySet(_oapp, _eid, _newLib);
     }
@@ -256,7 +254,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         // must provide new values
         if (oldLib == _newLib) revert Errors.SameValue();
         receiveLibrary[_oapp][_eid] = _newLib;
-        emit ReceiveLibrarySet(_oapp, _eid, oldLib, _newLib);
+        emit ReceiveLibrarySet(_oapp, _eid, _newLib);
 
         if (_gracePeriod > 0) {
             // to simplify the logic, we only allow to set timeout if neither the new lib nor old lib is DEFAULT_LIB, which would should read the default timeout configurations
