@@ -323,8 +323,10 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         return address(0x0);
     }
 
+    /// @notice delegate is authorized by the oapp to configure anything in layerzero
     function setDelegate(address _delegate) external {
         delegates[msg.sender] = _delegate;
+        emit DelegateSet(msg.sender, _delegate);
     }
 
     // ========================= Internal =========================

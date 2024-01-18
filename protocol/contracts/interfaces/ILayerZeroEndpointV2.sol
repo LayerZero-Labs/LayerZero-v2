@@ -59,6 +59,8 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
 
     event LzTokenSet(address token);
 
+    event DelegateSet(address sender, address delegate);
+
     function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory);
 
     function send(
