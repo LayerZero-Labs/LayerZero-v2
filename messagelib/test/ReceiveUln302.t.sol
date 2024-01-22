@@ -10,7 +10,7 @@ import { Packet } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/I
 import { PacketV1Codec } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/PacketV1Codec.sol";
 
 import { ReceiveUln302 } from "../contracts/uln/uln302/ReceiveUln302.sol";
-import { ReceiveUlnBase, VerificationState, Verification } from "../contracts/uln/ReceiveUlnBase.sol";
+import { ReceiveUlnBase, Verification } from "../contracts/uln/ReceiveUlnBase.sol";
 
 import { Setup } from "./util/Setup.sol";
 import { PacketUtil } from "./util/Packet.sol";
@@ -33,76 +33,6 @@ contract ReceiveUln302Test is Test {
         receiveUln302 = fixtureV2.receiveUln302;
         endpointV2 = fixtureV2.endpointV2;
         EID = fixtureV2.eid;
-    }
-
-    function test_Verifiable_Verifying() public {
-        // wire to itself
-        Setup.wireFixtureV2WithRemote(fixtureV2, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-        VerificationState status = receiveUln302.verifiable(header, payloadHash);
-        assertEq(uint256(status), uint256(VerificationState.Verifying));
-    }
-
-    function test_Verifiable_Verified() public {
-        // wire to itself
-        Setup.wireFixtureV2WithRemote(fixtureV2, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-
-        // verify
-        vm.prank(address(fixtureV2.dvn));
-        receiveUln302.verify(header, payloadHash, 1);
-
-        // commitVerification
-        receiveUln302.commitVerification(header, payloadHash);
-
-        VerificationState status = receiveUln302.verifiable(header, payloadHash);
-        assertEq(uint256(status), uint256(VerificationState.Verified));
-    }
-
-    function test_Verifiable_Verifiable() public {
-        // wire to itself
-        Setup.wireFixtureV2WithRemote(fixtureV2, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-
-        // dvn sign
-        vm.prank(address(fixtureV2.dvn));
-        receiveUln302.verify(header, payloadHash, 1);
-
-        VerificationState status = receiveUln302.verifiable(header, payloadHash);
-        assertEq(uint256(status), uint256(VerificationState.Verifiable));
     }
 
     function test_CommitVerification_Again() public {

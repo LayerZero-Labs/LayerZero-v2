@@ -133,10 +133,6 @@ contract EndpointV2Test is LayerZeroTest {
         vm.expectRevert(Errors.LZ_InvalidReceiveLibrary.selector);
         endpoint.verify(origin, receiver, payloadHash);
 
-        // verifiable by a valid msglib
-        bool verifiable = endpoint.verifiable(origin, receiver, address(simpleMsgLib), payloadHash);
-        assertTrue(verifiable);
-
         vm.prank(address(simpleMsgLib));
         vm.expectEmit(false, false, false, true, address(endpoint));
         emit ILayerZeroEndpointV2.PacketVerified(origin, receiver, payloadHash);
@@ -145,8 +141,6 @@ contract EndpointV2Test is LayerZeroTest {
 
         // re-verify different payload with same nonce
         bytes32 newPayloadHash = keccak256("newPayload");
-        verifiable = endpoint.verifiable(origin, receiver, address(simpleMsgLib), payloadHash);
-        assertTrue(verifiable);
         vm.prank(address(simpleMsgLib));
         endpoint.verify(origin, receiver, newPayloadHash);
         assertEq(endpoint.inboundPayloadHash(receiver, remoteEid, senderB32, 1), newPayloadHash);

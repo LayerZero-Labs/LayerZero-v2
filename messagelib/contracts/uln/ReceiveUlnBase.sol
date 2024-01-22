@@ -6,12 +6,6 @@ import { PacketV1Codec } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messa
 
 import { UlnBase, UlnConfig } from "./UlnBase.sol";
 
-enum VerificationState {
-    Verifying,
-    Verifiable,
-    Verified
-}
-
 struct Verification {
     bool submitted;
     uint64 confirmations;
@@ -30,6 +24,19 @@ abstract contract ReceiveUlnBase is UlnBase {
     error LZ_ULN_InvalidPacketVersion();
     error LZ_ULN_InvalidEid();
     error LZ_ULN_Verifying();
+
+    // ============================ External ===================================
+    function verifiable(
+        UlnConfig memory _config,
+        bytes32 _headerHash,
+        bytes32 _payloadHash
+    ) external view returns (bool) {
+        return _checkVerifiable(_config, _headerHash, _payloadHash);
+    }
+
+    function assertHeader(bytes calldata _packetHeader, uint32 _localEid) external pure {
+        _assertHeader(_packetHeader, _localEid);
+    }
 
     // ============================ Internal ===================================
     /// @dev per DVN signing function

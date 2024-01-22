@@ -32,12 +32,6 @@ struct Origin {
     uint64 nonce;
 }
 
-enum ExecutionState {
-    NotExecutable,
-    Executable,
-    Executed
-}
-
 interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessagingChannel, IMessagingContext {
     event PacketSent(bytes encodedPayload, bytes options, address sendLibrary);
 
@@ -70,14 +64,9 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
 
     function verify(Origin calldata _origin, address _receiver, bytes32 _payloadHash) external;
 
-    function verifiable(
-        Origin calldata _origin,
-        address _receiver,
-        address _receiveLib,
-        bytes32 _payloadHash
-    ) external view returns (bool);
+    function verifiable(Origin calldata _origin, address _receiver) external view returns (bool);
 
-    function executable(Origin calldata _origin, address _receiver) external view returns (ExecutionState);
+    function initializable(Origin calldata _origin, address _receiver) external view returns (bool);
 
     function lzReceive(
         Origin calldata _origin,

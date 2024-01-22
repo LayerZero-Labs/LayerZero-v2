@@ -42,6 +42,8 @@ interface IMessageLibManager {
 
     function isSupportedEid(uint32 _eid) external view returns (bool);
 
+    function isValidReceiveLibrary(address _receiver, uint32 _eid, address _lib) external view returns (bool);
+
     /// ------------------- OApp interfaces -------------------
     function setSendLibrary(address _oapp, uint32 _eid, address _newLib) external;
 

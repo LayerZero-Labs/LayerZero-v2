@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { MessagingFee, MessagingParams, MessagingReceipt, Origin, ExecutionState, ILayerZeroEndpointV2 } from "./interfaces/ILayerZeroEndpointV2.sol";
+import { MessagingFee, MessagingParams, MessagingReceipt, Origin, ILayerZeroEndpointV2 } from "./interfaces/ILayerZeroEndpointV2.sol";
 import { ISendLib, Packet } from "./interfaces/ISendLib.sol";
 import { ILayerZeroReceiver } from "./interfaces/ILayerZeroReceiver.sol";
 import { Errors } from "./libs/Errors.sol";
@@ -359,47 +359,11 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
     // ========================= VIEW FUNCTIONS FOR OFFCHAIN ONLY =========================
     // Not involved in any state transition function.
     // ====================================================================================
-
-    /// @dev check if a message is verifiable.
-    function verifiable(
-        Origin calldata _origin,
-        address _receiver,
-        address _receiveLib,
-        bytes32 _payloadHash
-    ) external view returns (bool) {
-        if (!isValidReceiveLibrary(_receiver, _origin.srcEid, _receiveLib)) return false;
-
-        uint64 lazyNonce = lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender];
-        if (!_initializable(_origin, _receiver, lazyNonce)) return false;
-        if (!_verifiable(_origin, _receiver, lazyNonce)) return false;
-
-        // checked in _inbound for verify
-        if (_payloadHash == EMPTY_PAYLOAD_HASH) return false;
-
-        return true;
+    function initializable(Origin calldata _origin, address _receiver) external view returns (bool) {
+        return _initializable(_origin, _receiver, lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]);
     }
 
-    /// @dev check if a message is executable.
-    /// @return ExecutionState of Executed, Executable, or NotExecutable
-    function executable(Origin calldata _origin, address _receiver) external view returns (ExecutionState) {
-        bytes32 payloadHash = inboundPayloadHash[_receiver][_origin.srcEid][_origin.sender][_origin.nonce];
-
-        // executed if the payload hash has been cleared and the nonce is less than or equal to lazyInboundNonce
-        if (
-            payloadHash == EMPTY_PAYLOAD_HASH &&
-            _origin.nonce <= lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]
-        ) {
-            return ExecutionState.Executed;
-        }
-
-        // executable if nonce has not been executed and is not nil and nonce is less than or equal to inboundNonce
-        if (
-            payloadHash != NIL_PAYLOAD_HASH && _origin.nonce <= inboundNonce(_receiver, _origin.srcEid, _origin.sender)
-        ) {
-            return ExecutionState.Executable;
-        }
-
-        // return NotExecutable as a catch-all
-        return ExecutionState.NotExecutable;
+    function verifiable(Origin calldata _origin, address _receiver) external view returns (bool) {
+        return _verifiable(_origin, _receiver, lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]);
     }
 }
