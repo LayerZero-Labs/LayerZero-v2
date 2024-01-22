@@ -16,34 +16,34 @@ abstract contract MultiSig {
     uint64 public signerSize;
     uint64 public quorum;
 
-    error OnlySigner();
-    error QuorumIsZero();
-    error SignersSizeIsLessThanQuorum(uint64 signersSize, uint64 quorum);
-    error UnorderedSigners();
-    error StateAlreadySet(address signer, bool active);
+    error MultiSig_OnlySigner();
+    error MultiSig_QuorumIsZero();
+    error MultiSig_SignersSizeIsLessThanQuorum(uint64 signersSize, uint64 quorum);
+    error MultiSig_UnorderedSigners();
+    error MultiSig_StateAlreadySet(address signer, bool active);
 
     event UpdateSigner(address _signer, bool _active);
     event UpdateQuorum(uint64 _quorum);
 
     modifier onlySigner() {
         if (!signers[msg.sender]) {
-            revert OnlySigner();
+            revert MultiSig_OnlySigner();
         }
         _;
     }
 
     constructor(address[] memory _signers, uint64 _quorum) {
         if (_quorum == 0) {
-            revert QuorumIsZero();
+            revert MultiSig_QuorumIsZero();
         }
         if (_signers.length < _quorum) {
-            revert SignersSizeIsLessThanQuorum(uint64(_signers.length), _quorum);
+            revert MultiSig_SignersSizeIsLessThanQuorum(uint64(_signers.length), _quorum);
         }
         address lastSigner = address(0);
         for (uint256 i = 0; i < _signers.length; i++) {
             address signer = _signers[i];
             if (signer <= lastSigner) {
-                revert UnorderedSigners();
+                revert MultiSig_UnorderedSigners();
             }
             signers[signer] = true;
             lastSigner = signer;
@@ -54,13 +54,13 @@ abstract contract MultiSig {
 
     function _setSigner(address _signer, bool _active) internal {
         if (signers[_signer] == _active) {
-            revert StateAlreadySet(_signer, _active);
+            revert MultiSig_StateAlreadySet(_signer, _active);
         }
         signers[_signer] = _active;
         uint64 _signerSize = _active ? signerSize + 1 : signerSize - 1;
         uint64 _quorum = quorum;
         if (_signerSize < _quorum) {
-            revert SignersSizeIsLessThanQuorum(_signerSize, _quorum);
+            revert MultiSig_SignersSizeIsLessThanQuorum(_signerSize, _quorum);
         }
         signerSize = _signerSize;
         emit UpdateSigner(_signer, _active);
@@ -68,11 +68,11 @@ abstract contract MultiSig {
 
     function _setQuorum(uint64 _quorum) internal {
         if (_quorum == 0) {
-            revert QuorumIsZero();
+            revert MultiSig_QuorumIsZero();
         }
         uint64 _signerSize = signerSize;
         if (_signerSize < _quorum) {
-            revert SignersSizeIsLessThanQuorum(_signerSize, _quorum);
+            revert MultiSig_SignersSizeIsLessThanQuorum(_signerSize, _quorum);
         }
         quorum = _quorum;
         emit UpdateQuorum(_quorum);

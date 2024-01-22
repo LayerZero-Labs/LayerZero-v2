@@ -25,7 +25,7 @@ contract ReceiveUln301 is IUltraLightNode301, ReceiveUlnBase, ReceiveLibBaseE1 {
     uint256 internal constant CONFIG_TYPE_EXECUTOR = 1;
     uint256 internal constant CONFIG_TYPE_ULN = 2;
 
-    error InvalidConfigType(uint256 configType);
+    error LZ_ULN_InvalidConfigType(uint256 configType);
 
     constructor(address _endpoint, uint32 _localEid) ReceiveLibBaseE1(_endpoint, _localEid) {}
 
@@ -43,7 +43,7 @@ contract ReceiveUln301 is IUltraLightNode301, ReceiveUlnBase, ReceiveLibBaseE1 {
         } else if (_configType == CONFIG_TYPE_ULN) {
             _setUlnConfig(_eid, _oapp, abi.decode(_config, (UlnConfig)));
         } else {
-            revert InvalidConfigType(_configType);
+            revert LZ_ULN_InvalidConfigType(_configType);
         }
     }
 
@@ -78,7 +78,7 @@ contract ReceiveUln301 is IUltraLightNode301, ReceiveUlnBase, ReceiveLibBaseE1 {
         } else if (_configType == CONFIG_TYPE_ULN) {
             return abi.encode(getUlnConfig(_oapp, _eid));
         } else {
-            revert InvalidConfigType(_configType);
+            revert LZ_ULN_InvalidConfigType(_configType);
         }
     }
 

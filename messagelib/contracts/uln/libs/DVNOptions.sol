@@ -14,8 +14,8 @@ library DVNOptions {
     uint8 internal constant WORKER_ID = 2;
     uint8 internal constant OPTION_TYPE_PRECRIME = 1;
 
-    error InvalidDVNIdx();
-    error InvalidDVNOptions(uint256 cursor);
+    error DVN_InvalidDVNIdx();
+    error DVN_InvalidDVNOptions(uint256 cursor);
 
     /// @dev group dvn options by its idx
     /// @param _options [dvn_id][dvn_option][dvn_id][dvn_option]...
@@ -98,7 +98,7 @@ library DVNOptions {
     ) internal pure {
         // dvnIdx starts from 0 but default value of dvnIndices is 0,
         // so we tell if the slot is empty by adding 1 to dvnIdx
-        if (_dvnIdx == 255) revert InvalidDVNIdx();
+        if (_dvnIdx == 255) revert DVN_InvalidDVNIdx();
         uint8 dvnIdxAdj = _dvnIdx + 1;
 
         for (uint256 j = 0; j < _dvnIndices.length; ++j) {
@@ -128,7 +128,7 @@ library DVNOptions {
 
                 uint16 optionLength = _options.toUint16(cursor);
                 cursor += 2;
-                if (optionLength < 2) revert InvalidDVNOptions(cursor); // at least 1 byte for dvn_idx and 1 byte for option_type
+                if (optionLength < 2) revert DVN_InvalidDVNOptions(cursor); // at least 1 byte for dvn_idx and 1 byte for option_type
 
                 uint8 dvnIdx = _options.toUint8(cursor);
 
@@ -138,7 +138,7 @@ library DVNOptions {
                 // the composability of the options. e.g. if we refrain from enforcing the order, an OApp that has
                 // already enforced certain options can append additional options to the end of the enforced
                 // ones without restrictions.
-                if (dvnIdx == 255) revert InvalidDVNIdx();
+                if (dvnIdx == 255) revert DVN_InvalidDVNIdx();
                 if (!bitmap.get(dvnIdx)) {
                     ++numDVNs;
                     bitmap = bitmap.set(dvnIdx);
@@ -147,7 +147,7 @@ library DVNOptions {
                 cursor += optionLength;
             }
         }
-        if (cursor != _options.length) revert InvalidDVNOptions(cursor);
+        if (cursor != _options.length) revert DVN_InvalidDVNOptions(cursor);
     }
 
     /// @dev decode the next dvn option from _options starting from the specified cursor

@@ -41,7 +41,7 @@ abstract contract MessagingChannel is IMessagingChannel {
         uint64 _nonce,
         bytes32 _payloadHash
     ) internal {
-        if (_payloadHash == EMPTY_PAYLOAD_HASH) revert Errors.InvalidPayloadHash();
+        if (_payloadHash == EMPTY_PAYLOAD_HASH) revert Errors.LZ_InvalidPayloadHash();
         inboundPayloadHash[_receiver][_srcEid][_sender][_nonce] = _payloadHash;
     }
 
@@ -82,7 +82,7 @@ abstract contract MessagingChannel is IMessagingChannel {
     function skip(address _oapp, uint32 _srcEid, bytes32 _sender, uint64 _nonce) external {
         _assertAuthorized(_oapp);
 
-        if (_nonce != inboundNonce(_oapp, _srcEid, _sender) + 1) revert Errors.InvalidNonce(_nonce);
+        if (_nonce != inboundNonce(_oapp, _srcEid, _sender) + 1) revert Errors.LZ_InvalidNonce(_nonce);
         lazyInboundNonce[_oapp][_srcEid][_sender] = _nonce;
         emit InboundNonceSkipped(_srcEid, _sender, _oapp, _nonce);
     }
@@ -96,9 +96,9 @@ abstract contract MessagingChannel is IMessagingChannel {
         _assertAuthorized(_oapp);
 
         bytes32 curPayloadHash = inboundPayloadHash[_oapp][_srcEid][_sender][_nonce];
-        if (curPayloadHash != _payloadHash) revert Errors.PayloadHashNotFound(curPayloadHash, _payloadHash);
+        if (curPayloadHash != _payloadHash) revert Errors.LZ_PayloadHashNotFound(curPayloadHash, _payloadHash);
         if (_nonce <= lazyInboundNonce[_oapp][_srcEid][_sender] && curPayloadHash == EMPTY_PAYLOAD_HASH)
-            revert Errors.InvalidNonce(_nonce);
+            revert Errors.LZ_InvalidNonce(_nonce);
         // set it to nil
         inboundPayloadHash[_oapp][_srcEid][_sender][_nonce] = NIL_PAYLOAD_HASH;
         emit PacketNilified(_srcEid, _sender, _oapp, _nonce, _payloadHash);
@@ -113,9 +113,9 @@ abstract contract MessagingChannel is IMessagingChannel {
         _assertAuthorized(_oapp);
 
         bytes32 curPayloadHash = inboundPayloadHash[_oapp][_srcEid][_sender][_nonce];
-        if (curPayloadHash != _payloadHash) revert Errors.PayloadHashNotFound(curPayloadHash, _payloadHash);
+        if (curPayloadHash != _payloadHash) revert Errors.LZ_PayloadHashNotFound(curPayloadHash, _payloadHash);
         if (curPayloadHash == EMPTY_PAYLOAD_HASH || _nonce > lazyInboundNonce[_oapp][_srcEid][_sender])
-            revert Errors.InvalidNonce(_nonce);
+            revert Errors.LZ_InvalidNonce(_nonce);
         delete inboundPayloadHash[_oapp][_srcEid][_sender][_nonce];
         emit PacketBurnt(_srcEid, _sender, _oapp, _nonce, _payloadHash);
     }
@@ -135,7 +135,7 @@ abstract contract MessagingChannel is IMessagingChannel {
             unchecked {
                 // try to lazily update the inboundNonce till the _nonce
                 for (uint64 i = currentNonce + 1; i <= _nonce; ++i) {
-                    if (!_hasPayloadHash(_receiver, _srcEid, _sender, i)) revert Errors.InvalidNonce(i);
+                    if (!_hasPayloadHash(_receiver, _srcEid, _sender, i)) revert Errors.LZ_InvalidNonce(i);
                 }
                 lazyInboundNonce[_receiver][_srcEid][_sender] = _nonce;
             }
@@ -144,7 +144,7 @@ abstract contract MessagingChannel is IMessagingChannel {
         // check the hash of the payload to verify the executor has given the proper payload that has been verified
         actualHash = keccak256(_payload);
         bytes32 expectedHash = inboundPayloadHash[_receiver][_srcEid][_sender][_nonce];
-        if (expectedHash != actualHash) revert Errors.PayloadHashNotFound(expectedHash, actualHash);
+        if (expectedHash != actualHash) revert Errors.LZ_PayloadHashNotFound(expectedHash, actualHash);
 
         // remove it from the storage
         delete inboundPayloadHash[_receiver][_srcEid][_sender][_nonce];

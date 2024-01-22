@@ -153,7 +153,7 @@ contract LzExecutorTest is Test, ILayerZeroReceiver {
         assertEq(uint256(receiveUln302.verifiable(packetHeader, payloadHash)), uint256(VerificationState.Verifying));
 
         NativeDropParam[] memory nativeDrop = new NativeDropParam[](0);
-        vm.expectRevert(LzExecutor.Verifying.selector);
+        vm.expectRevert(LzExecutor.LzExecutor_Verifying.selector);
         lzExecutor.commitAndExecute(
             address(receiveUln302),
             LzReceiveParam(origin, receiver, packet.guid, packet.message, "", 100000, 0),
@@ -173,7 +173,7 @@ contract LzExecutorTest is Test, ILayerZeroReceiver {
         );
 
         // try again
-        vm.expectRevert(LzExecutor.Executed.selector);
+        vm.expectRevert(LzExecutor.LzExecutor_Executed.selector);
         lzExecutor.commitAndExecute(
             address(receiveUln302),
             LzReceiveParam(origin, receiver, packet.guid, packet.message, "", 100000, 0),

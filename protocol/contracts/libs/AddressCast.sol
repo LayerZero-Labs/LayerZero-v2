@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.20;
 
-import { Errors } from "./Errors.sol";
-
 library AddressCast {
+    error AddressCast_InvalidSizeForAddress();
+    error AddressCast_InvalidAddress();
+
     function toBytes32(bytes calldata _addressBytes) internal pure returns (bytes32 result) {
-        if (_addressBytes.length > 32) revert Errors.InvalidAddress();
+        if (_addressBytes.length > 32) revert AddressCast_InvalidAddress();
         result = bytes32(_addressBytes);
         unchecked {
             uint256 offset = 32 - _addressBytes.length;
@@ -19,7 +20,7 @@ library AddressCast {
     }
 
     function toBytes(bytes32 _addressBytes32, uint256 _size) internal pure returns (bytes memory result) {
-        if (_size == 0 || _size > 32) revert Errors.InvalidSizeForAddress();
+        if (_size == 0 || _size > 32) revert AddressCast_InvalidSizeForAddress();
         result = new bytes(_size);
         unchecked {
             uint256 offset = 256 - _size * 8;
@@ -34,7 +35,7 @@ library AddressCast {
     }
 
     function toAddress(bytes calldata _addressBytes) internal pure returns (address result) {
-        if (_addressBytes.length != 20) revert Errors.InvalidAddress();
+        if (_addressBytes.length != 20) revert AddressCast_InvalidAddress();
         result = address(bytes20(_addressBytes));
     }
 }

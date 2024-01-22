@@ -104,7 +104,7 @@ contract SendLibBaseE2Test is Test {
 
         // treasury cannot withdraw altToken
         vm.startPrank(treasury);
-        vm.expectRevert(SendLibBaseE2.CannotWithdrawAltToken.selector);
+        vm.expectRevert(SendLibBaseE2.LZ_MessageLib_CannotWithdrawAltToken.selector);
         msglib.withdrawLzTokenFee(address(altToken), receiver, 100);
 
         // treasury can withdraw lzToken

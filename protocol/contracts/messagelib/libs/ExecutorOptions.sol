@@ -14,9 +14,9 @@ library ExecutorOptions {
     uint8 internal constant OPTION_TYPE_LZCOMPOSE = 3;
     uint8 internal constant OPTION_TYPE_ORDERED_EXECUTION = 4;
 
-    error InvalidLzReceiveOption();
-    error InvalidNativeDropOption();
-    error InvalidLzComposeOption();
+    error Executor_InvalidLzReceiveOption();
+    error Executor_InvalidNativeDropOption();
+    error Executor_InvalidLzComposeOption();
 
     /// @dev decode the next executor option from the options starting from the specified cursor
     /// @param _options [executor_id][executor_option][executor_id][executor_option]...
@@ -51,13 +51,13 @@ library ExecutorOptions {
     }
 
     function decodeLzReceiveOption(bytes calldata _option) internal pure returns (uint128 gas, uint128 value) {
-        if (_option.length != 16 && _option.length != 32) revert InvalidLzReceiveOption();
+        if (_option.length != 16 && _option.length != 32) revert Executor_InvalidLzReceiveOption();
         gas = _option.toU128(0);
         value = _option.length == 32 ? _option.toU128(16) : 0;
     }
 
     function decodeNativeDropOption(bytes calldata _option) internal pure returns (uint128 amount, bytes32 receiver) {
-        if (_option.length != 48) revert InvalidNativeDropOption();
+        if (_option.length != 48) revert Executor_InvalidNativeDropOption();
         amount = _option.toU128(0);
         receiver = _option.toB32(16);
     }
@@ -65,7 +65,7 @@ library ExecutorOptions {
     function decodeLzComposeOption(
         bytes calldata _option
     ) internal pure returns (uint16 index, uint128 gas, uint128 value) {
-        if (_option.length != 18 && _option.length != 34) revert InvalidLzComposeOption();
+        if (_option.length != 18 && _option.length != 34) revert Executor_InvalidLzComposeOption();
         index = _option.toU16(0);
         gas = _option.toU128(2);
         value = _option.length == 34 ? _option.toU128(18) : 0;

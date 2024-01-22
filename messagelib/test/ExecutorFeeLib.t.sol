@@ -46,7 +46,7 @@ contract ExecutorFeeLibTest is Test {
     }
 
     function test_getFee_noOptions_revert() public {
-        vm.expectRevert(IExecutorFeeLib.NoOptions.selector);
+        vm.expectRevert(IExecutorFeeLib.Executor_NoOptions.selector);
         IExecutorFeeLib.FeeParams memory params = IExecutorFeeLib.FeeParams(
             address(priceFeed),
             dstEid,
@@ -58,7 +58,9 @@ contract ExecutorFeeLibTest is Test {
     }
 
     function test_getFee_invalidOption_revert() public {
-        vm.expectRevert(abi.encodeWithSelector(IExecutorFeeLib.UnsupportedOptionType.selector, OPTION_TYPE_INVALID));
+        vm.expectRevert(
+            abi.encodeWithSelector(IExecutorFeeLib.Executor_UnsupportedOptionType.selector, OPTION_TYPE_INVALID)
+        );
         IExecutorFeeLib.FeeParams memory params = IExecutorFeeLib.FeeParams(
             address(priceFeed),
             dstEid,
@@ -166,7 +168,11 @@ contract ExecutorFeeLibTest is Test {
         uint128 nativeDropAmount = nativeDropCap + 1;
 
         vm.expectRevert(
-            abi.encodeWithSelector(IExecutorFeeLib.NativeAmountExceedsCap.selector, nativeDropAmount, nativeDropCap)
+            abi.encodeWithSelector(
+                IExecutorFeeLib.Executor_NativeAmountExceedsCap.selector,
+                nativeDropAmount,
+                nativeDropCap
+            )
         );
         IExecutorFeeLib.FeeParams memory params = IExecutorFeeLib.FeeParams(
             address(priceFeed),
@@ -225,7 +231,9 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        vm.expectRevert(abi.encodeWithSelector(IExecutorFeeLib.UnsupportedOptionType.selector, OPTION_TYPE_LZRECEIVE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IExecutorFeeLib.Executor_UnsupportedOptionType.selector, OPTION_TYPE_LZRECEIVE)
+        );
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, dstAmount);
         executorFeeLib.getFee(
             params,
@@ -243,7 +251,9 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        vm.expectRevert(abi.encodeWithSelector(IExecutorFeeLib.UnsupportedOptionType.selector, OPTION_TYPE_LZRECEIVE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IExecutorFeeLib.Executor_UnsupportedOptionType.selector, OPTION_TYPE_LZRECEIVE)
+        );
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, dstAmount);
         executorFeeLib.getFeeOnSend(
             params,
@@ -304,7 +314,9 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        vm.expectRevert(abi.encodeWithSelector(IExecutorFeeLib.UnsupportedOptionType.selector, OPTION_TYPE_LZCOMPOSE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IExecutorFeeLib.Executor_UnsupportedOptionType.selector, OPTION_TYPE_LZCOMPOSE)
+        );
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
         executorFeeLib.getFee(
             params,
@@ -322,7 +334,9 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        vm.expectRevert(abi.encodeWithSelector(IExecutorFeeLib.UnsupportedOptionType.selector, OPTION_TYPE_LZCOMPOSE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IExecutorFeeLib.Executor_UnsupportedOptionType.selector, OPTION_TYPE_LZCOMPOSE)
+        );
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
         executorFeeLib.getFeeOnSend(
             params,

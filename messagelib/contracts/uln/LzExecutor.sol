@@ -30,8 +30,11 @@ contract LzExecutor is Ownable {
     ILayerZeroEndpointV2 public immutable endpoint;
     uint32 public immutable localEid;
 
-    error Executed();
-    error Verifying();
+    error LzExecutor_Executed();
+    error LzExecutor_Verifying();
+    error LzExecutor_ReceiveLibViewNotSet();
+
+    event NativeWithdrawn(address _to, uint256 _amount);
 
     constructor(address _receiveUln302, address _endpoint) {
         receiveUln302 = _receiveUln302;
@@ -51,7 +54,7 @@ contract LzExecutor is Ownable {
     ) external payable {
         /// 1. check if executable, revert if executed
         ExecutionState executionState = endpoint.executable(_lzReceiveParam.origin, _lzReceiveParam.receiver);
-        if (executionState == ExecutionState.Executed) revert Executed();
+        if (executionState == ExecutionState.Executed) revert LzExecutor_Executed();
 
         /// 2. if not executable, check if verifiable, revert if verifying, commit if verifiable
         if (executionState != ExecutionState.Executable) {
@@ -71,7 +74,7 @@ contract LzExecutor is Ownable {
                 // verification required
                 IReceiveUlnE2(receiveLib).commitVerification(packetHeader, payloadHash);
             } else if (verificationState == VerificationState.Verifying) {
-                revert Verifying();
+                revert LzExecutor_Verifying();
             }
         }
 
@@ -93,5 +96,6 @@ contract LzExecutor is Ownable {
 
     function withdrawNative(address _to, uint256 _amount) external onlyOwner {
         Transfer.native(_to, _amount);
+        emit NativeWithdrawn(_to, _amount);
     }
 }

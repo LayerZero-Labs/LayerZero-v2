@@ -149,7 +149,7 @@ contract UlnOptionsTest is Test {
         uint8 optionType = 1;
         bytes memory t3Options = OptionsUtil.newOptions().addOption(workerId, optionType, bytes("abcd"));
 
-        vm.expectRevert(abi.encodeWithSelector(UlnOptionsImpl.InvalidWorkerId.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(UlnOptionsImpl.LZ_ULN_InvalidWorkerId.selector, 0));
         UlnOptions.decode(t3Options);
     }
 }

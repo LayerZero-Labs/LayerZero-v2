@@ -14,9 +14,9 @@ contract TreasuryFeeHandler is ITreasuryFeeHandler {
 
     ILayerZeroEndpoint public immutable endpoint;
 
-    error OnlySendLibrary();
-    error OnlyOnSending();
-    error InvalidAmount(uint256 required, uint256 supplied);
+    error LZ_TreasuryFeeHandler_OnlySendLibrary();
+    error LZ_TreasuryFeeHandler_OnlyOnSending();
+    error LZ_TreasuryFeeHandler_InvalidAmount(uint256 required, uint256 supplied);
 
     constructor(address _endpoint) {
         endpoint = ILayerZeroEndpoint(_endpoint);
@@ -31,9 +31,9 @@ contract TreasuryFeeHandler is ITreasuryFeeHandler {
         address _treasury
     ) external {
         // only sender's message library can call this function and only when sending a payload
-        if (endpoint.getSendLibraryAddress(_sender) != msg.sender) revert OnlySendLibrary();
-        if (!endpoint.isSendingPayload()) revert OnlyOnSending();
-        if (_required > _supplied) revert InvalidAmount(_required, _supplied);
+        if (endpoint.getSendLibraryAddress(_sender) != msg.sender) revert LZ_TreasuryFeeHandler_OnlySendLibrary();
+        if (!endpoint.isSendingPayload()) revert LZ_TreasuryFeeHandler_OnlyOnSending();
+        if (_required > _supplied) revert LZ_TreasuryFeeHandler_InvalidAmount(_required, _supplied);
 
         // send lz token fee to the treasury directly
         IERC20(_lzToken).safeTransferFrom(_sender, _treasury, _required);

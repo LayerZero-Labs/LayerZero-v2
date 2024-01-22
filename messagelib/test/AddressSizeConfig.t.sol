@@ -11,14 +11,14 @@ contract AddressSizeConfigTest is AddressSizeConfig, Test {
         vm.startPrank(owner());
 
         // can not set address size more than 32
-        vm.expectRevert(InvalidAddressSize.selector);
+        vm.expectRevert(AddressSizeConfig_InvalidAddressSize.selector);
         this.setAddressSize(1, 33);
 
         this.setAddressSize(1, 32);
         assertEq(addressSizes[1], 32);
 
         // can not set address size twice
-        vm.expectRevert(AddressSizeAlreadySet.selector);
+        vm.expectRevert(AddressSizeConfig_AddressSizeAlreadySet.selector);
         this.setAddressSize(1, 31);
     }
 }

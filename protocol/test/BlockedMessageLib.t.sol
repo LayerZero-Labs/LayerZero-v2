@@ -23,14 +23,14 @@ contract BlockedMessageLibTest is LayerZeroTest {
             "0x",
             false
         );
-        vm.expectRevert(Errors.NotImplemented.selector);
+        vm.expectRevert(Errors.LZ_NotImplemented.selector);
         endpoint.send{ value: 101 }(msgParams, receiver);
     }
 
     function test_Revert_Quote() public {
         address sender = address(0x1);
         MessagingParams memory msgParams = MessagingParams(remoteEid, bytes32(0), "", "", false);
-        vm.expectRevert(Errors.NotImplemented.selector);
+        vm.expectRevert(Errors.LZ_NotImplemented.selector);
         endpoint.quote(msgParams, sender);
     }
 }

@@ -19,7 +19,7 @@ contract UlnBaseTest is Test, UlnBase {
             1,
             UlnConfig(1, Constant.NIL_DVN_COUNT, 0, 0, new address[](Constant.NIL_DVN_COUNT), new address[](0))
         );
-        vm.expectRevert(InvalidRequiredDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidRequiredDVNCount.selector);
         this.setDefaultUlnConfigs(params);
 
         // nil optional dvns count
@@ -27,7 +27,7 @@ contract UlnBaseTest is Test, UlnBase {
             1,
             UlnConfig(1, 0, Constant.NIL_DVN_COUNT, 1, new address[](0), new address[](Constant.NIL_DVN_COUNT))
         );
-        vm.expectRevert(InvalidOptionalDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidOptionalDVNCount.selector);
         this.setDefaultUlnConfigs(params);
 
         // nil confirmations
@@ -35,12 +35,12 @@ contract UlnBaseTest is Test, UlnBase {
             1,
             UlnConfig(Constant.NIL_CONFIRMATIONS, 1, 0, 0, new address[](1), new address[](0))
         );
-        vm.expectRevert(InvalidConfirmations.selector);
+        vm.expectRevert(LZ_ULN_InvalidConfirmations.selector);
         this.setDefaultUlnConfigs(params);
 
         // no dvn
         params[0] = SetDefaultUlnConfigParam(1, UlnConfig(1, 0, 0, 0, new address[](0), new address[](0)));
-        vm.expectRevert(AtLeastOneDVN.selector);
+        vm.expectRevert(LZ_ULN_AtLeastOneDVN.selector);
         this.setDefaultUlnConfigs(params);
     }
 
@@ -64,42 +64,42 @@ contract UlnBaseTest is Test, UlnBase {
     function test_setInvalidUlnConfig() public {
         // dvns.length > 0 but count == default(0)
         UlnConfig memory param = UlnConfig(1, 0, 0, 0, new address[](1), new address[](0));
-        vm.expectRevert(InvalidRequiredDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidRequiredDVNCount.selector);
         _setUlnConfig(1, address(2), param);
 
         // count != dvns.length
         param = UlnConfig(1, 1, 0, 0, new address[](2), new address[](0));
-        vm.expectRevert(InvalidRequiredDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidRequiredDVNCount.selector);
         _setUlnConfig(1, address(2), param);
 
         // dvns.length > MAX(127)
         param = UlnConfig(1, 128, 0, 0, new address[](128), new address[](0));
-        vm.expectRevert(InvalidRequiredDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidRequiredDVNCount.selector);
         _setUlnConfig(1, address(2), param);
 
         // duplicated dvns
         param = UlnConfig(1, 2, 0, 0, new address[](2), new address[](0));
-        vm.expectRevert(Unsorted.selector);
+        vm.expectRevert(LZ_ULN_Unsorted.selector);
         _setUlnConfig(1, address(2), param);
 
         // optionalDVNs.length > 0 but count == default(0)
         param = UlnConfig(1, 0, 0, 0, new address[](0), new address[](1));
-        vm.expectRevert(InvalidOptionalDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidOptionalDVNCount.selector);
         _setUlnConfig(1, address(2), param);
 
         // optionalDVNs.length > MAX(127)
         param = UlnConfig(1, 0, 128, 1, new address[](0), new address[](128));
-        vm.expectRevert(InvalidOptionalDVNCount.selector);
+        vm.expectRevert(LZ_ULN_InvalidOptionalDVNCount.selector);
         _setUlnConfig(1, address(2), param);
 
         // optionalDVNs.length < threshold
         param = UlnConfig(1, 0, 1, 2, new address[](0), new address[](1));
-        vm.expectRevert(InvalidOptionalDVNThreshold.selector);
+        vm.expectRevert(LZ_ULN_InvalidOptionalDVNThreshold.selector);
         _setUlnConfig(1, address(2), param);
 
         // optionalDVNs.length > 0 but threshold is 0
         param = UlnConfig(1, 0, 1, 0, new address[](0), new address[](1));
-        vm.expectRevert(AtLeastOneDVN.selector);
+        vm.expectRevert(LZ_ULN_AtLeastOneDVN.selector);
         _setUlnConfig(1, address(2), param);
     }
 
@@ -119,7 +119,7 @@ contract UlnBaseTest is Test, UlnBase {
 
     function test_getUlnConfig() public {
         // no available dvn
-        vm.expectRevert(AtLeastOneDVN.selector);
+        vm.expectRevert(LZ_ULN_AtLeastOneDVN.selector);
         getUlnConfig(address(1), 1);
 
         // set default config

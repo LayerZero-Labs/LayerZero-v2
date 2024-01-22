@@ -25,6 +25,6 @@ contract BlockedMessageLib is ERC165 {
     }
 
     fallback() external {
-        revert Errors.NotImplemented();
+        revert Errors.LZ_NotImplemented();
     }
 }

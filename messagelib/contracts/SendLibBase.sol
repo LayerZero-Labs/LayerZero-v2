@@ -48,11 +48,11 @@ abstract contract SendLibBase is MessageLibBase, Ownable {
     event ExecutorConfigSet(address oapp, uint32 eid, ExecutorConfig config);
     event TreasuryNativeFeeCapSet(uint256 newTreasuryNativeFeeCap);
 
-    error InvalidMessageSize(uint256 actual, uint256 max);
-    error InvalidAmount(uint256 requested, uint256 available);
-    error TransferFailed();
-    error InvalidExecutor();
-    error ZeroMessageSize();
+    error LZ_MessageLib_InvalidMessageSize(uint256 actual, uint256 max);
+    error LZ_MessageLib_InvalidAmount(uint256 requested, uint256 available);
+    error LZ_MessageLib_TransferFailed();
+    error LZ_MessageLib_InvalidExecutor();
+    error LZ_MessageLib_ZeroMessageSize();
 
     constructor(
         address _endpoint,
@@ -68,8 +68,8 @@ abstract contract SendLibBase is MessageLibBase, Ownable {
         for (uint256 i = 0; i < _params.length; ++i) {
             SetDefaultExecutorConfigParam calldata param = _params[i];
 
-            if (param.config.executor == address(0x0)) revert InvalidExecutor();
-            if (param.config.maxMessageSize == 0) revert ZeroMessageSize();
+            if (param.config.executor == address(0x0)) revert LZ_MessageLib_InvalidExecutor();
+            if (param.config.maxMessageSize == 0) revert LZ_MessageLib_ZeroMessageSize();
 
             executorConfigs[DEFAULT_CONFIG][param.eid] = param.config;
         }
@@ -80,7 +80,7 @@ abstract contract SendLibBase is MessageLibBase, Ownable {
     function setTreasuryNativeFeeCap(uint256 _newTreasuryNativeFeeCap) external onlyOwner {
         // assert the new value is no greater than the old value
         if (_newTreasuryNativeFeeCap > treasuryNativeFeeCap)
-            revert InvalidAmount(_newTreasuryNativeFeeCap, treasuryNativeFeeCap);
+            revert LZ_MessageLib_InvalidAmount(_newTreasuryNativeFeeCap, treasuryNativeFeeCap);
         treasuryNativeFeeCap = _newTreasuryNativeFeeCap;
         emit TreasuryNativeFeeCapSet(_newTreasuryNativeFeeCap);
     }
@@ -100,7 +100,7 @@ abstract contract SendLibBase is MessageLibBase, Ownable {
 
     // ======================= Internal =======================
     function _assertMessageSize(uint256 _actual, uint256 _max) internal pure {
-        if (_actual > _max) revert InvalidMessageSize(_actual, _max);
+        if (_actual > _max) revert LZ_MessageLib_InvalidMessageSize(_actual, _max);
     }
 
     function _payExecutor(
@@ -227,7 +227,7 @@ abstract contract SendLibBase is MessageLibBase, Ownable {
     /// @dev authenticated by msg.sender only
     function _debitFee(uint256 _amount) internal {
         uint256 fee = fees[msg.sender];
-        if (_amount > fee) revert InvalidAmount(_amount, fee);
+        if (_amount > fee) revert LZ_MessageLib_InvalidAmount(_amount, fee);
         unchecked {
             fees[msg.sender] = fee - _amount;
         }

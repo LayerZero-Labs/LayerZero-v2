@@ -110,7 +110,7 @@ contract WorkerTest is Worker, Test {
 
         // lib must have the message lib role
         vm.startPrank(ADMIN);
-        vm.expectRevert(OnlyMessageLib.selector);
+        vm.expectRevert(Worker_OnlyMessageLib.selector);
         this.withdrawFee(lib, to, 10);
 
         // grant lib the message lib role

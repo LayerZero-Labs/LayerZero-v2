@@ -9,6 +9,8 @@ import { Errors } from "./libs/Errors.sol";
 
 /// @notice this is the endpoint contract for layerzero v2 deployed on chains using ERC20 as native tokens
 contract EndpointV2Alt is EndpointV2 {
+    error LZ_OnlyAltToken();
+
     /// @dev the altFeeToken is used for fees when the native token has no value
     /// @dev it is immutable for gas saving. only 1 endpoint for such chains
     address internal immutable nativeErc20;
@@ -29,7 +31,7 @@ contract EndpointV2Alt is EndpointV2 {
         address _receiver,
         address _refundAddress
     ) internal override {
-        if (msg.value > 0) revert Errors.OnlyAltToken();
+        if (msg.value > 0) revert LZ_OnlyAltToken();
         _payToken(nativeErc20, _required, _supplied, _receiver, _refundAddress);
     }
 
@@ -40,7 +42,7 @@ contract EndpointV2Alt is EndpointV2 {
 
     /// @dev check if lzToken is set to the same address
     function setLzToken(address _lzToken) public override onlyOwner {
-        if (_lzToken == nativeErc20) revert Errors.InvalidArgument();
+        if (_lzToken == nativeErc20) revert Errors.LZ_InvalidArgument();
         super.setLzToken(_lzToken);
     }
 

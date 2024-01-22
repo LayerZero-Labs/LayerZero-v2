@@ -10,17 +10,17 @@ library Transfer {
 
     address internal constant ADDRESS_ZERO = address(0);
 
-    error TransferNativeFailed(address _to, uint256 _value);
-    error ToAddressIsZero();
+    error Transfer_NativeFailed(address _to, uint256 _value);
+    error Transfer_ToAddressIsZero();
 
     function native(address _to, uint256 _value) internal {
-        if (_to == ADDRESS_ZERO) revert ToAddressIsZero();
+        if (_to == ADDRESS_ZERO) revert Transfer_ToAddressIsZero();
         (bool success, ) = _to.call{ value: _value }("");
-        if (!success) revert TransferNativeFailed(_to, _value);
+        if (!success) revert Transfer_NativeFailed(_to, _value);
     }
 
     function token(address _token, address _to, uint256 _value) internal {
-        if (_to == ADDRESS_ZERO) revert ToAddressIsZero();
+        if (_to == ADDRESS_ZERO) revert Transfer_ToAddressIsZero();
         IERC20(_token).safeTransfer(_to, _value);
     }
 

@@ -15,11 +15,11 @@ library UlnOptions {
     uint16 internal constant TYPE_2 = 2; // legacy options type 2
     uint16 internal constant TYPE_3 = 3;
 
-    error InvalidWorkerOptions(uint256 cursor);
-    error InvalidWorkerId(uint8 workerId);
-    error InvalidLegacyType1Option();
-    error InvalidLegacyType2Option();
-    error UnsupportedOptionType(uint16 optionType);
+    error LZ_ULN_InvalidWorkerOptions(uint256 cursor);
+    error LZ_ULN_InvalidWorkerId(uint8 workerId);
+    error LZ_ULN_InvalidLegacyType1Option();
+    error LZ_ULN_InvalidLegacyType2Option();
+    error LZ_ULN_UnsupportedOptionType(uint16 optionType);
 
     /// @dev decode the options into executorOptions and dvnOptions
     /// @param _options the options can be either legacy options (type 1 or 2) or type 3 options
@@ -29,7 +29,7 @@ library UlnOptions {
         bytes calldata _options
     ) internal pure returns (bytes memory executorOptions, bytes memory dvnOptions) {
         // at least 2 bytes for the option type, but can have no options
-        if (_options.length < 2) revert InvalidWorkerOptions(0);
+        if (_options.length < 2) revert LZ_ULN_InvalidWorkerOptions(0);
 
         uint16 optionsType = uint16(bytes2(_options[0:2]));
         uint256 cursor = 2;
@@ -46,7 +46,7 @@ library UlnOptions {
                 // checking the workerID can reduce gas usage for most cases
                 while (cursor < _options.length) {
                     uint8 workerId = uint8(bytes1(_options[cursor:cursor + 1]));
-                    if (workerId == 0) revert InvalidWorkerId(0);
+                    if (workerId == 0) revert LZ_ULN_InvalidWorkerId(0);
 
                     // workerId must equal to the lastWorkerId for the first option
                     // so it is always skipped in the first option
@@ -70,12 +70,12 @@ library UlnOptions {
                     ++cursor; // for workerId
 
                     uint16 size = uint16(bytes2(_options[cursor:cursor + 2]));
-                    if (size == 0) revert InvalidWorkerOptions(cursor);
+                    if (size == 0) revert LZ_ULN_InvalidWorkerOptions(cursor);
                     cursor += size + 2;
                 }
 
                 // the options length must be the same as the cursor at the end
-                if (cursor != _options.length) revert InvalidWorkerOptions(cursor);
+                if (cursor != _options.length) revert LZ_ULN_InvalidWorkerOptions(cursor);
 
                 // if we have reached the end of the options and the options are not empty
                 // we need to process the last worker's options
@@ -102,7 +102,7 @@ library UlnOptions {
         } else if (_workerId == DVNOptions.WORKER_ID) {
             _dvnOptions = _dvnOptions.length == 0 ? _newOptions : abi.encodePacked(_dvnOptions, _newOptions);
         } else {
-            revert InvalidWorkerId(_workerId);
+            revert LZ_ULN_InvalidWorkerId(_workerId);
         }
         return (_executorOptions, _dvnOptions);
     }
@@ -120,7 +120,7 @@ library UlnOptions {
         bytes calldata _options
     ) internal pure returns (bytes memory executorOptions) {
         if (_optionType == TYPE_1) {
-            if (_options.length != 34) revert InvalidLegacyType1Option();
+            if (_options.length != 34) revert LZ_ULN_InvalidLegacyType1Option();
 
             // execution gas
             uint128 executionGas = uint256(bytes32(_options[2:2 + 32])).toUint128();
@@ -137,7 +137,7 @@ library UlnOptions {
             );
         } else if (_optionType == TYPE_2) {
             // receiver size <= 32
-            if (_options.length <= 66 || _options.length > 98) revert InvalidLegacyType2Option();
+            if (_options.length <= 66 || _options.length > 98) revert LZ_ULN_InvalidLegacyType2Option();
 
             // execution gas
             uint128 executionGas = uint256(bytes32(_options[2:2 + 32])).toUint128();
@@ -170,7 +170,7 @@ library UlnOptions {
                 receiver
             );
         } else {
-            revert UnsupportedOptionType(_optionType);
+            revert LZ_ULN_UnsupportedOptionType(_optionType);
         }
     }
 }

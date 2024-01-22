@@ -13,10 +13,10 @@ interface IExecutorFeeLib {
         uint16 defaultMultiplierBps;
     }
 
-    error NoOptions();
-    error NativeAmountExceedsCap(uint256 amount, uint256 cap);
-    error UnsupportedOptionType(uint8 optionType);
-    error InvalidExecutorOptions(uint256 cursor);
+    error Executor_NoOptions();
+    error Executor_NativeAmountExceedsCap(uint256 amount, uint256 cap);
+    error Executor_UnsupportedOptionType(uint8 optionType);
+    error Executor_InvalidExecutorOptions(uint256 cursor);
 
     function getFeeOnSend(
         FeeParams calldata _params,

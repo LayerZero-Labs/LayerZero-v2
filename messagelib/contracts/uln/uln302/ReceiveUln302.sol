@@ -19,7 +19,7 @@ contract ReceiveUln302 is IReceiveUlnE2, ReceiveUlnBase, ReceiveLibBaseE2 {
     /// @dev CONFIG_TYPE_ULN=2 here to align with SendUln302/ReceiveUln302/ReceiveUln301
     uint32 internal constant CONFIG_TYPE_ULN = 2;
 
-    error InvalidConfigType(uint32 configType);
+    error LZ_ULN_InvalidConfigType(uint32 configType);
 
     constructor(address _endpoint) ReceiveLibBaseE2(_endpoint) {}
 
@@ -37,7 +37,7 @@ contract ReceiveUln302 is IReceiveUlnE2, ReceiveUlnBase, ReceiveLibBaseE2 {
             if (param.configType == CONFIG_TYPE_ULN) {
                 _setUlnConfig(param.eid, _oapp, abi.decode(param.config, (UlnConfig)));
             } else {
-                revert InvalidConfigType(param.configType);
+                revert LZ_ULN_InvalidConfigType(param.configType);
             }
         }
     }
@@ -71,7 +71,7 @@ contract ReceiveUln302 is IReceiveUlnE2, ReceiveUlnBase, ReceiveLibBaseE2 {
         if (_configType == CONFIG_TYPE_ULN) {
             return abi.encode(getUlnConfig(_oapp, _eid));
         } else {
-            revert InvalidConfigType(_configType);
+            revert LZ_ULN_InvalidConfigType(_configType);
         }
     }
 

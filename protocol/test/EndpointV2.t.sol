@@ -60,7 +60,7 @@ contract EndpointV2Test is LayerZeroTest {
 
         // fail to pay lz token due to endpoint not supporting lz token
         msgParams.payInLzToken = true;
-        vm.expectRevert(Errors.LzTokenUnavailable.selector);
+        vm.expectRevert(Errors.LZ_LzTokenUnavailable.selector);
         endpoint.quote(msgParams, sender);
 
         // enable lz token and quote again
@@ -90,12 +90,12 @@ contract EndpointV2Test is LayerZeroTest {
 
         // fail to send with lz token
         msgParams.payInLzToken = true;
-        vm.expectRevert(Errors.LzTokenUnavailable.selector);
+        vm.expectRevert(Errors.LZ_LzTokenUnavailable.selector);
         endpoint.send{ value: 200 }(msgParams, refundAddress);
 
         // fail for insufficient fee
         msgParams.payInLzToken = false;
-        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientFee.selector, 100, 99, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InsufficientFee.selector, 100, 99, 0, 0));
         endpoint.send{ value: 99 }(msgParams, refundAddress);
     }
 
@@ -121,7 +121,7 @@ contract EndpointV2Test is LayerZeroTest {
 
         // fail for insufficient lz token
         lzToken.transfer(address(endpoint), 98);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientFee.selector, 100, 200, 99, 98));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InsufficientFee.selector, 100, 200, 99, 98));
         endpoint.send{ value: 200 }(msgParams, refundAddress);
     }
 
@@ -130,7 +130,7 @@ contract EndpointV2Test is LayerZeroTest {
 
         // fail to verify by an invalid msglib
         vm.prank(address(0x1));
-        vm.expectRevert(Errors.InvalidReceiveLibrary.selector);
+        vm.expectRevert(Errors.LZ_InvalidReceiveLibrary.selector);
         endpoint.verify(origin, receiver, payloadHash);
 
         // verifiable by a valid msglib
@@ -210,7 +210,7 @@ contract EndpointV2Test is LayerZeroTest {
             vm.prank(address(simpleMsgLib));
             origin = Origin(remoteEid, senderB32, _nonce);
             if (!recommittableNonces[_nonce]) {
-                vm.expectRevert(Errors.PathNotVerifiable.selector);
+                vm.expectRevert(Errors.LZ_PathNotVerifiable.selector);
             }
             endpoint.verify(origin, receiver, payloadHash);
         }
@@ -224,7 +224,7 @@ contract EndpointV2Test is LayerZeroTest {
         Origin memory originNonceOne = Origin(remoteEid, senderB32, 1);
         Origin memory originNonceTwo = Origin(remoteEid, senderB32, 2);
         // Pathway cannot verify the first nonce until OApp returns allowInitializePath = true
-        vm.expectRevert(Errors.PathNotInitializable.selector);
+        vm.expectRevert(Errors.LZ_PathNotInitializable.selector);
         endpoint.verify(originNonceOne, receiver, payloadHash);
 
         // Pathway can verify the first nonce now that OApp returned allowInitializePath = true
@@ -232,7 +232,7 @@ contract EndpointV2Test is LayerZeroTest {
         endpoint.verify(originNonceOne, receiver, payloadHash);
 
         oapp.blacklistPathway(remoteEid, senderB32);
-        vm.expectRevert(Errors.PathNotInitializable.selector);
+        vm.expectRevert(Errors.LZ_PathNotInitializable.selector);
         endpoint.verify(originNonceOne, receiver, payloadHash);
 
         // Pathway cannot be "closed" once one (or more) nonces have been executed
@@ -288,7 +288,7 @@ contract EndpointV2Test is LayerZeroTest {
         endpoint.verify(origin, receiver, payloadHash);
         assertTrue(endpoint.inboundPayloadHash(receiver, remoteEid, senderB32, 1) != bytes32(0));
         vm.prank(delegate);
-        vm.expectRevert(Errors.Unauthorized.selector);
+        vm.expectRevert(Errors.LZ_Unauthorized.selector);
         endpoint.clear(receiver, origin, guid, message);
 
         vm.prank(receiver);

@@ -30,7 +30,7 @@ contract MultiSigTest is MultiSig, Test {
         assertEq(signerSize, 3);
 
         // cant add a signer twice
-        vm.expectRevert(abi.encodeWithSelector(StateAlreadySet.selector, newSigner, active));
+        vm.expectRevert(abi.encodeWithSelector(MultiSig_StateAlreadySet.selector, newSigner, active));
         _setSigner(newSigner, active);
 
         // remove a signer
@@ -38,7 +38,7 @@ contract MultiSigTest is MultiSig, Test {
         assertEq(signerSize, 2);
 
         // signer size must be >= quorum after removing a signer
-        vm.expectRevert(abi.encodeWithSelector(SignersSizeIsLessThanQuorum.selector, uint64(1), uint64(2)));
+        vm.expectRevert(abi.encodeWithSelector(MultiSig_SignersSizeIsLessThanQuorum.selector, uint64(1), uint64(2)));
         _setSigner(vm.addr(3), false);
     }
 
@@ -46,11 +46,11 @@ contract MultiSigTest is MultiSig, Test {
         assertEq(quorum, 2);
 
         // cant set quorum to 0
-        vm.expectRevert(QuorumIsZero.selector);
+        vm.expectRevert(MultiSig_QuorumIsZero.selector);
         _setQuorum(0);
 
         // cant set quorum to more than signer size
-        vm.expectRevert(abi.encodeWithSelector(SignersSizeIsLessThanQuorum.selector, uint64(2), uint64(3)));
+        vm.expectRevert(abi.encodeWithSelector(MultiSig_SignersSizeIsLessThanQuorum.selector, uint64(2), uint64(3)));
         _setQuorum(3);
 
         // set quorum to 1

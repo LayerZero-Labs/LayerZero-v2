@@ -10,12 +10,12 @@ abstract contract AddressSizeConfig is Ownable {
 
     event AddressSizeSet(uint16 eid, uint256 size);
 
-    error InvalidAddressSize();
-    error AddressSizeAlreadySet();
+    error AddressSizeConfig_InvalidAddressSize();
+    error AddressSizeConfig_AddressSizeAlreadySet();
 
     function setAddressSize(uint16 _eid, uint256 _size) external onlyOwner {
-        if (_size > 32) revert InvalidAddressSize();
-        if (addressSizes[_eid] != 0) revert AddressSizeAlreadySet();
+        if (_size > 32) revert AddressSizeConfig_InvalidAddressSize();
+        if (addressSizes[_eid] != 0) revert AddressSizeConfig_AddressSizeAlreadySet();
         addressSizes[_eid] = _size;
         emit AddressSizeSet(_eid, _size);
     }
