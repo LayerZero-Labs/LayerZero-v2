@@ -40,6 +40,8 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         IDVN.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external payable returns (uint256) {
+        if (_dstConfig.gas == 0) revert DVN_EidNotSupported(_params.dstEid);
+
         _decodeDVNOptions(_options); // todo: validate options
 
         uint256 callDataSize = _getCallDataSize(_params.quorum);
@@ -76,6 +78,8 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         IDVN.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256) {
+        if (_dstConfig.gas == 0) revert DVN_EidNotSupported(_params.dstEid);
+
         _decodeDVNOptions(_options); // validate options
 
         uint256 callDataSize = _getCallDataSize(_params.quorum);

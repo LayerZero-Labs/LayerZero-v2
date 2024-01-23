@@ -18,6 +18,7 @@ interface IExecutorFeeLib {
     error Executor_UnsupportedOptionType(uint8 optionType);
     error Executor_InvalidExecutorOptions(uint256 cursor);
     error Executor_ZeroLzReceiveGasProvided();
+    error Executor_EidNotSupported(uint32 eid);
 
     function getFeeOnSend(
         FeeParams calldata _params,
