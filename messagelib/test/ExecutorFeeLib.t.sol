@@ -132,21 +132,28 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             multiplierBps
         );
-        bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
-        uint256 actual = executorFeeLib.getFee(
-            params,
-            config,
-            abi.encodePacked(WORKER_ID, uint16(executorOption.length), executorOption)
+
+        bytes memory lzComposeOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
+        bytes memory lzReceiveOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, uint128(0));
+        bytes memory executorOption = abi.encodePacked(
+            WORKER_ID,
+            uint16(lzComposeOption.length),
+            lzComposeOption,
+            WORKER_ID,
+            uint16(lzReceiveOption.length),
+            lzReceiveOption
         );
+
+        uint256 actual = executorFeeLib.getFee(params, config, executorOption);
 
         assertEq(actual, expected);
     }
 
     function test_getFee_nativeTokenPriceZero_specificMultiplier() public {
-        priceFeed.setup(gasFee, priceRatio, 0);
+        priceFeed.setup(gasFee + gasFee, priceRatio, 0);
         uint256 dstFee = (dstAmount * priceRatio) / priceFeed.getPriceRatioDenominator();
 
-        uint256 expected = ((gasFee + dstFee) * multiplierBps) / 10000;
+        uint256 expected = ((gasFee + gasFee + dstFee) * multiplierBps) / 10000;
         IExecutorFeeLib.FeeParams memory params = IExecutorFeeLib.FeeParams(
             address(priceFeed),
             dstEid,
@@ -154,12 +161,19 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             multiplierBps
         );
-        bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
-        uint256 actual = executorFeeLib.getFee(
-            params,
-            config,
-            abi.encodePacked(WORKER_ID, uint16(executorOption.length), executorOption)
+
+        bytes memory lzComposeOption = abi.encodePacked(OPTION_TYPE_LZCOMPOSE, index, dstGas, dstAmount);
+        bytes memory lzReceiveOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, uint128(0));
+        bytes memory executorOption = abi.encodePacked(
+            WORKER_ID,
+            uint16(lzComposeOption.length),
+            lzComposeOption,
+            WORKER_ID,
+            uint16(lzReceiveOption.length),
+            lzReceiveOption
         );
+
+        uint256 actual = executorFeeLib.getFee(params, config, executorOption);
 
         assertEq(actual, expected);
     }

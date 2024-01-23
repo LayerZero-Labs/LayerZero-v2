@@ -113,6 +113,7 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         bool ordered = false;
         totalGas = _baseGas;
 
+        uint256 lzReceiveGas;
         while (cursor < _options.length) {
             (uint8 optionType, bytes calldata option, uint256 newCursor) = _options.nextExecutorOption(cursor);
             cursor = newCursor;
@@ -124,7 +125,7 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
                 if (_v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
 
                 dstAmount += value;
-                totalGas += gas;
+                lzReceiveGas += gas;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_NATIVE_DROP) {
                 (uint128 nativeDropAmount, ) = ExecutorOptions.decodeNativeDropOption(option);
                 dstAmount += nativeDropAmount;
@@ -143,9 +144,10 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         }
         if (cursor != _options.length) revert Executor_InvalidExecutorOptions(cursor);
         if (dstAmount > _nativeCap) revert Executor_NativeAmountExceedsCap(dstAmount, _nativeCap);
+        if (lzReceiveGas == 0) revert Executor_ZeroLzReceiveGasProvided();
+        totalGas += lzReceiveGas;
 
         if (ordered) {
-            // todo: finalize the premium for ordered
             totalGas = (totalGas * 102) / 100;
         }
     }
