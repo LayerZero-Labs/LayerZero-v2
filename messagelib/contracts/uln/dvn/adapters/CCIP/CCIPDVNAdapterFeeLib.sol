@@ -38,7 +38,8 @@ contract CCIPDVNAdapterFeeLib is OwnableUpgradeable, Proxied, ICCIPDVNAdapterFee
         bytes calldata _options,
         IRouterClient _router
     ) external payable returns (uint256 ccipFee, uint256 totalFee) {
-        if (_options.length > 0) revert CCIPDVN_OptionsUnsupported();
+        if (_dstConfig.gas == 0) revert CCIPDVNAdapter_EidNotSupported(_params.dstEid);
+        if (_options.length > 0) revert CCIPDVNAdapter_OptionsUnsupported();
 
         ccipFee = _router.getFee(_dstConfig.chainSelector, _message);
         totalFee = _applyPremium(_dstConfig.multiplierBps, _params.defaultMultiplierBps, ccipFee);
@@ -51,7 +52,8 @@ contract CCIPDVNAdapterFeeLib is OwnableUpgradeable, Proxied, ICCIPDVNAdapterFee
         bytes calldata _options,
         IRouterClient _router
     ) external view returns (uint256 totalFee) {
-        if (_options.length > 0) revert CCIPDVN_OptionsUnsupported();
+        if (_dstConfig.gas == 0) revert CCIPDVNAdapter_EidNotSupported(_params.dstEid);
+        if (_options.length > 0) revert CCIPDVNAdapter_OptionsUnsupported();
 
         totalFee = _router.getFee(_dstConfig.chainSelector, _message);
         totalFee = _applyPremium(_dstConfig.multiplierBps, _params.defaultMultiplierBps, totalFee);

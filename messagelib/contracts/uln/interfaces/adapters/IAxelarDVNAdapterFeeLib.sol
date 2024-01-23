@@ -31,6 +31,7 @@ interface IAxelarDVNAdapterFeeLib {
 
     error AxelarDVNAdapter_OptionsUnsupported();
     error AxelarDVNAdapter_InsufficientBalance(uint256 actual, uint256 requested);
+    error AxelarDVNAdapter_EidNotSupported(uint32 eid);
 
     function getFeeOnSend(
         Param calldata _params,

@@ -32,6 +32,8 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external returns (uint256 fee) {
+        if (_dstConfig.baseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
+
         (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
             _isV1Eid(_params.dstEid),
             _dstConfig.baseGas,
@@ -68,6 +70,8 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256 fee) {
+        if (_dstConfig.baseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
+
         (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
             _isV1Eid(_params.dstEid),
             _dstConfig.baseGas,

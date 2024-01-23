@@ -15,6 +15,7 @@ interface IDVNFeeLib {
     }
 
     error DVN_UnsupportedOptionType(uint8 optionType);
+    error DVN_EidNotSupported(uint32 eid);
 
     function getFeeOnSend(
         FeeParams calldata _params,

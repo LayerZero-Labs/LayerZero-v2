@@ -25,7 +25,8 @@ interface ICCIPDVNAdapterFeeLib {
 
     event DstConfigSet(DstConfigParam[] params);
 
-    error CCIPDVN_OptionsUnsupported();
+    error CCIPDVNAdapter_OptionsUnsupported();
+    error CCIPDVNAdapter_EidNotSupported(uint32 eid);
 
     function getFeeOnSend(
         Param calldata _params,

@@ -72,6 +72,7 @@ contract AxelarDVNAdapterFeeLib is OwnableUpgradeable, Proxied, IAxelarDVNAdapte
         bytes calldata _options,
         address _sendLib
     ) external payable returns (uint256 totalFee) {
+        if (_dstConfig.nativeGasFee == 0) revert AxelarDVNAdapter_EidNotSupported(_param.dstEid);
         if (_options.length > 0) revert AxelarDVNAdapter_OptionsUnsupported();
 
         uint256 axelarFee = _getAxelarFee(_dstConfig.nativeGasFee);
@@ -102,6 +103,7 @@ contract AxelarDVNAdapterFeeLib is OwnableUpgradeable, Proxied, IAxelarDVNAdapte
         IAxelarDVNAdapter.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256 totalFee) {
+        if (_dstConfig.nativeGasFee == 0) revert AxelarDVNAdapter_EidNotSupported(_param.dstEid);
         if (_options.length > 0) revert AxelarDVNAdapter_OptionsUnsupported();
 
         uint256 axelarFee = _getAxelarFee(_dstConfig.nativeGasFee);
