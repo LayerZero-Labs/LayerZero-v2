@@ -14,7 +14,7 @@ abstract contract MessagingContext is IMessagingContext {
 
     /// @dev the sendContext is set to 8 bytes 0s + 4 bytes eid + 20 bytes sender
     modifier sendContext(uint32 _dstEid, address _sender) {
-        if (_sendContext != NOT_ENTERED) revert Errors.SendReentrancy();
+        if (_sendContext != NOT_ENTERED) revert Errors.LZ_SendReentrancy();
         _sendContext = (uint256(_dstEid) << 160) | uint160(_sender);
         _;
         _sendContext = NOT_ENTERED;

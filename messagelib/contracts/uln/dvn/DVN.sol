@@ -26,13 +26,13 @@ contract DVN is Worker, MultiSig, IDVN {
     mapping(uint32 dstEid => DstConfig) public dstConfig;
     mapping(bytes32 executableHash => bool used) public usedHashes;
 
-    error OnlySelf();
-    error InvalidRole(bytes32 role);
-    error InstructionExpired();
-    error InvalidTarget(address target);
-    error InvalidVid(uint32 vid);
-    error InvalidSignatures();
-    error DuplicatedHash(bytes32 executableHash);
+    error DVN_OnlySelf();
+    error DVN_InvalidRole(bytes32 role);
+    error DVN_InstructionExpired();
+    error DVN_InvalidTarget(address target);
+    error DVN_InvalidVid(uint32 vid);
+    error DVN_InvalidSignatures();
+    error DVN_DuplicatedHash(bytes32 executableHash);
 
     event VerifySignaturesFailed(uint256 idx);
     event ExecuteFailed(uint256 _index, bytes _data);
@@ -72,20 +72,20 @@ contract DVN is Worker, MultiSig, IDVN {
         if (_role == ALLOWLIST || _role == DENYLIST || _role == MESSAGE_LIB_ROLE) {
             // self required
             if (address(this) != msg.sender) {
-                revert OnlySelf();
+                revert DVN_OnlySelf();
             }
         } else if (_role == ADMIN_ROLE) {
             // admin required
             _checkRole(ADMIN_ROLE);
         } else {
-            revert InvalidRole(_role);
+            revert DVN_InvalidRole(_role);
         }
         _;
     }
 
     modifier onlySelf() {
         if (address(this) != msg.sender) {
-            revert OnlySelf();
+            revert DVN_OnlySelf();
         }
         _;
     }
@@ -131,23 +131,23 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @dev calldata in the case is abi.encode new admin address
     function quorumChangeAdmin(ExecuteParam calldata _param) external {
         if (_param.expiration <= block.timestamp) {
-            revert InstructionExpired();
+            revert DVN_InstructionExpired();
         }
         if (_param.target != address(this)) {
-            revert InvalidTarget(_param.target);
+            revert DVN_InvalidTarget(_param.target);
         }
         if (_param.vid != vid) {
-            revert InvalidVid(_param.vid);
+            revert DVN_InvalidVid(_param.vid);
         }
 
         // generate and validate hash
         bytes32 hash = hashCallData(_param.vid, _param.target, _param.callData, _param.expiration);
         (bool sigsValid, ) = verifySignatures(hash, _param.signatures);
         if (!sigsValid) {
-            revert InvalidSignatures();
+            revert DVN_InvalidSignatures();
         }
         if (usedHashes[hash]) {
-            revert DuplicatedHash(hash);
+            revert DVN_DuplicatedHash(hash);
         }
 
         usedHashes[hash] = true;
@@ -221,7 +221,7 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param _amount amount to withdraw
     function withdrawFeeFromUlnV2(address _lib, address payable _to, uint256 _amount) external onlyRole(ADMIN_ROLE) {
         if (!hasRole(MESSAGE_LIB_ROLE, _lib)) {
-            revert OnlyMessageLib();
+            revert Worker_OnlyMessageLib();
         }
         ILayerZeroUltraLightNodeV2(_lib).withdrawNative(_to, _amount);
     }

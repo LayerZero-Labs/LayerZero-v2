@@ -43,7 +43,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
     modifier onlyPriceUpdater() {
         if (owner() != msg.sender) {
             if (!priceUpdater[msg.sender]) {
-                revert OnlyPriceUpdater();
+                revert LZ_PriceFeed_OnlyPriceUpdater();
             }
         }
         _;
@@ -102,7 +102,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         uint256 _gas
     ) external payable returns (uint256, uint128, uint128, uint128) {
         uint256 fee = getFee(_dstEid, _callDataSize, _gas);
-        if (msg.value < fee) revert InsufficientFee(msg.value, fee);
+        if (msg.value < fee) revert LZ_PriceFeed_InsufficientFee(msg.value, fee);
         return _estimateFeeByEid(_dstEid, _callDataSize, _gas);
     }
 
@@ -181,7 +181,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         } else if (l2Eid == 20132) {
             return 20121; // ethereum-goerli
         }
-        revert UnknownL2Eid(l2Eid);
+        revert LZ_PriceFeed_UnknownL2Eid(l2Eid);
     }
 
     function _estimateFeeWithDefaultModel(

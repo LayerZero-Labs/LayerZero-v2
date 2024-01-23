@@ -68,7 +68,7 @@ abstract contract SendLibBaseE1 is SendLibBase, AddressSizeConfig, IMessageLibE1
 
         // pay native fee
         // assert the user has attached enough native token for this address
-        if (msg.value < totalNativeFee) revert InsufficientMsgValue();
+        if (msg.value < totalNativeFee) revert LZ_MessageLib_InsufficientMsgValue();
         // refund if they send too much
         uint256 refundAmt = msg.value - totalNativeFee;
         if (refundAmt > 0) {
@@ -79,7 +79,7 @@ abstract contract SendLibBaseE1 is SendLibBase, AddressSizeConfig, IMessageLibE1
         if (lzTokenFee > 0) {
             // in v2, we let user pass a payInLzToken boolean but always charging the sender
             // likewise in v1, if _lzTokenPaymentAddress is passed, it must be the sender
-            if (_lzTokenPaymentAddress != sender) revert LzTokenPaymentAddressMustBeSender();
+            if (_lzTokenPaymentAddress != sender) revert LZ_MessageLib_LzTokenPaymentAddressMustBeSender();
             _payLzTokenFee(sender, lzTokenFee);
         }
 
@@ -117,9 +117,9 @@ abstract contract SendLibBaseE1 is SendLibBase, AddressSizeConfig, IMessageLibE1
     // ======================= Internal =======================
     /// @dev path = remoteAddress + localAddress.
     function _assertPath(address _sender, bytes calldata _path, uint256 remoteAddressSize) internal pure {
-        if (_path.length != 20 + remoteAddressSize) revert InvalidPath();
+        if (_path.length != 20 + remoteAddressSize) revert LZ_MessageLib_InvalidPath();
         address srcInPath = AddressCast.toAddress(_path[remoteAddressSize:]);
-        if (_sender != srcInPath) revert InvalidSender();
+        if (_sender != srcInPath) revert LZ_MessageLib_InvalidSender();
     }
 
     function _payLzTokenFee(address _sender, uint256 _lzTokenFee) internal {
@@ -145,7 +145,7 @@ abstract contract SendLibBaseE1 is SendLibBase, AddressSizeConfig, IMessageLibE1
     ) internal returns (Packet memory packet) {
         // assert toAddress size
         uint256 remoteAddressSize = addressSizes[_dstEid];
-        if (remoteAddressSize == 0) revert InvalidPath();
+        if (remoteAddressSize == 0) revert LZ_MessageLib_InvalidPath();
         _assertPath(_sender, _path, remoteAddressSize);
 
         // increment nonce

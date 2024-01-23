@@ -37,26 +37,26 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     }
 
     modifier onlyRegistered(address _lib) {
-        if (!isRegisteredLibrary[_lib]) revert Errors.OnlyRegisteredLib();
+        if (!isRegisteredLibrary[_lib]) revert Errors.LZ_OnlyRegisteredLib();
         _;
     }
 
     modifier isSendLib(address _lib) {
         if (_lib != DEFAULT_LIB) {
-            if (IMessageLib(_lib).messageLibType() == MessageLibType.Receive) revert Errors.OnlySendLib();
+            if (IMessageLib(_lib).messageLibType() == MessageLibType.Receive) revert Errors.LZ_OnlySendLib();
         }
         _;
     }
 
     modifier isReceiveLib(address _lib) {
         if (_lib != DEFAULT_LIB) {
-            if (IMessageLib(_lib).messageLibType() == MessageLibType.Send) revert Errors.OnlyReceiveLib();
+            if (IMessageLib(_lib).messageLibType() == MessageLibType.Send) revert Errors.LZ_OnlyReceiveLib();
         }
         _;
     }
 
     modifier onlyRegisteredOrDefault(address _lib) {
-        if (!isRegisteredLibrary[_lib] && _lib != DEFAULT_LIB) revert Errors.OnlyRegisteredOrDefaultLib();
+        if (!isRegisteredLibrary[_lib] && _lib != DEFAULT_LIB) revert Errors.LZ_OnlyRegisteredOrDefaultLib();
         _;
     }
 
@@ -64,7 +64,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     modifier onlySupportedEid(address _lib, uint32 _eid) {
         /// @dev doesnt need to check for default lib, because when they are initially added they get passed through this modifier
         if (_lib != DEFAULT_LIB) {
-            if (!IMessageLib(_lib).isSupportedEid(_eid)) revert Errors.UnsupportedEid();
+            if (!IMessageLib(_lib).isSupportedEid(_eid)) revert Errors.LZ_UnsupportedEid();
         }
         _;
     }
@@ -84,7 +84,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         lib = sendLibrary[_sender][_dstEid];
         if (lib == DEFAULT_LIB) {
             lib = defaultSendLibrary[_dstEid];
-            if (lib == address(0x0)) revert Errors.DefaultSendLibUnavailable();
+            if (lib == address(0x0)) revert Errors.LZ_DefaultSendLibUnavailable();
         }
     }
 
@@ -97,7 +97,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         lib = receiveLibrary[_receiver][_srcEid];
         if (lib == DEFAULT_LIB) {
             lib = defaultReceiveLibrary[_srcEid];
-            if (lib == address(0x0)) revert Errors.DefaultReceiveLibUnavailable();
+            if (lib == address(0x0)) revert Errors.LZ_DefaultReceiveLibUnavailable();
             isDefault = true;
         }
     }
@@ -139,9 +139,9 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     /// @dev only owner
     function registerLibrary(address _lib) public onlyOwner {
         // must have the right interface
-        if (!IERC165(_lib).supportsInterface(type(IMessageLib).interfaceId)) revert Errors.UnsupportedInterface();
+        if (!IERC165(_lib).supportsInterface(type(IMessageLib).interfaceId)) revert Errors.LZ_UnsupportedInterface();
         // must have not been registered
-        if (isRegisteredLibrary[_lib]) revert Errors.AlreadyRegistered();
+        if (isRegisteredLibrary[_lib]) revert Errors.LZ_AlreadyRegistered();
 
         // insert into both the map and the list
         isRegisteredLibrary[_lib] = true;
@@ -158,9 +158,8 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
         uint32 _eid,
         address _newLib
     ) external onlyOwner onlyRegistered(_newLib) isSendLib(_newLib) onlySupportedEid(_newLib, _eid) {
-        address oldLib = defaultSendLibrary[_eid];
         // must provide a different value
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (defaultSendLibrary[_eid] == _newLib) revert Errors.LZ_SameValue();
         defaultSendLibrary[_eid] = _newLib;
         emit DefaultSendLibrarySet(_eid, _newLib);
     }
@@ -176,10 +175,10 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     ) external onlyOwner onlyRegistered(_newLib) isReceiveLib(_newLib) onlySupportedEid(_newLib, _eid) {
         address oldLib = defaultReceiveLibrary[_eid];
         // must provide a different value
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (oldLib == _newLib) revert Errors.LZ_SameValue();
 
         defaultReceiveLibrary[_eid] = _newLib;
-        emit DefaultReceiveLibrarySet(_eid, oldLib, _newLib);
+        emit DefaultReceiveLibrarySet(_eid, _newLib);
 
         if (_gracePeriod > 0) {
             // override the current default timeout to the [old_lib + new expiry]
@@ -208,7 +207,7 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
             delete defaultReceiveLibraryTimeout[_eid];
         } else {
             // override it with new configuration
-            if (_expiry <= block.number) revert Errors.InvalidExpiry();
+            if (_expiry <= block.number) revert Errors.LZ_InvalidExpiry();
             Timeout storage timeout = defaultReceiveLibraryTimeout[_eid];
             timeout.lib = _lib;
             timeout.expiry = _expiry;
@@ -232,9 +231,8 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
     ) external onlyRegisteredOrDefault(_newLib) isSendLib(_newLib) onlySupportedEid(_newLib, _eid) {
         _assertAuthorized(_oapp);
 
-        address oldLib = sendLibrary[_oapp][_eid];
         // must provide a different value
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (sendLibrary[_oapp][_eid] == _newLib) revert Errors.LZ_SameValue();
         sendLibrary[_oapp][_eid] = _newLib;
         emit SendLibrarySet(_oapp, _eid, _newLib);
     }
@@ -254,15 +252,15 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
 
         address oldLib = receiveLibrary[_oapp][_eid];
         // must provide new values
-        if (oldLib == _newLib) revert Errors.SameValue();
+        if (oldLib == _newLib) revert Errors.LZ_SameValue();
         receiveLibrary[_oapp][_eid] = _newLib;
-        emit ReceiveLibrarySet(_oapp, _eid, oldLib, _newLib);
+        emit ReceiveLibrarySet(_oapp, _eid, _newLib);
 
         if (_gracePeriod > 0) {
             // to simplify the logic, we only allow to set timeout if neither the new lib nor old lib is DEFAULT_LIB, which would should read the default timeout configurations
             // (1) if the Oapp wants to fall back to the DEFAULT, then set the newLib to DEFAULT with grace period == 0
             // (2) if the Oapp wants to change to a non DEFAULT from DEFAULT, then set the newLib to 'non-default' with _gracePeriod == 0, then use setReceiveLibraryTimeout() interface
-            if (oldLib == DEFAULT_LIB || _newLib == DEFAULT_LIB) revert Errors.OnlyNonDefaultLib();
+            if (oldLib == DEFAULT_LIB || _newLib == DEFAULT_LIB) revert Errors.LZ_OnlyNonDefaultLib();
 
             // write to storage
             Timeout memory timeout = Timeout({ lib: oldLib, expiry: block.number + _gracePeriod });
@@ -288,14 +286,14 @@ abstract contract MessageLibManager is Ownable, IMessageLibManager {
 
         (, bool isDefault) = getReceiveLibrary(_oapp, _eid);
         // if current library is DEFAULT, Oapp cant set the timeout
-        if (isDefault) revert Errors.OnlyNonDefaultLib();
+        if (isDefault) revert Errors.LZ_OnlyNonDefaultLib();
 
         if (_expiry == 0) {
             // force remove the current configuration
             delete receiveLibraryTimeout[_oapp][_eid];
         } else {
             // override it with new configuration
-            if (_expiry <= block.number) revert Errors.InvalidExpiry();
+            if (_expiry <= block.number) revert Errors.LZ_InvalidExpiry();
             Timeout storage timeout = receiveLibraryTimeout[_oapp][_eid];
             timeout.lib = _lib;
             timeout.expiry = _expiry;

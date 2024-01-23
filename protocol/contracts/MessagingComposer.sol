@@ -22,7 +22,7 @@ abstract contract MessagingComposer is IMessagingComposer {
     /// @param _message the message
     function sendCompose(address _to, bytes32 _guid, uint16 _index, bytes calldata _message) external {
         // must have not been sent before
-        if (composeQueue[msg.sender][_to][_guid][_index] != NO_MESSAGE_HASH) revert Errors.ComposeExists();
+        if (composeQueue[msg.sender][_to][_guid][_index] != NO_MESSAGE_HASH) revert Errors.LZ_ComposeExists();
         composeQueue[msg.sender][_to][_guid][_index] = keccak256(_message);
         emit ComposeSent(msg.sender, _to, _guid, _index, _message);
     }
@@ -47,7 +47,7 @@ abstract contract MessagingComposer is IMessagingComposer {
         // assert the validity
         bytes32 expectedHash = composeQueue[_from][_to][_guid][_index];
         bytes32 actualHash = keccak256(_message);
-        if (expectedHash != actualHash) revert Errors.ComposeNotFound(expectedHash, actualHash);
+        if (expectedHash != actualHash) revert Errors.LZ_ComposeNotFound(expectedHash, actualHash);
 
         // marks the message as received to prevent reentrancy
         // cannot just delete the value, otherwise the message can be sent again and could result in some undefined behaviour

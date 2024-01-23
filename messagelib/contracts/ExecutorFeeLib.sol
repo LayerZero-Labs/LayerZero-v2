@@ -106,13 +106,14 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         bytes calldata _options
     ) internal pure returns (uint256 dstAmount, uint256 totalGas) {
         if (_options.length == 0) {
-            revert NoOptions();
+            revert Executor_NoOptions();
         }
 
         uint256 cursor = 0;
         bool ordered = false;
         totalGas = _baseGas;
 
+        uint256 lzReceiveGas;
         while (cursor < _options.length) {
             (uint8 optionType, bytes calldata option, uint256 newCursor) = _options.nextExecutorOption(cursor);
             cursor = newCursor;
@@ -121,16 +122,16 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
                 (uint128 gas, uint128 value) = ExecutorOptions.decodeLzReceiveOption(option);
 
                 // endpoint v1 does not support lzReceive with value
-                if (_v1Eid && value > 0) revert UnsupportedOptionType(optionType);
+                if (_v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
 
                 dstAmount += value;
-                totalGas += gas;
+                lzReceiveGas += gas;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_NATIVE_DROP) {
                 (uint128 nativeDropAmount, ) = ExecutorOptions.decodeNativeDropOption(option);
                 dstAmount += nativeDropAmount;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_LZCOMPOSE) {
                 // endpoint v1 does not support lzCompose
-                if (_v1Eid) revert UnsupportedOptionType(optionType);
+                if (_v1Eid) revert Executor_UnsupportedOptionType(optionType);
 
                 (, uint128 gas, uint128 value) = ExecutorOptions.decodeLzComposeOption(option);
                 dstAmount += value;
@@ -138,14 +139,15 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
             } else if (optionType == ExecutorOptions.OPTION_TYPE_ORDERED_EXECUTION) {
                 ordered = true;
             } else {
-                revert UnsupportedOptionType(optionType);
+                revert Executor_UnsupportedOptionType(optionType);
             }
         }
-        if (cursor != _options.length) revert InvalidExecutorOptions(cursor);
-        if (dstAmount > _nativeCap) revert NativeAmountExceedsCap(dstAmount, _nativeCap);
+        if (cursor != _options.length) revert Executor_InvalidExecutorOptions(cursor);
+        if (dstAmount > _nativeCap) revert Executor_NativeAmountExceedsCap(dstAmount, _nativeCap);
+        if (lzReceiveGas == 0) revert Executor_ZeroLzReceiveGasProvided();
+        totalGas += lzReceiveGas;
 
         if (ordered) {
-            // todo: finalize the premium for ordered
             totalGas = (totalGas * 102) / 100;
         }
     }

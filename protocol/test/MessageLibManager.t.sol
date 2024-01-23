@@ -40,7 +40,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         assertTrue(endpoint.isRegisteredLibrary(newMsglib));
 
         // cant register again
-        vm.expectRevert(Errors.AlreadyRegistered.selector);
+        vm.expectRevert(Errors.LZ_AlreadyRegistered.selector);
         endpoint.registerLibrary(newMsglib);
 
         // check all registered libraries
@@ -57,7 +57,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         endpoint.registerLibrary(address(0x1));
 
         // register a contract without the required interface
-        vm.expectRevert(Errors.UnsupportedInterface.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedInterface.selector);
         endpoint.registerLibrary(invalidMsglib);
     }
 
@@ -68,7 +68,7 @@ contract MessageLibManagerTest is LayerZeroTest {
     }
 
     function test_setDefaultSendLibraryWithUnregisteredLib() public {
-        vm.expectRevert(Errors.OnlyRegisteredLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyRegisteredLib.selector);
         endpoint.setDefaultSendLibrary(2, newMsglib);
     }
 
@@ -83,13 +83,13 @@ contract MessageLibManagerTest is LayerZeroTest {
         assertEq(isDefault, true);
 
         // set default to the same library
-        vm.expectRevert(Errors.SameValue.selector);
+        vm.expectRevert(Errors.LZ_SameValue.selector);
         endpoint.setDefaultSendLibrary(2, blockedLibrary);
     }
 
     function test_setDefaultSendLibraryWithInvalidEid() public {
         endpoint.registerLibrary(newMsglib);
-        vm.expectRevert(Errors.UnsupportedEid.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedEid.selector);
         endpoint.setDefaultSendLibrary(type(uint32).max, newMsglib);
     }
 
@@ -100,7 +100,7 @@ contract MessageLibManagerTest is LayerZeroTest {
     }
 
     function test_setDefaultReceiveLibraryWithUnregisteredLib() public {
-        vm.expectRevert(Errors.OnlyRegisteredLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyRegisteredLib.selector);
         endpoint.setDefaultReceiveLibrary(2, newMsglib, 0);
     }
 
@@ -112,13 +112,13 @@ contract MessageLibManagerTest is LayerZeroTest {
         assertEq(defaultReceiveLib, blockedLibrary);
 
         // set default to the same library
-        vm.expectRevert(Errors.SameValue.selector);
+        vm.expectRevert(Errors.LZ_SameValue.selector);
         endpoint.setDefaultReceiveLibrary(2, blockedLibrary, 0);
     }
 
     function test_setDefaultReceiveLibraryWithInvalidEid() public {
         endpoint.registerLibrary(newMsglib);
-        vm.expectRevert(Errors.UnsupportedEid.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedEid.selector);
         endpoint.setDefaultReceiveLibrary(type(uint32).max, newMsglib, 0);
     }
 
@@ -129,19 +129,19 @@ contract MessageLibManagerTest is LayerZeroTest {
     }
 
     function test_setDefaultReceiveLibraryTimeoutWithUnregisteredLib() public {
-        vm.expectRevert(Errors.OnlyRegisteredLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyRegisteredLib.selector);
         endpoint.setDefaultReceiveLibraryTimeout(2, newMsglib, 0);
     }
 
     function test_setDefaultReceiveLibraryTimeoutWithUnsupportedEid() public {
         endpoint.registerLibrary(newMsglib);
-        vm.expectRevert(Errors.UnsupportedEid.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedEid.selector);
         endpoint.setDefaultReceiveLibraryTimeout(type(uint32).max, newMsglib, 0);
     }
 
     function test_setDefaultReceiveLibraryTimeoutWithInvalidTimestamp() public {
         vm.roll(10); // set block.number to 10
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidExpiry.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidExpiry.selector));
         endpoint.setDefaultReceiveLibraryTimeout(2, blockedLibrary, 9);
     }
 
@@ -178,7 +178,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         assertFalse(isDefault);
 
         // set to the same library
-        vm.expectRevert(Errors.SameValue.selector);
+        vm.expectRevert(Errors.LZ_SameValue.selector);
         endpoint.setSendLibrary(delegate, 2, blockedLibrary);
 
         // set to the default library
@@ -195,26 +195,26 @@ contract MessageLibManagerTest is LayerZeroTest {
 
     function test_setSendLibrary_delegated() public {
         vm.startPrank(DELEGATE);
-        vm.expectRevert(abi.encodeWithSelector(Errors.Unauthorized.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_Unauthorized.selector));
         endpoint.setSendLibrary(OAPP, 2, blockedLibrary);
         _test_setSendLibrary(DELEGATE);
     }
 
     function test_setSendLibraryWithUnregisteredLib() public {
         vm.startPrank(OAPP);
-        vm.expectRevert(Errors.OnlyRegisteredOrDefaultLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyRegisteredOrDefaultLib.selector);
         endpoint.setSendLibrary(OAPP, 2, newMsglib);
     }
 
     function test_setSendLibraryWithInvalidEid() public {
         endpoint.registerLibrary(newMsglib);
         vm.startPrank(OAPP);
-        vm.expectRevert(Errors.UnsupportedEid.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedEid.selector);
         endpoint.setSendLibrary(OAPP, type(uint32).max, newMsglib);
     }
 
     function test_getSendLibraryWithInvalidEid() public {
-        vm.expectRevert(Errors.DefaultSendLibUnavailable.selector);
+        vm.expectRevert(Errors.LZ_DefaultSendLibUnavailable.selector);
         endpoint.getSendLibrary(OAPP, type(uint32).max);
     }
 
@@ -222,7 +222,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         vm.startPrank(_delegate);
 
         // fail to set non-default library with grace period
-        vm.expectRevert(Errors.OnlyNonDefaultLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyNonDefaultLib.selector);
         endpoint.setReceiveLibrary(OAPP, 2, blockedLibrary, 1);
 
         // set non-default library
@@ -232,7 +232,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         assertFalse(isDefault);
 
         // set to the same library
-        vm.expectRevert(Errors.SameValue.selector);
+        vm.expectRevert(Errors.LZ_SameValue.selector);
         endpoint.setReceiveLibrary(OAPP, 2, blockedLibrary, 0);
 
         // set to the default library
@@ -264,7 +264,7 @@ contract MessageLibManagerTest is LayerZeroTest {
     }
 
     function test_getReceiveLibraryWithInvalidEid() public {
-        vm.expectRevert(Errors.DefaultReceiveLibUnavailable.selector);
+        vm.expectRevert(Errors.LZ_DefaultReceiveLibUnavailable.selector);
         endpoint.getReceiveLibrary(OAPP, type(uint32).max);
     }
 
@@ -304,14 +304,14 @@ contract MessageLibManagerTest is LayerZeroTest {
 
     function test_setReceiveLibraryTimeoutWithUnregisteredLib() public {
         vm.startPrank(OAPP);
-        vm.expectRevert(Errors.OnlyRegisteredLib.selector);
+        vm.expectRevert(Errors.LZ_OnlyRegisteredLib.selector);
         endpoint.setReceiveLibraryTimeout(OAPP, 2, newMsglib, 0);
     }
 
     function test_setReceiveLibraryTimeoutWithInvalidEid() public {
         endpoint.registerLibrary(newMsglib);
         vm.startPrank(OAPP);
-        vm.expectRevert(Errors.UnsupportedEid.selector);
+        vm.expectRevert(Errors.LZ_UnsupportedEid.selector);
         endpoint.setReceiveLibraryTimeout(OAPP, type(uint32).max, newMsglib, 0);
     }
 
@@ -319,7 +319,7 @@ contract MessageLibManagerTest is LayerZeroTest {
         vm.roll(10); // set block.number to 10
         vm.startPrank(OAPP);
         endpoint.setReceiveLibrary(OAPP, 2, blockedLibrary, 0); // change to non-default library first
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidExpiry.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidExpiry.selector));
         endpoint.setReceiveLibraryTimeout(OAPP, 2, msglib, 9); // invalid number
     }
 

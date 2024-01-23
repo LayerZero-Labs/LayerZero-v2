@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { MessagingFee, MessagingParams, MessagingReceipt, Origin, ExecutionState, ILayerZeroEndpointV2 } from "./interfaces/ILayerZeroEndpointV2.sol";
+import { MessagingFee, MessagingParams, MessagingReceipt, Origin, ILayerZeroEndpointV2 } from "./interfaces/ILayerZeroEndpointV2.sol";
 import { ISendLib, Packet } from "./interfaces/ISendLib.sol";
 import { ILayerZeroReceiver } from "./interfaces/ILayerZeroReceiver.sol";
 import { Errors } from "./libs/Errors.sol";
@@ -54,7 +54,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
     /// @param _sender the sender of the message
     function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory) {
         // lzToken must be set to support payInLzToken
-        if (_params.payInLzToken && lzToken == address(0x0)) revert Errors.LzTokenUnavailable();
+        if (_params.payInLzToken && lzToken == address(0x0)) revert Errors.LZ_LzTokenUnavailable();
 
         // get the correct outbound nonce
         uint64 nonce = outboundNonce[_sender][_params.dstEid][_params.receiver] + 1;
@@ -84,7 +84,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         MessagingParams calldata _params,
         address _refundAddress
     ) external payable sendContext(_params.dstEid, msg.sender) returns (MessagingReceipt memory) {
-        if (_params.payInLzToken && lzToken == address(0x0)) revert Errors.LzTokenUnavailable();
+        if (_params.payInLzToken && lzToken == address(0x0)) revert Errors.LZ_LzTokenUnavailable();
 
         // send message
         (MessagingReceipt memory receipt, address _sendLibrary) = _send(msg.sender, _params);
@@ -149,11 +149,11 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
     /// @param _receiver the receiver of the message
     /// @param _payloadHash the payload hash of the message
     function verify(Origin calldata _origin, address _receiver, bytes32 _payloadHash) external {
-        if (!isValidReceiveLibrary(_receiver, _origin.srcEid, msg.sender)) revert Errors.InvalidReceiveLibrary();
+        if (!isValidReceiveLibrary(_receiver, _origin.srcEid, msg.sender)) revert Errors.LZ_InvalidReceiveLibrary();
 
         uint64 lazyNonce = lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender];
-        if (!_initializable(_origin, _receiver, lazyNonce)) revert Errors.PathNotInitializable();
-        if (!_verifiable(_origin, _receiver, lazyNonce)) revert Errors.PathNotVerifiable();
+        if (!_initializable(_origin, _receiver, lazyNonce)) revert Errors.LZ_PathNotInitializable();
+        if (!_verifiable(_origin, _receiver, lazyNonce)) revert Errors.LZ_PathNotVerifiable();
 
         // insert the message into the message channel
         _inbound(_receiver, _origin.srcEid, _origin.sender, _origin.nonce, _payloadHash);
@@ -292,7 +292,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
             // in which an oapp sending a message with lz token and the lz token is set to a new token between the tx
             // being sent and the tx being mined. if the required lz token fee is 0 and the old lz token would be
             // locked in the contract instead of being refunded
-            if (supplied == 0) revert Errors.ZeroLzTokenFee();
+            if (supplied == 0) revert Errors.LZ_ZeroLzTokenFee();
         }
     }
 
@@ -308,7 +308,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         uint256 _suppliedLzTokenFee
     ) internal pure {
         if (_required.nativeFee > _suppliedNativeFee || _required.lzTokenFee > _suppliedLzTokenFee) {
-            revert Errors.InsufficientFee(
+            revert Errors.LZ_InsufficientFee(
                 _required.nativeFee,
                 _suppliedNativeFee,
                 _required.lzTokenFee,
@@ -323,8 +323,10 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         return address(0x0);
     }
 
+    /// @notice delegate is authorized by the oapp to configure anything in layerzero
     function setDelegate(address _delegate) external {
         delegates[msg.sender] = _delegate;
+        emit DelegateSet(msg.sender, _delegate);
     }
 
     // ========================= Internal =========================
@@ -351,53 +353,17 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
 
     /// @dev assert the caller to either be the oapp or the delegate
     function _assertAuthorized(address _oapp) internal view override(MessagingChannel, MessageLibManager) {
-        if (msg.sender != _oapp && msg.sender != delegates[_oapp]) revert Errors.Unauthorized();
+        if (msg.sender != _oapp && msg.sender != delegates[_oapp]) revert Errors.LZ_Unauthorized();
     }
 
     // ========================= VIEW FUNCTIONS FOR OFFCHAIN ONLY =========================
     // Not involved in any state transition function.
     // ====================================================================================
-
-    /// @dev check if a message is verifiable.
-    function verifiable(
-        Origin calldata _origin,
-        address _receiver,
-        address _receiveLib,
-        bytes32 _payloadHash
-    ) external view returns (bool) {
-        if (!isValidReceiveLibrary(_receiver, _origin.srcEid, _receiveLib)) return false;
-
-        uint64 lazyNonce = lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender];
-        if (!_initializable(_origin, _receiver, lazyNonce)) return false;
-        if (!_verifiable(_origin, _receiver, lazyNonce)) return false;
-
-        // checked in _inbound for verify
-        if (_payloadHash == EMPTY_PAYLOAD_HASH) return false;
-
-        return true;
+    function initializable(Origin calldata _origin, address _receiver) external view returns (bool) {
+        return _initializable(_origin, _receiver, lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]);
     }
 
-    /// @dev check if a message is executable.
-    /// @return ExecutionState of Executed, Executable, or NotExecutable
-    function executable(Origin calldata _origin, address _receiver) external view returns (ExecutionState) {
-        bytes32 payloadHash = inboundPayloadHash[_receiver][_origin.srcEid][_origin.sender][_origin.nonce];
-
-        // executed if the payload hash has been cleared and the nonce is less than or equal to lazyInboundNonce
-        if (
-            payloadHash == EMPTY_PAYLOAD_HASH &&
-            _origin.nonce <= lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]
-        ) {
-            return ExecutionState.Executed;
-        }
-
-        // executable if nonce has not been executed and is not nil and nonce is less than or equal to inboundNonce
-        if (
-            payloadHash != NIL_PAYLOAD_HASH && _origin.nonce <= inboundNonce(_receiver, _origin.srcEid, _origin.sender)
-        ) {
-            return ExecutionState.Executable;
-        }
-
-        // return NotExecutable as a catch-all
-        return ExecutionState.NotExecutable;
+    function verifiable(Origin calldata _origin, address _receiver) external view returns (bool) {
+        return _verifiable(_origin, _receiver, lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender]);
     }
 }

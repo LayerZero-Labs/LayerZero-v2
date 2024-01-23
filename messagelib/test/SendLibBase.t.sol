@@ -28,12 +28,12 @@ contract SendLibBaseTest is Test, SendLibBase {
 
         // zero executor
         params[0] = SetDefaultExecutorConfigParam(1, ExecutorConfig(1, address(0)));
-        vm.expectRevert(InvalidExecutor.selector);
+        vm.expectRevert(LZ_MessageLib_InvalidExecutor.selector);
         this.setDefaultExecutorConfigs(params);
 
         // zero message size
         params[0] = SetDefaultExecutorConfigParam(1, ExecutorConfig(0, EXECUTOR));
-        vm.expectRevert(ZeroMessageSize.selector);
+        vm.expectRevert(LZ_MessageLib_ZeroMessageSize.selector);
         this.setDefaultExecutorConfigs(params);
 
         // set default executor configs
@@ -61,7 +61,7 @@ contract SendLibBaseTest is Test, SendLibBase {
 
     function test_assertMessageSize(uint256 _actual, uint256 _max) public {
         if (_actual > _max) {
-            vm.expectRevert(abi.encodeWithSelector(InvalidMessageSize.selector, _actual, _max));
+            vm.expectRevert(abi.encodeWithSelector(LZ_MessageLib_InvalidMessageSize.selector, _actual, _max));
         }
         _assertMessageSize(_actual, _max);
     }
@@ -173,7 +173,7 @@ contract SendLibBaseTest is Test, SendLibBase {
 
         // if _amount > _maxAmount, assertAndDebitAmount should revert
         if (_amount > _maxAmount) {
-            vm.expectRevert(abi.encodeWithSelector(InvalidAmount.selector, _amount, _maxAmount));
+            vm.expectRevert(abi.encodeWithSelector(LZ_MessageLib_InvalidAmount.selector, _amount, _maxAmount));
             _debitFee(_amount);
         } else {
             _debitFee(_amount);

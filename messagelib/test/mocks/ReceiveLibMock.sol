@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 import { SetConfigParam } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLibManager.sol";
 import { IMessageLib, MessageLibType } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLib.sol";
 import { IReceiveUlnE2 } from "../../contracts/uln/interfaces/IReceiveUlnE2.sol";
-import { Verification, VerificationState } from "../../contracts/uln/ReceiveUlnBase.sol";
+import { Verification } from "../../contracts/uln/ReceiveUlnBase.sol";
 
 contract ReceiveLibMock is IReceiveUlnE2, IMessageLib {
     error NotImplemented();
@@ -19,10 +19,6 @@ contract ReceiveLibMock is IReceiveUlnE2, IMessageLib {
 
     function version() external pure returns (uint64 major, uint8 minor, uint8 endpointVersion) {
         return (3, 0, 2);
-    }
-
-    function verifiable(bytes calldata, bytes32) external pure returns (VerificationState) {
-        revert NotImplemented();
     }
 
     function commitVerification(bytes calldata, bytes32) external pure {

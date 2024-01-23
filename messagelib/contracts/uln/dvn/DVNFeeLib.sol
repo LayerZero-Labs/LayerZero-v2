@@ -129,9 +129,9 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         while (cursor < _options.length) {
             (uint8 optionType, , uint256 newCursor) = _options.nextDVNOption(cursor);
             cursor = newCursor;
-            revert UnsupportedOptionType(optionType);
+            revert DVN_UnsupportedOptionType(optionType);
         }
-        if (cursor != _options.length) revert DVNOptions.InvalidDVNOptions(cursor);
+        if (cursor != _options.length) revert DVNOptions.DVN_InvalidDVNOptions(cursor);
 
         return 0; // todo: precrime fee model
     }

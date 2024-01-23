@@ -17,6 +17,8 @@ import { TokenMock } from "./mocks/TokenMock.sol";
 contract EndpointV2AltTest is LayerZeroTest {
     event PacketSent(bytes encodedPayload, bytes options, address sendLibrary);
 
+    error LZ_OnlyAltToken();
+
     // endpoint2 is the endpoint with alt token
     EndpointV2Alt internal endpointAlt;
     SimpleMessageLib internal simpleMsgLibAlt;
@@ -58,12 +60,12 @@ contract EndpointV2AltTest is LayerZeroTest {
 
         // fail for insufficient fee
         altToken.transfer(address(endpointAlt), 99);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientFee.selector, 100, 99, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InsufficientFee.selector, 100, 99, 0, 0));
         endpointAlt.send(msgParams, refundAddress);
 
         // fail for sending with value
         altToken.transfer(address(endpointAlt), 100);
-        vm.expectRevert(abi.encodeWithSelector(Errors.OnlyAltToken.selector));
+        vm.expectRevert(abi.encodeWithSelector(LZ_OnlyAltToken.selector));
         endpointAlt.send{ value: 1 }(msgParams, refundAddress);
     }
 }

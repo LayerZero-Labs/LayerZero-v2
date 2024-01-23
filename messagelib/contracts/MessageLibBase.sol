@@ -7,10 +7,10 @@ abstract contract MessageLibBase {
     address internal immutable endpoint;
     uint32 internal immutable localEid;
 
-    error OnlyEndpoint();
+    error LZ_MessageLib_OnlyEndpoint();
 
     modifier onlyEndpoint() {
-        if (endpoint != msg.sender) revert OnlyEndpoint();
+        if (endpoint != msg.sender) revert LZ_MessageLib_OnlyEndpoint();
         _;
     }
 

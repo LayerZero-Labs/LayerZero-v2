@@ -20,8 +20,8 @@ abstract contract SendLibBaseE2 is SendLibBase, ERC165, ISendLib {
     event NativeFeeWithdrawn(address worker, address receiver, uint256 amount);
     event LzTokenFeeWithdrawn(address lzToken, address receiver, uint256 amount);
 
-    error NotTreasury();
-    error CannotWithdrawAltToken();
+    error LZ_MessageLib_NotTreasury();
+    error LZ_MessageLib_CannotWithdrawAltToken();
 
     constructor(
         address _endpoint,
@@ -75,10 +75,10 @@ abstract contract SendLibBaseE2 is SendLibBase, ERC165, ISendLib {
     /// @dev E2 only
     /// @dev treasury only function
     function withdrawLzTokenFee(address _lzToken, address _to, uint256 _amount) external {
-        if (msg.sender != treasury) revert NotTreasury();
+        if (msg.sender != treasury) revert LZ_MessageLib_NotTreasury();
 
         // lz token cannot be the same as the native token
-        if (ILayerZeroEndpointV2(endpoint).nativeToken() == _lzToken) revert CannotWithdrawAltToken();
+        if (ILayerZeroEndpointV2(endpoint).nativeToken() == _lzToken) revert LZ_MessageLib_CannotWithdrawAltToken();
 
         Transfer.token(_lzToken, _to, _amount);
 

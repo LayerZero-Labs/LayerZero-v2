@@ -37,12 +37,14 @@ contract TreasuryFeeHandlerTest is Test {
             abi.encode(msglib)
         );
         vm.mockCall(endpoint, abi.encodeWithSelector(ILayerZeroEndpoint.isSendingPayload.selector), abi.encode(false));
-        vm.expectRevert(TreasuryFeeHandler.OnlyOnSending.selector);
+        vm.expectRevert(TreasuryFeeHandler.LZ_TreasuryFeeHandler_OnlyOnSending.selector);
         handler.payFee(address(lzToken), sender, 100, 100, treasury);
 
         // when both conditions are met, but required amount is more than supplied, revert
         vm.mockCall(endpoint, abi.encodeWithSelector(ILayerZeroEndpoint.isSendingPayload.selector), abi.encode(true));
-        vm.expectRevert(abi.encodeWithSelector(TreasuryFeeHandler.InvalidAmount.selector, 100, 99));
+        vm.expectRevert(
+            abi.encodeWithSelector(TreasuryFeeHandler.LZ_TreasuryFeeHandler_InvalidAmount.selector, 100, 99)
+        );
         handler.payFee(address(lzToken), sender, 100, 99, treasury);
 
         // when both conditions are met, and required amount is less than supplied, transfer

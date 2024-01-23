@@ -142,7 +142,7 @@ contract SimpleMessageLib is Ownable, ERC165 {
     function _handleMessagingParamsHook(bytes memory _encodedPacket, bytes memory _options) internal virtual {}
 
     fallback() external payable {
-        revert Errors.NotImplemented();
+        revert Errors.LZ_NotImplemented();
     }
 
     receive() external payable {}

@@ -31,7 +31,7 @@ contract MessagingComposerTest is LayerZeroTest {
         assertEq(endpoint.composeQueue(oapp, composer, guid, 0), keccak256(message));
 
         // revert due to sending same message
-        vm.expectRevert(Errors.ComposeExists.selector);
+        vm.expectRevert(Errors.LZ_ComposeExists.selector);
         endpoint.sendCompose(composer, guid, 0, message);
     }
 
@@ -48,7 +48,7 @@ contract MessagingComposerTest is LayerZeroTest {
         assertEq(ComposerMock(composer).count(), 1);
 
         // cant resend message even if it is marked as sent
-        vm.expectRevert(Errors.ComposeExists.selector);
+        vm.expectRevert(Errors.LZ_ComposeExists.selector);
         vm.prank(oapp);
         endpoint.sendCompose(composer, guid, 0, message);
     }

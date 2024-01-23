@@ -33,13 +33,13 @@ abstract contract UlnBase is Ownable {
 
     mapping(address oapp => mapping(uint32 eid => UlnConfig)) internal ulnConfigs;
 
-    error Unsorted();
-    error InvalidRequiredDVNCount();
-    error InvalidOptionalDVNCount();
-    error AtLeastOneDVN();
-    error InvalidOptionalDVNThreshold();
-    error InvalidConfirmations();
-    error UnsupportedEid(uint32 eid);
+    error LZ_ULN_Unsorted();
+    error LZ_ULN_InvalidRequiredDVNCount();
+    error LZ_ULN_InvalidOptionalDVNCount();
+    error LZ_ULN_AtLeastOneDVN();
+    error LZ_ULN_InvalidOptionalDVNThreshold();
+    error LZ_ULN_InvalidConfirmations();
+    error LZ_ULN_UnsupportedEid(uint32 eid);
 
     event DefaultUlnConfigsSet(SetDefaultUlnConfigParam[] params);
     event UlnConfigSet(address oapp, uint32 eid, UlnConfig config);
@@ -57,9 +57,9 @@ abstract contract UlnBase is Ownable {
             SetDefaultUlnConfigParam calldata param = _params[i];
 
             // 2.a must not use NIL
-            if (param.config.requiredDVNCount == NIL_DVN_COUNT) revert InvalidRequiredDVNCount();
-            if (param.config.optionalDVNCount == NIL_DVN_COUNT) revert InvalidOptionalDVNCount();
-            if (param.config.confirmations == NIL_CONFIRMATIONS) revert InvalidConfirmations();
+            if (param.config.requiredDVNCount == NIL_DVN_COUNT) revert LZ_ULN_InvalidRequiredDVNCount();
+            if (param.config.optionalDVNCount == NIL_DVN_COUNT) revert LZ_ULN_InvalidOptionalDVNCount();
+            if (param.config.confirmations == NIL_CONFIRMATIONS) revert LZ_ULN_InvalidConfirmations();
 
             // 2.b must have at least one dvn
             _assertAtLeastOneDVN(param.config);
@@ -138,13 +138,13 @@ abstract contract UlnBase is Ownable {
     }
 
     function _assertSupportedEid(uint32 _remoteEid) internal view {
-        if (!_isSupportedEid(_remoteEid)) revert UnsupportedEid(_remoteEid);
+        if (!_isSupportedEid(_remoteEid)) revert LZ_ULN_UnsupportedEid(_remoteEid);
     }
 
     // ============================ Private ===================================
 
     function _assertAtLeastOneDVN(UlnConfig memory _config) private pure {
-        if (_config.requiredDVNCount == 0 && _config.optionalDVNThreshold == 0) revert AtLeastOneDVN();
+        if (_config.requiredDVNCount == 0 && _config.optionalDVNThreshold == 0) revert LZ_ULN_AtLeastOneDVN();
     }
 
     /// @dev this private function is used in both setDefaultUlnConfigs and setUlnConfig
@@ -154,10 +154,10 @@ abstract contract UlnBase is Ownable {
         // if dvnCount == DEFAULT, dvn list must be empty
         // otherwise, dvnList.length == dvnCount and assert the list is valid
         if (_param.requiredDVNCount == NIL_DVN_COUNT || _param.requiredDVNCount == DEFAULT) {
-            if (_param.requiredDVNs.length != 0) revert InvalidRequiredDVNCount();
+            if (_param.requiredDVNs.length != 0) revert LZ_ULN_InvalidRequiredDVNCount();
         } else {
             if (_param.requiredDVNs.length != _param.requiredDVNCount || _param.requiredDVNCount > MAX_COUNT)
-                revert InvalidRequiredDVNCount();
+                revert LZ_ULN_InvalidRequiredDVNCount();
             _assertNoDuplicates(_param.requiredDVNs);
         }
 
@@ -170,13 +170,13 @@ abstract contract UlnBase is Ownable {
         //     a) use a custom 1/1 dvn (practically a required dvn), or
         //     b) use a custom 2/3 dvn
         if (_param.optionalDVNCount == NIL_DVN_COUNT || _param.optionalDVNCount == DEFAULT) {
-            if (_param.optionalDVNs.length != 0) revert InvalidOptionalDVNCount();
-            if (_param.optionalDVNThreshold != 0) revert InvalidOptionalDVNThreshold();
+            if (_param.optionalDVNs.length != 0) revert LZ_ULN_InvalidOptionalDVNCount();
+            if (_param.optionalDVNThreshold != 0) revert LZ_ULN_InvalidOptionalDVNThreshold();
         } else {
             if (_param.optionalDVNs.length != _param.optionalDVNCount || _param.optionalDVNCount > MAX_COUNT)
-                revert InvalidOptionalDVNCount();
+                revert LZ_ULN_InvalidOptionalDVNCount();
             if (_param.optionalDVNThreshold == 0 || _param.optionalDVNThreshold > _param.optionalDVNCount)
-                revert InvalidOptionalDVNThreshold();
+                revert LZ_ULN_InvalidOptionalDVNThreshold();
             _assertNoDuplicates(_param.optionalDVNs);
         }
         // don't assert valid count here, as it needs to be validated along side default config
@@ -188,7 +188,7 @@ abstract contract UlnBase is Ownable {
         address lastDVN = address(0);
         for (uint256 i = 0; i < _dvns.length; i++) {
             address dvn = _dvns[i];
-            if (dvn <= lastDVN) revert Unsorted(); // to ensure no duplicates
+            if (dvn <= lastDVN) revert LZ_ULN_Unsorted(); // to ensure no duplicates
             lastDVN = dvn;
         }
     }

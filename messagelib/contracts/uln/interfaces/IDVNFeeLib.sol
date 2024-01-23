@@ -14,7 +14,7 @@ interface IDVNFeeLib {
         uint16 defaultMultiplierBps;
     }
 
-    error UnsupportedOptionType(uint8 optionType);
+    error DVN_UnsupportedOptionType(uint8 optionType);
 
     function getFeeOnSend(
         FeeParams calldata _params,

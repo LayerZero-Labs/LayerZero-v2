@@ -10,9 +10,8 @@ import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/I
 import { Packet } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
 import { PacketV1Codec } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/PacketV1Codec.sol";
 import { EndpointV1 } from "./mocks/EndpointV1.sol";
-import { ExecutionState } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-import { VerificationState, Verification } from "../contracts/uln/ReceiveUlnBase.sol";
+import { Verification } from "../contracts/uln/ReceiveUlnBase.sol";
 import { ReceiveUln301 } from "../contracts/uln/uln301/ReceiveUln301.sol";
 
 import { Constant } from "./util/Constant.sol";
@@ -61,78 +60,6 @@ contract ReceiveUln301Test is Test {
         );
         assertTrue(submitted);
         assertEq(confirmations_, 1);
-    }
-
-    function test_Verifiable_Verifying() public {
-        // wire to itself
-        Setup.wireFixtureV1WithRemote(fixtureV1, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-        VerificationState status = receiveUln301.verifiable(header, payloadHash);
-        assertEq(uint256(status), uint256(VerificationState.Verifying));
-    }
-
-    function test_Verifiable_Verifiable() public {
-        // wire to itself
-        Setup.wireFixtureV1WithRemote(fixtureV1, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes memory payload = BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81);
-        vm.prank(address(fixtureV1.dvn));
-        receiveUln301.verify(header, keccak256(payload), 1);
-
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-        VerificationState status = receiveUln301.verifiable(header, payloadHash);
-        // in 301, verifiable will return as Verified, because it is ready to be executed
-        assertEq(uint256(status), uint256(VerificationState.Verified));
-    }
-
-    function test_Verifiable_Verified() public {
-        // wire to itself
-        Setup.wireFixtureV1WithRemote(fixtureV1, EID);
-
-        Packet memory packet = PacketUtil.newPacket(
-            1,
-            EID,
-            address(this),
-            EID,
-            address(this),
-            abi.encodePacked("message")
-        );
-        bytes memory encodedPacket = PacketV1Codec.encode(packet);
-
-        bytes memory header = BytesLib.slice(encodedPacket, 0, 81);
-        bytes memory payload = BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81);
-        vm.prank(address(fixtureV1.dvn));
-        receiveUln301.verify(header, keccak256(payload), 1);
-
-        // verify
-        vm.prank(address(fixtureV1.executor));
-        receiveUln301.commitVerification(encodedPacket, 10000000);
-
-        bytes32 payloadHash = keccak256(BytesLib.slice(encodedPacket, 81, encodedPacket.length - 81));
-        VerificationState status = receiveUln301.verifiable(header, payloadHash);
-        assertEq(uint256(status), uint256(VerificationState.Verified));
     }
 
     function test_CommitVerification() public {
