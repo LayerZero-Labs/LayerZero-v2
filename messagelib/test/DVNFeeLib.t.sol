@@ -23,7 +23,7 @@ contract DVNFeeLibTest is Test {
     uint256 gasFee = 100;
     uint128 priceRatio = 1e10;
     uint128 nativePriceUSD = 2000e10;
-    uint64 gas = 0;
+    uint64 gas = 1;
     uint16 multiplierBps = 10000;
     uint128 floorMarginUSD = 3e10;
     uint64 quorum = 3;

@@ -6,10 +6,10 @@ import { ILayerZeroMessagingLibrary } from "@layerzerolabs/lz-evm-v1-0.7/contrac
 
 /// extends ILayerZeroMessagingLibrary instead of ILayerZeroMessagingLibraryV2 for reducing the contract size
 interface IMessageLibE1 is ILayerZeroMessagingLibrary {
-    error InvalidPath();
-    error InvalidSender();
-    error InsufficientMsgValue();
-    error LzTokenPaymentAddressMustBeSender();
+    error LZ_MessageLib_InvalidPath();
+    error LZ_MessageLib_InvalidSender();
+    error LZ_MessageLib_InsufficientMsgValue();
+    error LZ_MessageLib_LzTokenPaymentAddressMustBeSender();
 
     function setLzToken(address _lzToken) external;
 

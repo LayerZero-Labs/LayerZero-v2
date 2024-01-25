@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -14,7 +14,7 @@ contract Treasury is Ownable, ILayerZeroTreasury {
     uint256 public lzTokenFee;
     bool public lzTokenEnabled;
 
-    error LzTokenNotEnabled();
+    error LZ_Treasury_LzTokenNotEnabled();
 
     function getFee(
         address /*_sender*/,
@@ -65,7 +65,7 @@ contract Treasury is Ownable, ILayerZeroTreasury {
 
     function _getFee(uint256 _totalFee, bool _payInLzToken) internal view returns (uint256) {
         if (_payInLzToken) {
-            if (!lzTokenEnabled) revert LzTokenNotEnabled();
+            if (!lzTokenEnabled) revert LZ_Treasury_LzTokenNotEnabled();
             return lzTokenFee;
         } else {
             return (_totalFee * nativeBP) / 10000;

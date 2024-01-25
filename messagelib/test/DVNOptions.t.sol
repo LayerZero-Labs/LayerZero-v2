@@ -15,7 +15,7 @@ contract DVNOptionsTest is Test {
         bytes memory options = "";
         options = options.addDVNOption(255, 0, ""); // index 255
 
-        vm.expectRevert(DVNOptions.InvalidDVNIdx.selector);
+        vm.expectRevert(DVNOptions.DVN_InvalidDVNIdx.selector);
         DVNOptions.getNumDVNs(options);
     }
 

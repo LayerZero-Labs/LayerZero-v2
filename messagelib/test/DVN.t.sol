@@ -85,7 +85,7 @@ contract DVNTest is Test {
     }
 
     function test_Revert_SetSigner_NotBySelf() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.setSigner(alice, true);
     }
@@ -105,7 +105,7 @@ contract DVNTest is Test {
     }
 
     function test_Revert_SetQuorum_NotBySelf() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.setQuorum(2);
     }
@@ -118,13 +118,13 @@ contract DVNTest is Test {
     }
 
     function test_Revert_GrantRole_MessageLib_NotBySelf() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.grantRole(MESSAGE_LIB_ROLE, alice);
     }
 
     function test_Revert_GrantRole_MessageLib_IfAdmin() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         dvn.grantRole(MESSAGE_LIB_ROLE, alice); // address(this) is admin
     }
 
@@ -147,20 +147,20 @@ contract DVNTest is Test {
     }
 
     function test_Revert_GrantRevokeRole_AllowList_NotBySelf() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.grantRole(ALLOWLIST, alice);
 
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.revokeRole(ALLOWLIST, alice);
     }
 
     function test_Revert_GrantRevokeRole_AllowList_IfAdmin() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         dvn.grantRole(ALLOWLIST, alice); // address(this) is admin
 
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         dvn.revokeRole(ALLOWLIST, alice); // address(this) is admin
     }
 
@@ -177,20 +177,20 @@ contract DVNTest is Test {
     }
 
     function test_Revert_GrantRevokeRole_DENYLIST_NotBySelf() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.grantRole(DENYLIST, alice);
 
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         vm.prank(bob);
         dvn.revokeRole(DENYLIST, alice);
     }
 
     function test_Revert_GrantRevokeRole_DENYLIST_IfAdmin() public {
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         dvn.grantRole(DENYLIST, alice); // address(this) is admin
 
-        vm.expectRevert(DVN.OnlySelf.selector);
+        vm.expectRevert(DVN.DVN_OnlySelf.selector);
         dvn.revokeRole(DENYLIST, alice); // address(this) is admin
     }
 
@@ -254,10 +254,10 @@ contract DVNTest is Test {
 
     function test_Revert_GrantRevokeRole_UnknownRole() public {
         bytes32 unknownRole = bytes32(uint256(123));
-        vm.expectRevert(abi.encodeWithSelector(DVN.InvalidRole.selector, unknownRole));
+        vm.expectRevert(abi.encodeWithSelector(DVN.DVN_InvalidRole.selector, unknownRole));
         dvn.grantRole(unknownRole, alice);
 
-        vm.expectRevert(abi.encodeWithSelector(DVN.InvalidRole.selector, unknownRole));
+        vm.expectRevert(abi.encodeWithSelector(DVN.DVN_InvalidRole.selector, unknownRole));
         dvn.revokeRole(unknownRole, alice);
     }
 
@@ -315,7 +315,7 @@ contract DVNTest is Test {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // sign by signer
             signatures = abi.encodePacked(r, s, v);
         }
-        vm.expectRevert(DVN.InstructionExpired.selector);
+        vm.expectRevert(DVN.DVN_InstructionExpired.selector);
         dvn.quorumChangeAdmin(ExecuteParam(eid, address(dvn), data, 0, signatures));
     }
 
@@ -334,7 +334,7 @@ contract DVNTest is Test {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // sign by signer
             signatures = abi.encodePacked(r, s, v);
         }
-        vm.expectRevert(abi.encodeWithSelector(DVN.InvalidVid.selector, invalidVid));
+        vm.expectRevert(abi.encodeWithSelector(DVN.DVN_InvalidVid.selector, invalidVid));
         dvn.quorumChangeAdmin(ExecuteParam(invalidVid, address(dvn), data, 1000, signatures));
     }
 
@@ -353,7 +353,7 @@ contract DVNTest is Test {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // sign by signer
             signatures = abi.encodePacked(r, s, v);
         }
-        vm.expectRevert(abi.encodeWithSelector(DVN.InvalidTarget.selector, invalidTarget));
+        vm.expectRevert(abi.encodeWithSelector(DVN.DVN_InvalidTarget.selector, invalidTarget));
         dvn.quorumChangeAdmin(ExecuteParam(eid, invalidTarget, data, 1000, signatures));
     }
 
@@ -403,7 +403,7 @@ contract DVNTest is Test {
         vm.prank(address(dvn));
         dvn.grantRole(DENYLIST, deniedSender);
 
-        vm.expectRevert(IWorker.NotAllowed.selector);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
         vm.prank(address(fixtureV2.sendUln302));
         dvn.assignJob(ILayerZeroDVN.AssignJobParam(0, "", "", 0, deniedSender), "");
     }
@@ -415,7 +415,7 @@ contract DVNTest is Test {
         dvn.grantRole(ALLOWLIST, allowedSender);
 
         address sender = address(2);
-        vm.expectRevert(IWorker.NotAllowed.selector);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
         vm.prank(address(fixtureV2.sendUln302));
         dvn.assignJob(ILayerZeroDVN.AssignJobParam(0, "", "", 0, sender), "");
     }
@@ -440,7 +440,7 @@ contract DVNTest is Test {
         vm.prank(address(dvn));
         dvn.grantRole(DENYLIST, deniedSender);
 
-        vm.expectRevert(IWorker.NotAllowed.selector);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
         dvn.getFee(0, 0, deniedSender, "");
     }
 
@@ -451,7 +451,7 @@ contract DVNTest is Test {
         dvn.grantRole(ALLOWLIST, allowedSender);
 
         address sender = address(2);
-        vm.expectRevert(IWorker.NotAllowed.selector);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
         dvn.getFee(0, 0, sender, "");
     }
 
@@ -475,7 +475,7 @@ contract DVNTest is Test {
 
     function test_Revert_WithdrawFee_NotUlnLib() public {
         address unknownUlnLib = address(1);
-        vm.expectRevert(IWorker.OnlyMessageLib.selector);
+        vm.expectRevert(IWorker.Worker_OnlyMessageLib.selector);
         dvn.withdrawFee(unknownUlnLib, address(1), 0);
     }
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { Packet } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
 
@@ -16,7 +16,7 @@ contract SendUln301 is SendUlnBase, SendLibBaseE1 {
     uint256 internal constant CONFIG_TYPE_EXECUTOR = 1;
     uint256 internal constant CONFIG_TYPE_ULN = 2;
 
-    error InvalidConfigType(uint256 configType);
+    error LZ_ULN_InvalidConfigType(uint256 configType);
 
     constructor(
         address _endpoint,
@@ -50,7 +50,7 @@ contract SendUln301 is SendUlnBase, SendLibBaseE1 {
         } else if (_configType == CONFIG_TYPE_ULN) {
             _setUlnConfig(_eid, _oapp, abi.decode(_config, (UlnConfig)));
         } else {
-            revert InvalidConfigType(_configType);
+            revert LZ_ULN_InvalidConfigType(_configType);
         }
     }
 
@@ -62,7 +62,7 @@ contract SendUln301 is SendUlnBase, SendLibBaseE1 {
         } else if (_configType == CONFIG_TYPE_ULN) {
             return abi.encode(getUlnConfig(_oapp, _eid));
         } else {
-            revert InvalidConfigType(_configType);
+            revert LZ_ULN_InvalidConfigType(_configType);
         }
     }
 

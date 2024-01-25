@@ -1,162 +1,112 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
-
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { BytesLib } from "solidity-bytes-utils/contracts/BytesLib.sol";
+pragma solidity ^0.8.20;
 
 import { Transfer } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Transfer.sol";
-import { IMessageLib } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLib.sol";
 import { ISendLib } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
 
 import { ILayerZeroDVN } from "../../interfaces/ILayerZeroDVN.sol";
-import { IReceiveUlnE2 } from "../../interfaces/IReceiveUlnE2.sol";
-import { IDVNAdapterFeeLib } from "../../interfaces/IDVNAdapterFeeLib.sol";
+import { Worker } from "../../../Worker.sol";
+import { DVNAdapterMessageCodec } from "./libs/DVNAdapterMessageCodec.sol";
 
-/// @title DVNAdapterBase
+interface ISendLibBase {
+    function fees(address _worker) external view returns (uint256);
+}
+
+interface IReceiveUln {
+    function verify(bytes calldata _packetHeader, bytes32 _payloadHash, uint64 _confirmations) external;
+}
+
+struct ReceiveLibParam {
+    address sendLib;
+    uint32 dstEid;
+    bytes32 receiveLib;
+}
+
+/// @title SendDVNAdapterBase
 /// @notice base contract for DVN adapters
 /// @dev limitations:
 ///  - doesn't accept alt token
 ///  - doesn't respect block confirmations
-///  - doesn't support multiple libraries. One deployment per library
-abstract contract DVNAdapterBase is Ownable, ILayerZeroDVN {
-    using BytesLib for bytes;
+abstract contract DVNAdapterBase is Worker, ILayerZeroDVN {
+    // --- Errors ---
+    error DVNAdapter_InsufficientBalance(uint256 actual, uint256 requested);
+    error DVNAdapter_NotImplemented();
+    error DVNAdapter_MissingRecieveLib(address sendLib, uint32 dstEid);
 
-    struct DstMultiplierParam {
-        uint32 dstEid;
-        uint16 multiplierBps;
-    }
+    event ReceiveLibsSet(ReceiveLibParam[] params);
 
-    /// @dev for protocols that doesn't allow to configure outbound block confirmations per message,
-    /// ignore confirmations set in the config and use the maximum possible confirmations to prevent failure
-    /// in the receive library due to insufficient confirmations if the config was changed before the message is received
+    /// @dev on change of application config, dvn adapters will not perform any additional verification
+    /// @dev to avoid messages from being stuck, all verifications from adapters will be done with the maximum possible confirmations
     uint64 internal constant MAX_CONFIRMATIONS = type(uint64).max;
 
-    uint256 internal constant PACKET_HEADER_SIZE = 81;
-    uint256 internal constant PAYLOAD_HASH_SIZE = 32;
-    uint256 internal constant PAYLOAD_SIZE = PACKET_HEADER_SIZE + PAYLOAD_HASH_SIZE;
+    /// @dev receive lib to call verify() on at destination
+    mapping(address sendLib => mapping(uint32 dstEid => bytes32 receiveLib)) public receiveLibs;
 
-    ISendLib public immutable sendLib;
-    IReceiveUlnE2 public immutable receiveLib;
-    IDVNAdapterFeeLib public feeLib;
+    constructor(
+        address _roleAdmin,
+        address[] memory _admins,
+        uint16 _defaultMultiplierBps
+    ) Worker(new address[](0), address(0x0), _defaultMultiplierBps, _roleAdmin, _admins) {}
 
-    uint16 public defaultMultiplierBps = 10_000; // no multiplier
-    mapping(address admin => bool) public admins;
-
-    error OnlySendLib();
-    error Unauthorized();
-    error InvalidPayloadSize();
-    error VersionMismatch();
-
-    event AdminSet(address indexed admin, bool isAdmin);
-    event DefaultMultiplierSet(uint16 multiplierBps);
-    event DstMultiplierSet(DstMultiplierParam[] params);
-    event FeeLibSet(address indexed feeLib);
-    event FeeWithdrawn(address indexed to, uint256 amount);
-    event TokenWithdrawn(address indexed to, address token, uint256 amount);
-
-    modifier onlySendLib() {
-        if (msg.sender != address(sendLib)) revert OnlySendLib();
-        _;
-    }
-
-    modifier onlyAdmin() {
-        if (!admins[msg.sender]) revert Unauthorized();
-        _;
-    }
-
-    constructor(address _sendLib, address _receiveLib, address[] memory _admins) {
-        (uint64 sendMajor, uint8 sendMinor, uint8 sendEndpoint) = IMessageLib(_sendLib).version();
-        (uint64 receiveMajor, uint8 receiveMinor, uint8 receiveEndpoint) = IMessageLib(_receiveLib).version();
-
-        if (sendMajor != receiveMajor || sendMinor != receiveMinor || sendEndpoint != receiveEndpoint) {
-            revert VersionMismatch();
+    // ========================= OnlyAdmin =========================
+    /// @notice sets receive lib for destination chains
+    /// @dev DEFAULT_ADMIN_ROLE can set MESSAGE_LIB_ROLE for sendLibs and use below function to set receiveLibs
+    function setReceiveLibs(ReceiveLibParam[] calldata _params) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint256 i = 0; i < _params.length; i++) {
+            ReceiveLibParam calldata param = _params[i];
+            receiveLibs[param.sendLib][param.dstEid] = param.receiveLib;
         }
 
-        sendLib = ISendLib(_sendLib);
-        receiveLib = IReceiveUlnE2(_receiveLib);
-
-        for (uint256 i = 0; i < _admins.length; i++) {
-            admins[_admins[i]] = true;
-            emit AdminSet(_admins[i], true);
-        }
+        emit ReceiveLibsSet(_params);
     }
 
-    function setAdmin(address _admin, bool _isAdmin) external onlyOwner {
-        admins[_admin] = _isAdmin;
-        emit AdminSet(_admin, _isAdmin);
+    // ========================= Internal =========================
+    function _getAndAssertReceiveLib(address _sendLib, uint32 _dstEid) internal view returns (bytes32 lib) {
+        lib = receiveLibs[_sendLib][_dstEid];
+        if (lib == bytes32(0)) revert DVNAdapter_MissingRecieveLib(_sendLib, _dstEid);
     }
 
-    // -------------------- Only Admin --------------------
-
-    /// @notice sets the default fee multiplier in basis points
-    /// @param _defaultMultiplierBps default fee multiplier
-    function setDefaultMultiplier(uint16 _defaultMultiplierBps) external onlyAdmin {
-        defaultMultiplierBps = _defaultMultiplierBps;
-        emit DefaultMultiplierSet(_defaultMultiplierBps);
-    }
-
-    function setFeeLib(address _feeLib) external onlyAdmin {
-        feeLib = IDVNAdapterFeeLib(_feeLib);
-        emit FeeLibSet(_feeLib);
-    }
-
-    /// @dev supports withdrawing fee from ULN301, ULN302 and more
-    /// @param _to address to withdraw fee to
-    /// @param _amount amount to withdraw
-    function withdrawFee(address _to, uint256 _amount) external onlyAdmin {
-        _withdrawFee(_to, _amount);
-    }
-
-    /// @dev supports withdrawing token from the contract
-    /// @param _token token address
-    /// @param _to address to withdraw token to
-    /// @param _amount amount to withdraw
-    function withdrawToken(address _token, address _to, uint256 _amount) external onlyAdmin {
-        // transfers native if _token is address(0x0)
-        Transfer.nativeOrToken(_token, _to, _amount);
-        emit TokenWithdrawn(_to, _token, _amount);
-    }
-
-    // -------------------- Internal Functions --------------------
-
-    function _assertBalanceAndWithdrawFee(uint256 _messageFee) internal {
-        uint256 balance = address(this).balance;
-
-        if (balance < _messageFee) {
-            // withdraw fees from the sendLib if balance is insufficient
-            // sendLib will revert if not enough fees were accumulated
-            _withdrawFee(address(this), _messageFee - balance); // todo: why not withdraw all fees from sendLib? so that dont need to withdraw every time
-        }
-    }
-
-    function _withdrawFee(address _to, uint256 _amount) internal {
-        sendLib.withdrawFee(_to, _amount);
-        emit FeeWithdrawn(_to, _amount);
-    }
-
-    function _encodePayload(
+    function _encode(
+        bytes32 _receiveLib,
         bytes memory _packetHeader,
         bytes32 _payloadHash
-    ) internal pure returns (bytes memory payload) {
-        return abi.encodePacked(_packetHeader, _payloadHash);
+    ) internal pure returns (bytes memory) {
+        return DVNAdapterMessageCodec.encode(_receiveLib, _packetHeader, _payloadHash);
     }
 
-    function _decodePayload(
-        bytes memory _payload
-    ) internal pure returns (bytes memory packetHeader, bytes32 payloadHash) {
-        if (_payload.length != PAYLOAD_SIZE) revert InvalidPayloadSize();
-        uint256 start = 0;
-        packetHeader = _payload.slice(start, PACKET_HEADER_SIZE);
-
-        start += PACKET_HEADER_SIZE;
-        payloadHash = _payload.toBytes32(start);
+    function _encodeEmpty() internal pure returns (bytes memory) {
+        return
+            DVNAdapterMessageCodec.encode(bytes32(0), new bytes(DVNAdapterMessageCodec.PACKET_HEADER_SIZE), bytes32(0));
     }
 
-    function _verify(bytes memory _payload) internal {
-        (bytes memory packetHeader, bytes32 payloadHash) = _decodePayload(_payload);
-        receiveLib.verify(packetHeader, payloadHash, MAX_CONFIRMATIONS);
+    function _decodeAndVerify(bytes calldata _payload) internal {
+        (address receiveLib, bytes memory packetHeader, bytes32 payloadHash) = DVNAdapterMessageCodec.decode(_payload);
+
+        IReceiveUln(receiveLib).verify(packetHeader, payloadHash, MAX_CONFIRMATIONS);
     }
 
+    function _withdrawFeeFromSendLib(address _sendLib, address _to) internal {
+        uint256 fee = ISendLibBase(_sendLib).fees(address(this));
+        if (fee > 0) {
+            ISendLib(_sendLib).withdrawFee(_to, fee);
+            emit Withdraw(_sendLib, _to, fee);
+        }
+    }
+
+    function _assertBalanceAndWithdrawFee(address _sendLib, uint256 _messageFee) internal {
+        uint256 balance = address(this).balance;
+        if (balance < _messageFee) {
+            // withdraw all fees from the sendLib if balance is insufficient
+            _withdrawFeeFromSendLib(_sendLib, address(this));
+
+            // check balance again
+            balance = address(this).balance;
+            // revert if balance is still insufficient, need to transfer more funds manually to the adapter
+            if (balance < _messageFee) revert DVNAdapter_InsufficientBalance(balance, _messageFee);
+        }
+    }
+
+    /// @dev to receive refund
     receive() external payable {}
 }

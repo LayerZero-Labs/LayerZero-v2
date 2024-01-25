@@ -51,7 +51,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
 
     function test_Inbound_Revert_InvalidPayloadHash() public {
         // revert due to invalid payload hash
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidPayloadHash.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidPayloadHash.selector));
         _inbound(receiver, remoteEid, senderB32, 1, bytes32(0x0));
     }
 
@@ -102,7 +102,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
 
         uint64 inboundNonce = this.inboundNonce(receiver, remoteEid, senderB32);
         // fail to skip with an invalid nonce
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, uint64(inboundNonce + 2)));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, uint64(inboundNonce + 2)));
         this.skip(receiver, remoteEid, senderB32, inboundNonce + 2);
     }
 
@@ -113,7 +113,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
     function test_skip_delegated() public {
         // Test that the delegate cannot skip before receiver sets delegate
         vm.prank(delegate);
-        vm.expectRevert(abi.encodeWithSelector(Errors.Unauthorized.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_Unauthorized.selector));
         this.skip(receiver, remoteEid, senderB32, 1);
         // Set delegate
         vm.prank(receiver);
@@ -153,7 +153,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         // Nilify should revert with PayloadHashNotFound if the provided payload hash does not match the contents of inboundPayloadHash
         bytes32 wrongPayloadHash = bytes32(uint256(payloadHash) + 1);
         _inbound(receiver, remoteEid, senderB32, curNonce, payloadHash);
-        vm.expectRevert(abi.encodeWithSelector(Errors.PayloadHashNotFound.selector, payloadHash, wrongPayloadHash));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_PayloadHashNotFound.selector, payloadHash, wrongPayloadHash));
         this.nilify(receiver, remoteEid, senderB32, curNonce, wrongPayloadHash);
 
         // Nilify a verified but non-executed nonce should succeed
@@ -178,7 +178,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         curNonce = 2;
         _inbound(receiver, remoteEid, senderB32, curNonce, payloadHash);
         _clearPayload(receiver, remoteEid, senderB32, curNonce, payload);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, curNonce));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, curNonce));
         this.nilify(
             receiver,
             remoteEid,
@@ -194,7 +194,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         curNonce = 1;
         _inbound(receiver, remoteEid, senderB32, curNonce, payloadHash);
         _clearPayload(receiver, remoteEid, senderB32, curNonce, payload);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, curNonce));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, curNonce));
         this.nilify(
             receiver,
             remoteEid,
@@ -228,7 +228,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
 
     function test_nilify_delegated() public {
         vm.prank(delegate);
-        vm.expectRevert(abi.encodeWithSelector(Errors.Unauthorized.selector));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_Unauthorized.selector));
         this.nilify(receiver, remoteEid, senderB32, 1, inboundPayloadHash[receiver][remoteEid][senderB32][1]);
         vm.prank(receiver);
         this.setDelegate(delegate);
@@ -258,16 +258,16 @@ contract MessagingChannelTest is Test, MessagingChannel {
         assertEq(lazyNonce, this.lazyInboundNonce(receiver, remoteEid, senderB32));
 
         // Burn should revert with InvalidNonce if the requested nonce is greater than lazyInboundNonce
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, lazyNonce + 1));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, lazyNonce + 1));
         this.burn(receiver, remoteEid, senderB32, lazyNonce + 1, payloadHash);
 
         // Burn should revert with InvalidNonce if the payload hash of the requested nonce is 0x0
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, lazyNonce - 1));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, lazyNonce - 1));
         this.burn(receiver, remoteEid, senderB32, lazyNonce - 1, EMPTY_PAYLOAD_HASH);
 
         // Burn should revert with PayloadHashNotFound if the provided payload hash does not match the contents of inboundPayloadHash
         bytes32 wrongPayloadHash = bytes32(uint256(payloadHash) + 1);
-        vm.expectRevert(abi.encodeWithSelector(Errors.PayloadHashNotFound.selector, payloadHash, wrongPayloadHash));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_PayloadHashNotFound.selector, payloadHash, wrongPayloadHash));
         this.burn(receiver, remoteEid, senderB32, 1, wrongPayloadHash);
 
         // Burn a verified but non-executed nonce should succeed
@@ -283,7 +283,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
 
     function test_burn_delegated() public {
         vm.prank(delegate);
-        vm.expectRevert(Errors.Unauthorized.selector);
+        vm.expectRevert(Errors.LZ_Unauthorized.selector);
         this.burn(receiver, remoteEid, senderB32, 1, inboundPayloadHash[receiver][remoteEid][senderB32][1]);
         vm.prank(receiver);
         this.setDelegate(delegate);
@@ -303,7 +303,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         _inbound(receiver, remoteEid, senderB32, 4, payloadHash);
 
         // try to clear nonce 4 but fails due to nonce 3 not inbounded
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidNonce.selector, uint64(3)));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_InvalidNonce.selector, uint64(3)));
         _clearPayload(receiver, remoteEid, senderB32, 4, payload);
 
         // clear nonce 2 successfully
@@ -321,7 +321,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         _inbound(receiver, remoteEid, senderB32, 1, payloadHash);
 
         // reverts due to wrong message
-        vm.expectRevert(abi.encodeWithSelector(Errors.PayloadHashNotFound.selector, payloadHash, keccak256("bar")));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_PayloadHashNotFound.selector, payloadHash, keccak256("bar")));
         _clearPayload(receiver, remoteEid, senderB32, 1, "bar"); // wrong message
     }
 
@@ -333,7 +333,7 @@ contract MessagingChannelTest is Test, MessagingChannel {
         _clearPayload(receiver, remoteEid, senderB32, 1, payload);
 
         // reverts due to already cleared
-        vm.expectRevert(abi.encodeWithSelector(Errors.PayloadHashNotFound.selector, bytes32(0x0), payloadHash));
+        vm.expectRevert(abi.encodeWithSelector(Errors.LZ_PayloadHashNotFound.selector, bytes32(0x0), payloadHash));
         _clearPayload(receiver, remoteEid, senderB32, 1, payload);
     }
 
@@ -351,6 +351,6 @@ contract MessagingChannelTest is Test, MessagingChannel {
     }
 
     function _assertAuthorized(address _oapp) internal view override {
-        if (msg.sender != _oapp && msg.sender != delegates[_oapp]) revert Errors.Unauthorized();
+        if (msg.sender != _oapp && msg.sender != delegates[_oapp]) revert Errors.LZ_Unauthorized();
     }
 }

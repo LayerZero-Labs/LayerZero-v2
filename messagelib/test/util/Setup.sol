@@ -6,6 +6,7 @@ import { EndpointV2 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/Endpoint
 import { EndpointV1 } from "../mocks/EndpointV1.sol";
 
 import { NonceContractMock as NonceContract } from "../../contracts/uln/uln301/mocks/NonceContractMock.sol";
+import { IDVN } from "../../contracts/uln/interfaces/IDVN.sol";
 import { DVN } from "../../contracts/uln/dvn/DVN.sol";
 import { DVNFeeLib } from "../../contracts/uln/dvn/DVNFeeLib.sol";
 import { Executor } from "../../contracts/Executor.sol";
@@ -261,6 +262,10 @@ library Setup {
         address[] memory admins = new address[](1);
         admins[0] = address(this);
         DVN dvn = new DVN(eid, libs, priceFeed, signers, 1, admins);
+
+        IDVN.DstConfigParam[] memory dstConfigParams = new IDVN.DstConfigParam[](1);
+        dstConfigParams[0] = IDVN.DstConfigParam({ dstEid: eid, gas: 5000, multiplierBps: 0, floorMarginUSD: 0 });
+        dvn.setDstConfig(dstConfigParams);
         DVNFeeLib dvnFeeLib = new DVNFeeLib(1e18);
         dvn.setWorkerFeeLib(address(dvnFeeLib));
 

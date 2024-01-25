@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
@@ -25,6 +25,6 @@ contract BlockedMessageLib is ERC165 {
     }
 
     fallback() external {
-        revert Errors.NotImplemented();
+        revert Errors.LZ_NotImplemented();
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Transfer } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Transfer.sol";
@@ -40,6 +40,8 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         IDVN.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external payable returns (uint256) {
+        if (_dstConfig.gas == 0) revert DVN_EidNotSupported(_params.dstEid);
+
         _decodeDVNOptions(_options); // todo: validate options
 
         uint256 callDataSize = _getCallDataSize(_params.quorum);
@@ -76,6 +78,8 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         IDVN.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256) {
+        if (_dstConfig.gas == 0) revert DVN_EidNotSupported(_params.dstEid);
+
         _decodeDVNOptions(_options); // validate options
 
         uint256 callDataSize = _getCallDataSize(_params.quorum);
@@ -129,9 +133,9 @@ contract DVNFeeLib is Ownable, IDVNFeeLib {
         while (cursor < _options.length) {
             (uint8 optionType, , uint256 newCursor) = _options.nextDVNOption(cursor);
             cursor = newCursor;
-            revert UnsupportedOptionType(optionType);
+            revert DVN_UnsupportedOptionType(optionType);
         }
-        if (cursor != _options.length) revert DVNOptions.InvalidDVNOptions(cursor);
+        if (cursor != _options.length) revert DVNOptions.DVN_InvalidDVNOptions(cursor);
 
         return 0; // todo: precrime fee model
     }

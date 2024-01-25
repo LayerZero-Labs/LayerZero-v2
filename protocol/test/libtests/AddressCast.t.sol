@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import { Test } from "forge-std/Test.sol";
 
 import { AddressCast } from "../../contracts/libs/AddressCast.sol";
-import { Errors } from "../../contracts/libs/Errors.sol";
 
 contract AddressCastTest is Test {
     AddressCastWrapper internal addressCastWrapper;
@@ -22,7 +21,7 @@ contract AddressCastTest is Test {
 
     function test_Revert_Bytes_ToBytes32_IfGt32Bytes() public {
         bytes memory bytesAddress = abi.encodePacked(address(0x1), address(0x2));
-        vm.expectRevert(Errors.InvalidAddress.selector);
+        vm.expectRevert(AddressCast.AddressCast_InvalidAddress.selector);
         addressCastWrapper.toBytes32(bytesAddress);
     }
 
@@ -54,7 +53,7 @@ contract AddressCastTest is Test {
         bytes32 bytes32Address = bytes32(
             uint256(0x00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffff)
         );
-        vm.expectRevert(Errors.InvalidSizeForAddress.selector);
+        vm.expectRevert(AddressCast.AddressCast_InvalidSizeForAddress.selector);
         AddressCast.toBytes(bytes32Address, 33);
     }
 
@@ -62,7 +61,7 @@ contract AddressCastTest is Test {
         bytes32 bytes32Address = bytes32(
             uint256(0x00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffff)
         );
-        vm.expectRevert(Errors.InvalidSizeForAddress.selector);
+        vm.expectRevert(AddressCast.AddressCast_InvalidSizeForAddress.selector);
         AddressCast.toBytes(bytes32Address, 0);
     }
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import { ILayerZeroEndpoint } from "@layerzerolabs/lz-evm-v1-0.7/contracts/interfaces/ILayerZeroEndpoint.sol";
@@ -49,15 +49,15 @@ abstract contract ReceiveLibBaseE1 is MessageLibBase, AddressSizeConfig, ILayerZ
     event DefaultExecutorsSet(SetDefaultExecutorParam[] params);
     event ExecutorSet(address oapp, uint32 eid, address executor);
 
-    error InvalidExecutor();
-    error OnlyExecutor();
+    error LZ_MessageLib_InvalidExecutor();
+    error LZ_MessageLib_OnlyExecutor();
 
     constructor(address _endpoint, uint32 _localEid) MessageLibBase(_endpoint, _localEid) {}
 
     function setDefaultExecutors(SetDefaultExecutorParam[] calldata _params) external onlyOwner {
         for (uint256 i = 0; i < _params.length; ++i) {
             SetDefaultExecutorParam calldata param = _params[i];
-            if (param.executor == address(0x0)) revert InvalidExecutor();
+            if (param.executor == address(0x0)) revert LZ_MessageLib_InvalidExecutor();
             defaultExecutors[param.eid] = param.executor;
         }
         emit DefaultExecutorsSet(_params);
@@ -85,7 +85,7 @@ abstract contract ReceiveLibBaseE1 is MessageLibBase, AddressSizeConfig, ILayerZ
         // if the executor is malicious, it can make the msg as a storedPayload or fail in the nonBlockingApp
         // which might result in unintended behaviour and risks, like grieving.
         // to err on the safe side, we should assert the executor here.
-        if (msg.sender != getExecutor(_receiver, _srcEid)) revert OnlyExecutor();
+        if (msg.sender != getExecutor(_receiver, _srcEid)) revert LZ_MessageLib_OnlyExecutor();
 
         if (_receiver.code.length == 0) {
             /// on chains where EOA has no codes, it will early return and emit InvalidDst event

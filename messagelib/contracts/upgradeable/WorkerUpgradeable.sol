@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LZBL-1.2
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -70,7 +70,7 @@ abstract contract WorkerUpgradeable is Initializable, AccessControlUpgradeable, 
 
     modifier onlyAcl(address _sender) {
         if (!hasAcl(_sender)) {
-            revert NotAllowed();
+            revert Worker_NotAllowed();
         }
         _;
     }
@@ -127,7 +127,7 @@ abstract contract WorkerUpgradeable is Initializable, AccessControlUpgradeable, 
     /// @param _to address to withdraw fee to
     /// @param _amount amount to withdraw
     function withdrawFee(address _lib, address _to, uint256 _amount) external onlyRole(ADMIN_ROLE) {
-        if (!hasRole(MESSAGE_LIB_ROLE, _lib)) revert OnlyMessageLib();
+        if (!hasRole(MESSAGE_LIB_ROLE, _lib)) revert Worker_OnlyMessageLib();
         ISendLib(_lib).withdrawFee(_to, _amount);
         emit Withdraw(_lib, _to, _amount);
     }
@@ -174,7 +174,7 @@ abstract contract WorkerUpgradeable is Initializable, AccessControlUpgradeable, 
 
     /// @dev overrides AccessControl to disable renouncing of roles
     function renounceRole(bytes32 /*role*/, address /*account*/) public pure override {
-        revert RoleRenouncingDisabled();
+        revert Worker_RoleRenouncingDisabled();
     }
 
     /**
@@ -182,5 +182,5 @@ abstract contract WorkerUpgradeable is Initializable, AccessControlUpgradeable, 
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[45] private __gap;
+    uint256[47] private __gap;
 }

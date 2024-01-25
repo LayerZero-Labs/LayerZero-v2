@@ -9,9 +9,9 @@ interface IWorker {
     event SetSupportedOptionTypes(uint32 dstEid, uint8[] optionTypes);
     event Withdraw(address lib, address to, uint256 amount);
 
-    error NotAllowed();
-    error OnlyMessageLib();
-    error RoleRenouncingDisabled();
+    error Worker_NotAllowed();
+    error Worker_OnlyMessageLib();
+    error Worker_RoleRenouncingDisabled();
 
     function setPriceFeed(address _priceFeed) external;
 

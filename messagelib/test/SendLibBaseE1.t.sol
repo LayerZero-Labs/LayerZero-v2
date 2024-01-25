@@ -40,7 +40,7 @@ contract SendLibBaseE1Test is SendLibBaseE1, Test {
         this.assertPath(_sender, path, _receiver.length);
 
         // revert if address is wrong
-        vm.expectRevert(InvalidPath.selector);
+        vm.expectRevert(LZ_MessageLib_InvalidPath.selector);
         this.assertPath(_sender, path, _receiver.length + 1);
     }
 

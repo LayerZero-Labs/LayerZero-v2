@@ -29,4 +29,6 @@ interface IMessagingChannel {
         bytes32 _sender,
         uint64 _nonce
     ) external view returns (bytes32);
+
+    function lazyInboundNonce(address _receiver, uint32 _srcEid, bytes32 _sender) external view returns (uint64);
 }
