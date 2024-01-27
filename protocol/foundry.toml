@@ -21,6 +21,7 @@ remappings = [
     # ok - solidity-stringutils/=node_modules/solidity-stringutils/
     # not ok - solidity-stringutils/=node_modules/solidity-stringutils/src/
     '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
+    '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
     'solidity-bytes-utils/=node_modules/solidity-bytes-utils/',
     'hardhat-deploy/=node_modules/hardhat-deploy/',
     '@layerzerolabs/lz-evm-protocol-v2/=node_modules/@layerzerolabs/lz-evm-protocol-v2/',
