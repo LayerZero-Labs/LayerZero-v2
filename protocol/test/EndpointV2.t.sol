@@ -104,7 +104,7 @@ contract EndpointV2Test is LayerZeroTest {
         endpoint.setLzToken(address(lzToken));
         lzToken.transfer(address(endpoint), 200);
 
-        // send with 200 native and 200, but the endpoint only accept 100 native and 99 lz token
+        // send with 200 native and 200, but the endpoint only accepts 100 native and 99 lz token
         MessagingParams memory msgParams = MessagingParams(remoteEid, receiverB32, message, "", true);
         MessagingReceipt memory receipt = endpoint.send{ value: 200 }(msgParams, refundAddress);
         assertEq(receipt.fee.nativeFee, 100);

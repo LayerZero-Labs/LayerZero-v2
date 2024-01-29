@@ -30,7 +30,7 @@ import { MessagingContext } from "./MessagingContext.sol";
 //     -userApplication -> oapp. Omnichain Application
 //     -srcAddress -> sender
 //     -dstAddress -> receiver
-//          - Rationale: The sender/receiver on EVM is the address. However, on non-EVM chains, the sender/receiver could
+//          - Rationale: The sender/receiver on EVM is the address. However, on non-EVM chains, the sender/receiver could be
 //          represented as a public key, or some other identifier. The term sender/receiver is more generic
 //     -payload -> message.
 //          - Rationale: The term payload is used in the context of a packet, which is a combination of the message and GUID
@@ -45,7 +45,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
     }
 
     /// @dev MESSAGING STEP 0
-    /// @notice This view function gives the application built on top of LayerZero the ability to requests a quote
+    /// @notice This view function gives the application built on top of LayerZero the ability to request a quote
     /// with the same parameters as they would to send their message. Since the quotes are given on chain there is a
     /// race condition in which the prices could change between the time the user gets their quote and the time they
     /// submit their message. If the price moves up and the user doesn't send enough funds the transaction will revert,
@@ -136,7 +136,7 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
             _params.payInLzToken
         );
 
-        // Emit packet information for DVNs, Executors, and any other offchain infrastructure to only listen
+        // Emit packet information for DVNs, Executors, and any other off chain infrastructure to only listen
         // for this one event to perform their actions.
         emit PacketSent(encodedPacket, _params.options, _sendLibrary);
 
