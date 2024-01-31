@@ -57,7 +57,7 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
     mapping(uint32 srcEid => uint256 count) public inboundCount;
     mapping(uint32 dstEid => uint256 count) public outboundCount;
 
-    constructor(address _endpoint, address _owner) OApp(_endpoint, _owner) {
+    constructor(address _endpoint, address _delegate) OApp(_endpoint, _delegate) {
         admin = msg.sender;
         eid = ILayerZeroEndpointV2(_endpoint).eid();
     }

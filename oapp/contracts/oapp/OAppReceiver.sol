@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.20;
 
-import { ILayerZeroReceiver, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroReceiver.sol";
+import { IOAppReceiver, Origin } from "./interfaces/IOAppReceiver.sol";
 import { OAppCore } from "./OAppCore.sol";
 
 /**
  * @title OAppReceiver
  * @dev Abstract contract implementing the ILayerZeroReceiver interface and extending OAppCore for OApp receivers.
  */
-abstract contract OAppReceiver is ILayerZeroReceiver, OAppCore {
+abstract contract OAppReceiver is IOAppReceiver, OAppCore {
     // Custom error message for when the caller is not the registered endpoint/
     error OnlyEndpoint(address addr);
 
@@ -23,11 +23,22 @@ abstract contract OAppReceiver is ILayerZeroReceiver, OAppCore {
      * @return receiverVersion The version of the OAppReceiver.sol contract.
      *
      * @dev Providing 0 as the default for OAppSender version. Indicates that the OAppSender is not implemented.
-     * ie. this is a SEND only OApp.
+     * ie. this is a RECEIVE only OApp.
      * @dev If the OApp uses both OAppSender and OAppReceiver, then this needs to be override returning the correct versions.
      */
     function oAppVersion() public view virtual returns (uint64 senderVersion, uint64 receiverVersion) {
         return (0, RECEIVER_VERSION);
+    }
+
+    /**
+     * @notice Retrieves the address responsible for 'sending' composeMsg's to the Endpoint.
+     * @return sender The address responsible for 'sending' composeMsg's to the Endpoint.
+     *
+     * @dev Applications can optionally choose to implement a separate composeMsg sender that is NOT the bridging layer.
+     * @dev The default sender IS the OApp implementer.
+     */
+    function composeMsgSender() public view virtual returns (address sender) {
+        return address(this);
     }
 
     /**
