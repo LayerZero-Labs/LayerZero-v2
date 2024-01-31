@@ -12,6 +12,7 @@ interface IOAppCore {
     error OnlyPeer(uint32 eid, bytes32 sender);
     error NoPeer(uint32 eid);
     error InvalidEndpointCall();
+    error InvalidDelegate();
 
     // Event emitted when a peer (OApp) is set for a corresponding endpoint
     event PeerSet(uint32 eid, bytes32 peer);

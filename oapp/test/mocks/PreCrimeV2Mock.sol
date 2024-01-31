@@ -9,7 +9,7 @@ import { InboundPacket } from "../../contracts/precrime/libs/Packet.sol";
 import { PreCrimeV2SimulatorMock } from "./PreCrimeV2SimulatorMock.sol";
 
 contract PreCrimeV2Mock is PreCrime {
-    constructor(address _endpoint, address _simulator) PreCrime(_endpoint, _simulator, msg.sender) {}
+    constructor(address _endpoint, address _simulator) PreCrime(_endpoint, _simulator) {}
 
     uint32[] public eids;
     bytes[] public results;

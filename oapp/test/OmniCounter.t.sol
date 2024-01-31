@@ -45,7 +45,7 @@ contract OmniCounterTest is TestHelper {
 
     function setUpPreCrime() public {
         // set up precrime for aCounter
-        aPreCrime = new OmniCounterPreCrime(address(aCounter.endpoint()), address(aCounter), address(this));
+        aPreCrime = new OmniCounterPreCrime(address(aCounter.endpoint()), address(aCounter));
         aPreCrime.setMaxBatchSize(10);
 
         PreCrimePeer[] memory aCounterPreCrimePeers = new PreCrimePeer[](1);
@@ -59,7 +59,7 @@ contract OmniCounterTest is TestHelper {
         aCounter.setPreCrime(address(aPreCrime));
 
         // set up precrime for bCounter
-        bPreCrime = new OmniCounterPreCrime(address(bCounter.endpoint()), address(bCounter), address(this));
+        bPreCrime = new OmniCounterPreCrime(address(bCounter.endpoint()), address(bCounter));
         bPreCrime.setMaxBatchSize(10);
 
         PreCrimePeer[] memory bCounterPreCrimePeers = new PreCrimePeer[](1);

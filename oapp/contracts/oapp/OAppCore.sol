@@ -17,14 +17,17 @@ abstract contract OAppCore is IOAppCore, Ownable {
     mapping(uint32 eid => bytes32 peer) public peers;
 
     /**
-     * @dev Constructor to initialize the OAppCore with the provided endpoint and owner.
+     * @dev Constructor to initialize the OAppCore with the provided endpoint and delegate.
      * @param _endpoint The address of the LOCAL Layer Zero endpoint.
-     * @param _owner The address of the owner of the OAppCore.
+     * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
+     *
+     * @dev The delegate typically should be set as the owner of the contract.
      */
-    constructor(address _endpoint, address _owner) {
-        _transferOwnership(_owner);
+    constructor(address _endpoint, address _delegate) {
         endpoint = ILayerZeroEndpointV2(_endpoint);
-        endpoint.setDelegate(_owner); // @dev By default, the owner is the delegate
+
+        if (_delegate == address(0)) revert InvalidDelegate();
+        endpoint.setDelegate(_delegate);
     }
 
     /**
@@ -60,7 +63,6 @@ abstract contract OAppCore is IOAppCore, Ownable {
      *
      * @dev Only the owner/admin of the OApp can call this function.
      * @dev Provides the ability for a delegate to set configs, on behalf of the OApp, directly on the Endpoint contract.
-     * @dev Defaults to the owner of the OApp.
      */
     function setDelegate(address _delegate) public onlyOwner {
         endpoint.setDelegate(_delegate);
