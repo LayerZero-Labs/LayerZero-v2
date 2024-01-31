@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 import { OAppPreCrimeSimulator } from "../../contracts/precrime/OAppPreCrimeSimulator.sol";
 

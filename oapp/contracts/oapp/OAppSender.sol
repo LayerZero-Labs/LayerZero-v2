@@ -27,7 +27,7 @@ abstract contract OAppSender is OAppCore {
      * @return receiverVersion The version of the OAppReceiver.sol contract.
      *
      * @dev Providing 0 as the default for OAppReceiver version. Indicates that the OAppReceiver is not implemented.
-     * ie. this is a RECEIVE only OApp.
+     * ie. this is a SEND only OApp.
      * @dev If the OApp uses both OAppSender and OAppReceiver, then this needs to be override returning the correct versions
      */
     function oAppVersion() public view virtual returns (uint64 senderVersion, uint64 receiverVersion) {
