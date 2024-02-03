@@ -6,6 +6,8 @@ Refer to the [LayerZero V2 Docs](https://docs.layerzero.network/contracts/overvi
 
 Join the `#dev-general` channel on [Discord](https://discord-layerzero.netlify.app/discord) to discuss technical issues.
 
+[Audit Reports](https://github.com/LayerZero-Labs/Audits)
+
 ## Build & Test
 
 ```bash
