@@ -16,7 +16,7 @@ contract UlnOptionsMock {
 }
 
 contract OptionsHelper {
-    UlnOptionsMock ulnOptions = new UlnOptionsMock();
+    UlnOptionsMock ulnOptions;
 
     function _parseExecutorLzReceiveOption(bytes memory _options) internal view returns (uint256 gas, uint256 value) {
         (bool exist, bytes memory option) = _getExecutorOptionByOptionType(
