@@ -26,7 +26,7 @@ import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/I
 import { OApp } from "../contracts/oapp/OApp.sol";
 import { OptionsBuilder } from "../contracts/oapp/libs/OptionsBuilder.sol";
 
-import { OptionsHelper } from "./OptionsHelper.sol";
+import { OptionsHelper, UlnOptionsMock } from "./OptionsHelper.sol";
 import { SendUln302Mock as SendUln302 } from "./mocks/SendUln302Mock.sol";
 import { SimpleMessageLibMock } from "./mocks/SimpleMessageLibMock.sol";
 import "./mocks/ExecutorFeeLibMock.sol";
@@ -53,7 +53,9 @@ contract TestHelper is Test, OptionsHelper {
 
     uint128 public executorValueCap = 0.1 ether;
 
-    function setUp() public virtual {}
+    function setUp() public virtual {
+        ulnOptions = new UlnOptionsMock();
+    }
 
     /**
      * @dev set executorValueCap if more than 0.1 ether is necessary
