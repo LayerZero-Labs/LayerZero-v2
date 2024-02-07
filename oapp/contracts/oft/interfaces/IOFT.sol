@@ -60,13 +60,14 @@ interface IOFT {
         bytes32 indexed guid, // GUID of the OFT message.
         uint32 dstEid, // Destination Endpoint ID.
         address indexed fromAddress, // Address of the sender on the src chain.
-        uint256 amountLD // Amount of tokens sent in local decimals.
+        uint256 amountSentLD, // Amount of tokens sent in local decimals.
+        uint256 amountReceivedLD // Amount of tokens received in local decimals.
     );
     event OFTReceived(
         bytes32 indexed guid, // GUID of the OFT message.
         uint32 srcEid, // Source Endpoint ID.
         address indexed toAddress, // Address of the recipient on the dst chain.
-        uint256 amountLD // Amount of tokens received in local decimals.
+        uint256 amountReceivedLD // Amount of tokens received in local decimals.
     );
 
     /**
