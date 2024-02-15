@@ -122,7 +122,7 @@ abstract contract SendLibBaseE2 is SendLibBase, ERC165, ISendLib {
         totalNativeFee += _payExecutor(config.executor, _packet.dstEid, _packet.sender, msgSize, executorOptions);
 
         // handle other workers
-        (uint256 verifierFee, bytes memory packetBytes) = _payVerifier(_packet, validationOptions); //for ULN, it will be dvns
+        (uint256 verifierFee, bytes memory packetBytes) = _payVerifier(_packet, validationOptions); // for ULN, it will be dvns
         totalNativeFee += verifierFee;
 
         encodedPacket = packetBytes;
