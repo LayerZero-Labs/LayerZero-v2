@@ -2,13 +2,18 @@
 
 pragma solidity ^0.8.20;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./interfaces/ILayerZeroEndpointV2.sol";
 
+/**
+ * @title EndpointV2ViewUpgradeable
+ * @dev This contract provides view functions for interacting with LayerZero EndpointV2.
+ *      It includes functions to check if a message is initializable, verifiable, and executable.
+ */
 enum ExecutionState {
-    NotExecutable, // executor: waits for PayloadVerified event and starts polling for executable
-    VerifiedButNotExecutable, // executor: starts active polling for executable
+    NotExecutable, // @notice executor: waits for PayloadVerified event and starts polling for executable
+    VerifiedButNotExecutable, // @notice executor: starts active polling for executable
     Executable,
     Executed
 }
@@ -19,26 +24,60 @@ contract EndpointV2ViewUpgradeable is Initializable {
 
     ILayerZeroEndpointV2 public endpoint;
 
-    function __EndpointV2View_init(address _endpoint) internal onlyInitializing {
+    /**
+     * @dev Initializes the contract with the given endpoint address.
+     * @param _endpoint The address of the LayerZero EndpointV2 contract.
+     */
+    function __EndpointV2View_init(
+        address _endpoint
+    ) internal onlyInitializing {
         __EndpointV2View_init_unchained(_endpoint);
     }
 
-    function __EndpointV2View_init_unchained(address _endpoint) internal onlyInitializing {
+    /**
+     * @dev Completes the initialization process.
+     * @param _endpoint The address of the LayerZero EndpointV2 contract.
+     */
+    function __EndpointV2View_init_unchained(
+        address _endpoint
+    ) internal onlyInitializing {
         endpoint = ILayerZeroEndpointV2(_endpoint);
     }
 
-    function initializable(Origin memory _origin, address _receiver) public view returns (bool) {
+    /**
+     * @notice Check if a message is initializable.
+     * @param _origin The origin of the message.
+     * @param _receiver The receiver of the message.
+     * @return A boolean indicating whether the message is initializable.
+     */
+    function initializable(
+        Origin memory _origin,
+        address _receiver
+    ) public view returns (bool) {
         return endpoint.initializable(_origin, _receiver);
     }
 
-    /// @dev check if a message is verifiable.
+    /**
+     * @notice Check if a message is verifiable.
+     * @param _origin The origin of the message.
+     * @param _receiver The receiver of the message.
+     * @param _receiveLib The receive library address.
+     * @param _payloadHash The payload hash of the message.
+     * @return A boolean indicating whether the message is verifiable.
+     */
     function verifiable(
         Origin memory _origin,
         address _receiver,
         address _receiveLib,
         bytes32 _payloadHash
     ) public view returns (bool) {
-        if (!endpoint.isValidReceiveLibrary(_receiver, _origin.srcEid, _receiveLib)) return false;
+        if (
+            !endpoint.isValidReceiveLibrary(
+                _receiver,
+                _origin.srcEid,
+                _receiveLib
+            )
+        ) return false;
 
         if (!endpoint.verifiable(_origin, _receiver)) return false;
 
@@ -48,15 +87,28 @@ contract EndpointV2ViewUpgradeable is Initializable {
         return true;
     }
 
-    /// @dev check if a message is executable.
-    /// @return ExecutionState of Executed, Executable, or NotExecutable
-    function executable(Origin memory _origin, address _receiver) public view returns (ExecutionState) {
-        bytes32 payloadHash = endpoint.inboundPayloadHash(_receiver, _origin.srcEid, _origin.sender, _origin.nonce);
+    /**
+     * @notice Check if a message is executable.
+     * @param _origin The origin of the message.
+     * @param _receiver The receiver of the message.
+     * @return The ExecutionState of Executed, Executable, or NotExecutable.
+     */
+    function executable(
+        Origin memory _origin,
+        address _receiver
+    ) public view returns (ExecutionState) {
+        bytes32 payloadHash = endpoint.inboundPayloadHash(
+            _receiver,
+            _origin.srcEid,
+            _origin.sender,
+            _origin.nonce
+        );
 
         // executed if the payload hash has been cleared and the nonce is less than or equal to lazyInboundNonce
         if (
             payloadHash == EMPTY_PAYLOAD_HASH &&
-            _origin.nonce <= endpoint.lazyInboundNonce(_receiver, _origin.srcEid, _origin.sender)
+            _origin.nonce <=
+            endpoint.lazyInboundNonce(_receiver, _origin.srcEid, _origin.sender)
         ) {
             return ExecutionState.Executed;
         }
@@ -64,13 +116,16 @@ contract EndpointV2ViewUpgradeable is Initializable {
         // executable if nonce has not been executed and has not been nilified and nonce is less than or equal to inboundNonce
         if (
             payloadHash != NIL_PAYLOAD_HASH &&
-            _origin.nonce <= endpoint.inboundNonce(_receiver, _origin.srcEid, _origin.sender)
+            _origin.nonce <=
+            endpoint.inboundNonce(_receiver, _origin.srcEid, _origin.sender)
         ) {
             return ExecutionState.Executable;
         }
 
         // only start active executable polling if payload hash is not empty nor nil
-        if (payloadHash != EMPTY_PAYLOAD_HASH && payloadHash != NIL_PAYLOAD_HASH) {
+        if (
+            payloadHash != EMPTY_PAYLOAD_HASH && payloadHash != NIL_PAYLOAD_HASH
+        ) {
             return ExecutionState.VerifiedButNotExecutable;
         }
 
