@@ -2,11 +2,7 @@
   "name": "@layerzerolabs/layerzero-v2",
   "version": "2.0.2",
   "private": true,
-  "workspaces": [
-    "protocol",
-    "messagelib",
-    "oapp"
-  ],
+  "workspaces": ["protocol", "messagelib", "oapp"],
   "scripts": {
     "clean": "$npm_execpath workspaces foreach --all run clean",
     "build": "$npm_execpath workspaces foreach --all run build",
@@ -29,36 +25,19 @@
     "solhint": "^4.0.0"
   },
   "dependenciesMeta": {
-    "@axelar-network/axelar-gmp-sdk-solidity": {
-      "unplugged": true
-    },
-    "@chainlink/contracts-ccip": {
-      "unplugged": true
-    },
-    "@layerzerolabs/lz-evm-v1-0.7": {
-      "unplugged": true
-    },
-    "@layerzerolabs/solidity-examples": {
-      "unplugged": true
-    },
-    "@openzeppelin/contracts": {
-      "unplugged": true
-    },
-    "@openzeppelin/contracts-upgradeable": {
-      "unplugged": true
-    },
-    "hardhat-deploy": {
-      "unplugged": true
-    },
-    "solidity-bytes-utils": {
-      "unplugged": true
-    },
-    "solidity-stringutils": {
-      "unplugged": true
-    }
+    "@axelar-network/axelar-gmp-sdk-solidity": { "unplugged": true },
+    "@chainlink/contracts-ccip": { "unplugged": true },
+    "@layerzerolabs/lz-evm-v1-0.7": { "unplugged": true },
+    "@layerzerolabs/solidity-examples": { "unplugged": true },
+    "@openzeppelin/contracts": { "unplugged": true },
+    "@openzeppelin/contracts-upgradeable": { "unplugged": true },
+    "hardhat-deploy": { "unplugged": true },
+    "solidity-bytes-utils": { "unplugged": true },
+    "solidity-stringutils": { "unplugged": true }
   },
   "packageManager": "yarn@4.0.2",
   "engines": {
     "node": ">=18.12.0"
   }
 }
+
