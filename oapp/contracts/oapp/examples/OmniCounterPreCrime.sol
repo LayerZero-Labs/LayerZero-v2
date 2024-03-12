@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.20;
 
 import { PreCrime, PreCrimePeer } from "../../precrime/PreCrime.sol";
@@ -32,17 +31,8 @@ contract OmniCounterPreCrime is PreCrime {
         bytes[] memory _simulations
     ) internal view override {
         uint32 localEid = _getLocalEid();
-        ChainCount[] memory localChainCounts;
+        ChainCount[] memory localChainCounts = _findLocalChainCounts(_eids, _simulations, localEid);
 
-        // find local chain counts
-        for (uint256 i = 0; i < _eids.length; i++) {
-            if (_eids[i] == localEid) {
-                localChainCounts = abi.decode(_simulations[i], (ChainCount[]));
-                break;
-            }
-        }
-
-        // local against remote
         for (uint256 i = 0; i < _eids.length; i++) {
             uint32 remoteEid = _eids[i];
             ChainCount[] memory remoteChainCounts = abi.decode(_simulations[i], (ChainCount[]));
@@ -52,6 +42,19 @@ contract OmniCounterPreCrime is PreCrime {
                 revert CrimeFound("inboundCount > outboundCount");
             }
         }
+    }
+
+    function _findLocalChainCounts(
+        uint32[] memory _eids,
+        bytes[] memory _simulations,
+        uint32 _localEid
+    ) internal view returns (ChainCount[] memory) {
+        for (uint256 i = 0; i < _eids.length; i++) {
+            if (_eids[i] == _localEid) {
+                return abi.decode(_simulations[i], (ChainCount[]));
+            }
+        }
+        return new ChainCount ;
     }
 
     function _findChainCounts(
