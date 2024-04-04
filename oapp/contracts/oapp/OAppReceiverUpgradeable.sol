@@ -2,20 +2,28 @@
 
 pragma solidity ^0.8.20;
 
-import { IOAppReceiver, Origin } from "./interfaces/IOAppReceiver.sol";
-import { OAppCore } from "./OAppCore.sol";
+import {IOAppReceiver, Origin} from "./interfaces/IOAppReceiver.sol";
+import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
 
 /**
  * @title OAppReceiver
  * @dev Abstract contract implementing the ILayerZeroReceiver interface and extending OAppCore for OApp receivers.
  */
-abstract contract OAppReceiver is IOAppReceiver, OAppCore {
+abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCoreUpgradeable {
     // Custom error message for when the caller is not the registered endpoint/
     error OnlyEndpoint(address addr);
 
     // @dev The version of the OAppReceiver implementation.
     // @dev Version is bumped when changes are made to this contract.
     uint64 internal constant RECEIVER_VERSION = 1;
+
+    /**
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
+     */
+    function __OAppReceiver_init() internal onlyInitializing {}
+
+    function __OAppReceiver_init_unchained() internal onlyInitializing {}
 
     /**
      * @notice Retrieves the OApp version information.
@@ -51,7 +59,7 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
      * Can be overridden by the OApp if there is other logic to determine this.
      */
     function allowInitializePath(Origin calldata origin) public view virtual returns (bool) {
-        return peers[origin.srcEid] == origin.sender;
+        return peers(origin.srcEid) == origin.sender;
     }
 
     /**
@@ -65,7 +73,7 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
      * @dev This is also enforced by the OApp.
      * @dev By default this is NOT enabled. ie. nextNonce is hardcoded to return 0.
      */
-    function nextNonce(uint32 /*_srcEid*/, bytes32 /*_sender*/) public view virtual returns (uint64 nonce) {
+    function nextNonce(uint32, /*_srcEid*/ bytes32 /*_sender*/ ) public view virtual returns (uint64 nonce) {
         return 0;
     }
 

@@ -2,18 +2,43 @@
 
 pragma solidity ^0.8.20;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IOAppOptionsType3, EnforcedOptionParam } from "../interfaces/IOAppOptionsType3.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IOAppOptionsType3, EnforcedOptionParam} from "../interfaces/IOAppOptionsType3.sol";
 
 /**
  * @title OAppOptionsType3
  * @dev Abstract contract implementing the IOAppOptionsType3 interface with type 3 options.
  */
-abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
+abstract contract OAppOptionsType3Upgradeable is IOAppOptionsType3, OwnableUpgradeable {
+    struct OAppOptionsType3Storage {
+        // @dev The "msgType" should be defined in the child contract.
+        mapping(uint32 => mapping(uint16 => bytes)) enforcedOptions;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("layerzerov2.storage.oappoptionstype3")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OAppOptionsType3StorageLocation =
+        0x8d2bda5d9f6ffb5796910376005392955773acee5548d0fcdb10e7c264ea0000;
+
     uint16 internal constant OPTION_TYPE_3 = 3;
 
-    // @dev The "msgType" should be defined in the child contract.
-    mapping(uint32 eid => mapping(uint16 msgType => bytes enforcedOption)) public enforcedOptions;
+    function _getOAppOptionsType3Storage() internal pure returns (OAppOptionsType3Storage storage $) {
+        assembly {
+            $.slot := OAppOptionsType3StorageLocation
+        }
+    }
+
+    /**
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
+     */
+    function __OAppOptionsType3_init() internal onlyInitializing {}
+
+    function __OAppOptionsType3_init_unchained() internal onlyInitializing {}
+
+    function enforcedOptions(uint32 _eid, uint16 _msgType) public view returns (bytes memory) {
+        OAppOptionsType3Storage storage $ = _getOAppOptionsType3Storage();
+        return $.enforcedOptions[_eid][_msgType];
+    }
 
     /**
      * @dev Sets the enforced options for specific endpoint and message type combinations.
@@ -26,10 +51,11 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
      * if you are only making a standard LayerZero message ie. lzReceive() WITHOUT sendCompose().
      */
     function setEnforcedOptions(EnforcedOptionParam[] calldata _enforcedOptions) public virtual onlyOwner {
+        OAppOptionsType3Storage storage $ = _getOAppOptionsType3Storage();
         for (uint256 i = 0; i < _enforcedOptions.length; i++) {
             // @dev Enforced options are only available for optionType 3, as type 1 and 2 dont support combining.
             _assertOptionsType3(_enforcedOptions[i].options);
-            enforcedOptions[_enforcedOptions[i].eid][_enforcedOptions[i].msgType] = _enforcedOptions[i].options;
+            $.enforcedOptions[_enforcedOptions[i].eid][_enforcedOptions[i].msgType] = _enforcedOptions[i].options;
         }
 
         emit EnforcedOptionSet(_enforcedOptions);
@@ -47,12 +73,14 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
      * - The resulting options will be {gasLimit: 300k, msg.value: 1.5 ether} when the message is executed on the remote lzReceive() function.
      * @dev This presence of duplicated options is handled off-chain in the verifier/executor.
      */
-    function combineOptions(
-        uint32 _eid,
-        uint16 _msgType,
-        bytes calldata _extraOptions
-    ) public view virtual returns (bytes memory) {
-        bytes memory enforced = enforcedOptions[_eid][_msgType];
+    function combineOptions(uint32 _eid, uint16 _msgType, bytes calldata _extraOptions)
+        public
+        view
+        virtual
+        returns (bytes memory)
+    {
+        OAppOptionsType3Storage storage $ = _getOAppOptionsType3Storage();
+        bytes memory enforced = $.enforcedOptions[_eid][_msgType];
 
         // No enforced options, pass whatever the caller supplied, even if it's empty or legacy type 1/2 options.
         if (enforced.length == 0) return _extraOptions;

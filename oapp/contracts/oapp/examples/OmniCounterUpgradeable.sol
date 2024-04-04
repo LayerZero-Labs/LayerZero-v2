@@ -2,12 +2,17 @@
 
 pragma solidity ^0.8.20;
 
-import { ILayerZeroEndpointV2, MessagingFee, MessagingReceipt, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
-import { ILayerZeroComposer } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroComposer.sol";
+import {
+    ILayerZeroEndpointV2,
+    MessagingFee,
+    MessagingReceipt,
+    Origin
+} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {ILayerZeroComposer} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroComposer.sol";
 
-import { OApp } from "../OApp.sol";
-import { OptionsBuilder } from "../libs/OptionsBuilder.sol";
-import { OAppPreCrimeSimulator } from "../../precrime/OAppPreCrimeSimulator.sol";
+import {OAppUpgradeable} from "../OAppUpgradeable.sol";
+import {OptionsBuilder} from "../libs/OptionsBuilder.sol";
+import {OAppPreCrimeSimulatorUpgradeable} from "../../precrime/OAppPreCrimeSimulatorUpgradeable.sol";
 
 library MsgCodec {
     uint8 internal constant VANILLA_TYPE = 1;
@@ -40,7 +45,7 @@ library MsgCodec {
     }
 }
 
-contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
+contract OmniCounterUpgradeable is ILayerZeroComposer, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable {
     using MsgCodec for bytes;
     using OptionsBuilder for bytes;
 
@@ -57,9 +62,15 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
     mapping(uint32 srcEid => uint256 count) public inboundCount;
     mapping(uint32 dstEid => uint256 count) public outboundCount;
 
-    constructor(address _endpoint, address _delegate) OApp(_endpoint, _delegate) {
+    constructor(address _endpoint) OAppUpgradeable(_endpoint) {}
+
+    function initialize(address _delegate) public initializer {
+        __Ownable_init();
+        _transferOwnership(_delegate);
+        __OAppCore_init(_delegate);
+
         admin = msg.sender;
-        eid = ILayerZeroEndpointV2(_endpoint).eid();
+        eid = ILayerZeroEndpointV2(endpoint).eid();
     }
 
     modifier onlyAdmin() {
@@ -74,7 +85,7 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
     }
 
     function withdraw(address payable _to, uint256 _amount) external onlyAdmin {
-        (bool success, ) = _to.call{ value: _amount }("");
+        (bool success,) = _to.call{value: _amount}("");
         require(success, "OmniCounter: withdraw failed");
     }
 
@@ -93,11 +104,10 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
         _lzSend(_eid, MsgCodec.encode(_type, eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
     }
 
-    function batchIncrement(
-        uint32[] calldata _eids,
-        uint8[] calldata _types,
-        bytes[] calldata _options
-    ) external payable {
+    function batchIncrement(uint32[] calldata _eids, uint8[] calldata _types, bytes[] calldata _options)
+        external
+        payable
+    {
         require(_eids.length == _options.length && _eids.length == _types.length, "OmniCounter: length mismatch");
 
         MessagingReceipt memory receipt;
@@ -108,11 +118,7 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
             uint8 msgType = _types[i];
             //            bytes memory options = combineOptions(dstEid, msgType, _options[i]);
             receipt = _lzSend(
-                dstEid,
-                MsgCodec.encode(msgType, eid),
-                _options[i],
-                MessagingFee(providedFee, 0),
-                payable(refundAddress)
+                dstEid, MsgCodec.encode(msgType, eid), _options[i], MessagingFee(providedFee, 0), payable(refundAddress)
             );
             _incrementOutbound(dstEid);
             providedFee -= receipt.fee.nativeFee;
@@ -121,11 +127,11 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
 
     // -------------------------------
     // View
-    function quote(
-        uint32 _eid,
-        uint8 _type,
-        bytes calldata _options
-    ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
+    function quote(uint32 _eid, uint8 _type, bytes calldata _options)
+        public
+        view
+        returns (uint256 nativeFee, uint256 lzTokenFee)
+    {
         //        bytes memory options = combineOptions(_eid, _type, _options);
         MessagingFee memory fee = _quote(_eid, MsgCodec.encode(_type, eid), _options, false);
         return (fee.nativeFee, fee.lzTokenFee);
@@ -148,7 +154,7 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
         Origin calldata _origin,
         bytes32 _guid,
         bytes calldata _message,
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) internal override {
         _acceptNonce(_origin.srcEid, _origin.sender, _origin.nonce);
@@ -198,13 +204,11 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
         outboundCount[_dstEid]++;
     }
 
-    function lzCompose(
-        address _oApp,
-        bytes32 /*_guid*/,
-        bytes calldata _message,
-        address,
-        bytes calldata
-    ) external payable override {
+    function lzCompose(address _oApp, bytes32, /*_guid*/ bytes calldata _message, address, bytes calldata)
+        external
+        payable
+        override
+    {
         require(_oApp == address(this), "!oApp");
         require(msg.sender == address(endpoint), "!endpoint");
 
@@ -267,7 +271,7 @@ contract OmniCounter is ILayerZeroComposer, OApp, OAppPreCrimeSimulator {
     }
 
     function isPeer(uint32 _eid, bytes32 _peer) public view override returns (bool) {
-        return peers[_eid] == _peer;
+        return peers(_eid) == _peer;
     }
 
     // @dev Batch send requires overriding this function from OAppSender because the msg.value contains multiple fees
