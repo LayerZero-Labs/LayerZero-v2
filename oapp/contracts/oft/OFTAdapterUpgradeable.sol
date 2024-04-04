@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.20;
 
-import { IERC20Metadata, IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IOFT, OFTCore } from "./OFTCore.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IOFT, OFTCoreUpgradeable} from "./OFTCoreUpgradeable.sol";
 
 /**
  * @title OFTAdapter Contract
@@ -17,7 +17,7 @@ import { IOFT, OFTCore } from "./OFTCore.sol";
  * IF the 'innerToken' applies something like a transfer fee, the default will NOT work...
  * a pre/post balance check will need to be done to calculate the amountSentLD/amountReceivedLD.
  */
-abstract contract OFTAdapter is OFTCore {
+abstract contract OFTAdapterUpgradeable is OFTCoreUpgradeable {
     using SafeERC20 for IERC20;
 
     IERC20 internal immutable innerToken;
@@ -26,15 +26,26 @@ abstract contract OFTAdapter is OFTCore {
      * @dev Constructor for the OFTAdapter contract.
      * @param _token The address of the ERC-20 token to be adapted.
      * @param _lzEndpoint The LayerZero endpoint address.
-     * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(
-        address _token,
-        address _lzEndpoint,
-        address _delegate
-    ) OFTCore(IERC20Metadata(_token).decimals(), _lzEndpoint, _delegate) {
+    constructor(address _token, address _lzEndpoint)
+        OFTCoreUpgradeable(IERC20Metadata(_token).decimals(), _lzEndpoint)
+    {
         innerToken = IERC20(_token);
     }
+
+    /**
+     * @dev Initializes the OFTAdapter with the provided delegate.
+     * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
+     *
+     * @dev The delegate typically should be set as the owner of the contract.
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
+     */
+    function __OFTAdapter_init(address _delegate) internal onlyInitializing {
+        __OFTCore_init(_delegate);
+    }
+
+    function __OFTAdapter_init_unchained() internal onlyInitializing {}
 
     /**
      * @notice Retrieves interfaceID and the version of the OFT.
@@ -84,11 +95,12 @@ abstract contract OFTAdapter is OFTCore {
      * IF the 'innerToken' applies something like a transfer fee, the default will NOT work...
      * a pre/post balance check will need to be done to calculate the amountReceivedLD.
      */
-    function _debit(
-        uint256 _amountLD,
-        uint256 _minAmountLD,
-        uint32 _dstEid
-    ) internal virtual override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
+    function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)
+        internal
+        virtual
+        override
+        returns (uint256 amountSentLD, uint256 amountReceivedLD)
+    {
         (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
         // @dev Lock tokens by moving them into this contract from the caller.
         innerToken.safeTransferFrom(msg.sender, address(this), amountSentLD);
@@ -105,11 +117,12 @@ abstract contract OFTAdapter is OFTCore {
      * IF the 'innerToken' applies something like a transfer fee, the default will NOT work...
      * a pre/post balance check will need to be done to calculate the amountReceivedLD.
      */
-    function _credit(
-        address _to,
-        uint256 _amountLD,
-        uint32 /*_srcEid*/
-    ) internal virtual override returns (uint256 amountReceivedLD) {
+    function _credit(address _to, uint256 _amountLD, uint32 /*_srcEid*/ )
+        internal
+        virtual
+        override
+        returns (uint256 amountReceivedLD)
+    {
         // @dev Unlock the tokens and transfer to the recipient.
         innerToken.safeTransfer(_to, _amountLD);
         // @dev In the case of NON-default OFTAdapter, the amountLD MIGHT not be == amountReceivedLD.

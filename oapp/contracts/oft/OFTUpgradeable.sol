@@ -2,27 +2,36 @@
 
 pragma solidity ^0.8.20;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { IOFT, OFTCore } from "./OFTCore.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IOFT, OFTCoreUpgradeable} from "./OFTCoreUpgradeable.sol";
 
 /**
  * @title OFT Contract
  * @dev OFT is an ERC-20 token that extends the functionality of the OFTCore contract.
  */
-abstract contract OFT is OFTCore, ERC20 {
+abstract contract OFTUpgradeable is OFTCoreUpgradeable, ERC20Upgradeable {
     /**
      * @dev Constructor for the OFT contract.
+     * @param _lzEndpoint The LayerZero endpoint address.
+     */
+    constructor(address _lzEndpoint) OFTCoreUpgradeable(decimals(), _lzEndpoint) {}
+
+    /**
+     * @dev Initializes the OFT with the provided name, symbol, and delegate.
      * @param _name The name of the OFT.
      * @param _symbol The symbol of the OFT.
-     * @param _lzEndpoint The LayerZero endpoint address.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
+     *
+     * @dev The delegate typically should be set as the owner of the contract.
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
      */
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _lzEndpoint,
-        address _delegate
-    ) ERC20(_name, _symbol) OFTCore(decimals(), _lzEndpoint, _delegate) {}
+    function __OFT_init(string memory _name, string memory _symbol, address _delegate) internal onlyInitializing {
+        __ERC20_init(_name, _symbol);
+        __OFTCore_init(_delegate);
+    }
+
+    function __OFT_init_unchained() internal onlyInitializing {}
 
     /**
      * @notice Retrieves interfaceID and the version of the OFT.
@@ -66,11 +75,12 @@ abstract contract OFT is OFTCore, ERC20 {
      * @return amountSentLD The amount sent in local decimals.
      * @return amountReceivedLD The amount received in local decimals on the remote.
      */
-    function _debit(
-        uint256 _amountLD,
-        uint256 _minAmountLD,
-        uint32 _dstEid
-    ) internal virtual override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
+    function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)
+        internal
+        virtual
+        override
+        returns (uint256 amountSentLD, uint256 amountReceivedLD)
+    {
         (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
 
         // @dev In NON-default OFT, amountSentLD could be 100, with a 10% fee, the amountReceivedLD amount is 90,
@@ -87,11 +97,12 @@ abstract contract OFT is OFTCore, ERC20 {
      * @dev _srcEid The source chain ID.
      * @return amountReceivedLD The amount of tokens ACTUALLY received in local decimals.
      */
-    function _credit(
-        address _to,
-        uint256 _amountLD,
-        uint32 /*_srcEid*/
-    ) internal virtual override returns (uint256 amountReceivedLD) {
+    function _credit(address _to, uint256 _amountLD, uint32 /*_srcEid*/ )
+        internal
+        virtual
+        override
+        returns (uint256 amountReceivedLD)
+    {
         // @dev Default OFT mints on dst.
         _mint(_to, _amountLD);
         // @dev In the case of NON-default OFT, the _amountLD MIGHT not be == amountReceivedLD.
