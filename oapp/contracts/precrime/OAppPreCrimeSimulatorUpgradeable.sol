@@ -2,17 +2,42 @@
 
 pragma solidity ^0.8.20;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IPreCrime } from "./interfaces/IPreCrime.sol";
-import { IOAppPreCrimeSimulator, InboundPacket, Origin } from "./interfaces/IOAppPreCrimeSimulator.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IPreCrime} from "./interfaces/IPreCrime.sol";
+import {IOAppPreCrimeSimulator, InboundPacket, Origin} from "./interfaces/IOAppPreCrimeSimulator.sol";
 
 /**
  * @title OAppPreCrimeSimulator
  * @dev Abstract contract serving as the base for preCrime simulation functionality in an OApp.
  */
-abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, Ownable {
-    // The address of the preCrime implementation.
-    address public preCrime;
+abstract contract OAppPreCrimeSimulatorUpgradeable is IOAppPreCrimeSimulator, OwnableUpgradeable {
+    struct OAppPreCrimeSimulatorStorage {
+        // The address of the preCrime implementation.
+        address preCrime;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("layerzerov2.storage.oappprecrimesimulator")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OAppPreCrimeSimulatorStorageLocation =
+        0xefb041d771d6daaa55702fff6eb740d63ba559a75d2d1d3e151c78ff2480b600;
+
+    function _getOAppPreCrimeSimulatorStorage() internal pure returns (OAppPreCrimeSimulatorStorage storage $) {
+        assembly {
+            $.slot := OAppPreCrimeSimulatorStorageLocation
+        }
+    }
+
+    /**
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
+     */
+    function __OAppPreCrimeSimulator_init() internal onlyInitializing {}
+
+    function __OAppPreCrimeSimulator_init_unchained() internal onlyInitializing {}
+
+    function preCrime() external view override returns (address) {
+        OAppPreCrimeSimulatorStorage storage $ = _getOAppPreCrimeSimulatorStorage();
+        return $.preCrime;
+    }
 
     /**
      * @dev Retrieves the address of the OApp contract.
@@ -30,7 +55,8 @@ abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, Ownable {
      * @param _preCrime The address of the preCrime contract.
      */
     function setPreCrime(address _preCrime) public virtual onlyOwner {
-        preCrime = _preCrime;
+        OAppPreCrimeSimulatorStorage storage $ = _getOAppPreCrimeSimulatorStorage();
+        $.preCrime = _preCrime;
         emit PreCrimeSet(_preCrime);
     }
 
@@ -56,12 +82,8 @@ abstract contract OAppPreCrimeSimulator is IOAppPreCrimeSimulator, Ownable {
             // They are instead stubbed to default values, address(0) and bytes("")
             // @dev Calling this.lzReceiveSimulate removes ability for assembly return 0 callstack exit,
             // which would cause the revert to be ignored.
-            this.lzReceiveSimulate{ value: packet.value }(
-                packet.origin,
-                packet.guid,
-                packet.message,
-                packet.executor,
-                packet.extraData
+            this.lzReceiveSimulate{value: packet.value}(
+                packet.origin, packet.guid, packet.message, packet.executor, packet.extraData
             );
         }
 

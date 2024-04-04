@@ -2,16 +2,26 @@
 
 pragma solidity ^0.8.20;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { BytesLib } from "solidity-bytes-utils/contracts/BytesLib.sol";
-import { ILayerZeroEndpointV2 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {BytesLib} from "solidity-bytes-utils/contracts/BytesLib.sol";
+import {ILayerZeroEndpointV2} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-import { IPreCrime, PreCrimePeer } from "./interfaces/IPreCrime.sol";
-import { IOAppPreCrimeSimulator } from "./interfaces/IOAppPreCrimeSimulator.sol";
-import { InboundPacket, PacketDecoder } from "./libs/Packet.sol";
+import {IPreCrime, PreCrimePeer} from "./interfaces/IPreCrime.sol";
+import {IOAppPreCrimeSimulator} from "./interfaces/IOAppPreCrimeSimulator.sol";
+import {InboundPacket, PacketDecoder} from "./libs/Packet.sol";
 
-abstract contract PreCrime is Ownable, IPreCrime {
+abstract contract PreCrimeUpgradeable is OwnableUpgradeable, IPreCrime {
     using BytesLib for bytes;
+
+    struct PreCrimeStorage {
+        // preCrime config
+        uint64 maxBatchSize;
+        PreCrimePeer[] preCrimePeers;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("layerzerov2.storage.precrime")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant PreCrimeStorageLocation =
+        0x56af11d8938063b7ae95a808f88d40c589be3bbf4cb6facdbc642a7b38e01f00;
 
     uint16 internal constant CONFIG_VERSION = 2;
     address internal constant OFF_CHAIN_CALLER = address(0xDEAD);
@@ -19,10 +29,6 @@ abstract contract PreCrime is Ownable, IPreCrime {
     address internal immutable lzEndpoint;
     address public immutable simulator;
     address public immutable oApp;
-
-    // preCrime config
-    uint64 public maxBatchSize;
-    PreCrimePeer[] internal preCrimePeers;
 
     /// @dev getConfig(), simulate() and preCrime() are not view functions because it is more flexible to be able to
     ///      update state for some complex logic. So onlyOffChain() modifier is to make sure they are only called
@@ -32,37 +38,60 @@ abstract contract PreCrime is Ownable, IPreCrime {
         _;
     }
 
+    function _getPreCrimeStorage() internal pure returns (PreCrimeStorage storage $) {
+        assembly {
+            $.slot := PreCrimeStorageLocation
+        }
+    }
+
     constructor(address _endpoint, address _simulator) {
         lzEndpoint = _endpoint;
         simulator = _simulator;
         oApp = IOAppPreCrimeSimulator(_simulator).oApp();
     }
 
+    /**
+     * @dev Ownable is not initialized here on purpose. It should be initialized in the child contract to
+     * accommodate the different version of Ownable.
+     */
+    function __PreCrime_init() internal onlyInitializing {}
+
+    function __PreCrime_init_unchained() internal onlyInitializing {}
+
+    function maxBatchSize() external view returns (uint64) {
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        return $.maxBatchSize;
+    }
+
     function setMaxBatchSize(uint64 _maxBatchSize) external onlyOwner {
-        maxBatchSize = _maxBatchSize;
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        $.maxBatchSize = _maxBatchSize;
     }
 
     function setPreCrimePeers(PreCrimePeer[] calldata _preCrimePeers) external onlyOwner {
-        delete preCrimePeers;
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        delete $.preCrimePeers;
         for (uint256 i = 0; i < _preCrimePeers.length; ++i) {
-            preCrimePeers.push(_preCrimePeers[i]);
+            $.preCrimePeers.push(_preCrimePeers[i]);
         }
     }
 
     function getPreCrimePeers() external view returns (PreCrimePeer[] memory) {
-        return preCrimePeers;
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        return $.preCrimePeers;
     }
 
-    function getConfig(
-        bytes[] calldata _packets,
-        uint256[] calldata _packetMsgValues
-    ) external onlyOffChain returns (bytes memory) {
-        bytes memory config = abi.encodePacked(CONFIG_VERSION, maxBatchSize);
+    function getConfig(bytes[] calldata _packets, uint256[] calldata _packetMsgValues)
+        external
+        onlyOffChain
+        returns (bytes memory)
+    {
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        bytes memory config = abi.encodePacked(CONFIG_VERSION, $.maxBatchSize);
 
         // if no packets, return config with all peers
-        PreCrimePeer[] memory peers = _packets.length == 0
-            ? preCrimePeers
-            : _getPreCrimePeers(PacketDecoder.decode(_packets, _packetMsgValues));
+        PreCrimePeer[] memory peers =
+            _packets.length == 0 ? $.preCrimePeers : _getPreCrimePeers(PacketDecoder.decode(_packets, _packetMsgValues));
 
         if (peers.length > 0) {
             uint16 size = uint16(peers.length);
@@ -77,20 +106,22 @@ abstract contract PreCrime is Ownable, IPreCrime {
     }
 
     // @dev _packetMsgValues refers to the 'lzReceive' option passed per packet
-    function simulate(
-        bytes[] calldata _packets,
-        uint256[] calldata _packetMsgValues
-    ) external payable override onlyOffChain returns (bytes memory) {
+    function simulate(bytes[] calldata _packets, uint256[] calldata _packetMsgValues)
+        external
+        payable
+        override
+        onlyOffChain
+        returns (bytes memory)
+    {
         InboundPacket[] memory packets = PacketDecoder.decode(_packets, _packetMsgValues);
         _checkPacketSizeAndOrder(packets);
         return _simulate(packets);
     }
 
-    function preCrime(
-        bytes[] calldata _packets,
-        uint256[] calldata _packetMsgValues,
-        bytes[] calldata _simulations
-    ) external onlyOffChain {
+    function preCrime(bytes[] calldata _packets, uint256[] calldata _packetMsgValues, bytes[] calldata _simulations)
+        external
+        onlyOffChain
+    {
         InboundPacket[] memory packets = PacketDecoder.decode(_packets, _packetMsgValues);
         uint32[] memory eids = new uint32[](_simulations.length);
         bytes[] memory simulations = new bytes[](_simulations.length);
@@ -107,6 +138,11 @@ abstract contract PreCrime is Ownable, IPreCrime {
 
     function version() external pure returns (uint64 major, uint8 minor) {
         return (2, 0);
+    }
+
+    function preCrimePeers() internal view returns (PreCrimePeer[] storage) {
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        return $.preCrimePeers;
     }
 
     function _checkResultsCompleteness(InboundPacket[] memory _packets, uint32[] memory _eids) internal {
@@ -132,7 +168,8 @@ abstract contract PreCrime is Ownable, IPreCrime {
     }
 
     function _checkPacketSizeAndOrder(InboundPacket[] memory _packets) internal view {
-        if (_packets.length > maxBatchSize) revert PacketOversize(maxBatchSize, _packets.length);
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        if (_packets.length > $.maxBatchSize) revert PacketOversize($.maxBatchSize, _packets.length);
 
         // check packets nonce, sequence order
         // packets should group by srcEid and sender, then sort by nonce ascending
@@ -162,7 +199,7 @@ abstract contract PreCrime is Ownable, IPreCrime {
     }
 
     function _simulate(InboundPacket[] memory _packets) internal virtual returns (bytes memory) {
-        (bool success, bytes memory returnData) = simulator.call{ value: msg.value }(
+        (bool success, bytes memory returnData) = simulator.call{value: msg.value}(
             abi.encodeWithSelector(IOAppPreCrimeSimulator.lzReceiveAndRevert.selector, _packets)
         );
 
@@ -197,11 +234,12 @@ abstract contract PreCrime is Ownable, IPreCrime {
     // ----------------- to be implemented -----------------
     function buildSimulationResult() external view virtual override returns (bytes memory);
 
-    function _getPreCrimePeers(InboundPacket[] memory _packets) internal virtual returns (PreCrimePeer[] memory peers);
+    function _getPreCrimePeers(InboundPacket[] memory _packets)
+        internal
+        virtual
+        returns (PreCrimePeer[] memory peers);
 
-    function _preCrime(
-        InboundPacket[] memory _packets,
-        uint32[] memory _eids,
-        bytes[] memory _simulations
-    ) internal virtual;
+    function _preCrime(InboundPacket[] memory _packets, uint32[] memory _eids, bytes[] memory _simulations)
+        internal
+        virtual;
 }
