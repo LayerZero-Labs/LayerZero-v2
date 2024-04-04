@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.15;
 
-import { Packet } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
-import { PacketV1Codec } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/PacketV1Codec.sol";
-import { Errors } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Errors.sol";
+import {Packet} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
+import {PacketV1Codec} from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/PacketV1Codec.sol";
+import {Errors} from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Errors.sol";
 
-import { OptionsBuilder } from "../contracts/oapp/libs/OptionsBuilder.sol";
-import { OmniCounter, MsgCodec } from "../contracts/oapp/examples/OmniCounter.sol";
-import { OmniCounterPreCrime } from "../contracts/oapp/examples/OmniCounterPreCrime.sol";
-import { PreCrimePeer } from "../contracts/precrime/interfaces/IPreCrime.sol";
+import {OptionsBuilder} from "../contracts/oapp/libs/OptionsBuilder.sol";
+import {OmniCounterUpgradeable, MsgCodec} from "../contracts/oapp/examples/OmniCounterUpgradeable.sol";
+import {OmniCounterPreCrimeUpgradeable} from "../contracts/oapp/examples/OmniCounterPreCrimeUpgradeable.sol";
+import {PreCrimePeer} from "../contracts/precrime/interfaces/IPreCrime.sol";
 
-import { TestHelper } from "./TestHelper.sol";
+import {TestHelper} from "./TestHelper.sol";
 
 import "forge-std/console.sol";
 
@@ -22,10 +22,10 @@ contract OmniCounterTest is TestHelper {
     uint32 bEid = 2;
 
     // omnicounter with precrime
-    OmniCounter aCounter;
-    OmniCounterPreCrime aPreCrime;
-    OmniCounter bCounter;
-    OmniCounterPreCrime bPreCrime;
+    OmniCounterUpgradeable aCounter;
+    OmniCounterPreCrimeUpgradeable aPreCrime;
+    OmniCounterUpgradeable bCounter;
+    OmniCounterPreCrimeUpgradeable bPreCrime;
 
     address offchain = address(0xDEAD);
 
@@ -36,38 +36,44 @@ contract OmniCounterTest is TestHelper {
 
         setUpEndpoints(2, LibraryType.UltraLightNode);
 
-        address[] memory uas = setupOApps(type(OmniCounter).creationCode, 1, 2);
-        aCounter = OmniCounter(payable(uas[0]));
-        bCounter = OmniCounter(payable(uas[1]));
+        address[] memory uas = setupOApps(type(OmniCounterUpgradeable).creationCode, 1, 2);
+        aCounter = OmniCounterUpgradeable(payable(uas[0]));
+        bCounter = OmniCounterUpgradeable(payable(uas[1]));
 
         setUpPreCrime();
     }
 
     function setUpPreCrime() public {
         // set up precrime for aCounter
-        aPreCrime = new OmniCounterPreCrime(address(aCounter.endpoint()), address(aCounter));
+        aPreCrime = OmniCounterPreCrimeUpgradeable(
+            _deployContractAndProxy(
+                type(OmniCounterPreCrimeUpgradeable).creationCode,
+                abi.encode(address(aCounter.endpoint()), aCounter),
+                abi.encodeWithSelector(OmniCounterPreCrimeUpgradeable.intialize.selector, address(this))
+            )
+        );
         aPreCrime.setMaxBatchSize(10);
 
         PreCrimePeer[] memory aCounterPreCrimePeers = new PreCrimePeer[](1);
-        aCounterPreCrimePeers[0] = PreCrimePeer(
-            bEid,
-            addressToBytes32(address(bPreCrime)),
-            addressToBytes32(address(bCounter))
-        );
+        aCounterPreCrimePeers[0] =
+            PreCrimePeer(bEid, addressToBytes32(address(bPreCrime)), addressToBytes32(address(bCounter)));
         aPreCrime.setPreCrimePeers(aCounterPreCrimePeers);
 
         aCounter.setPreCrime(address(aPreCrime));
 
         // set up precrime for bCounter
-        bPreCrime = new OmniCounterPreCrime(address(bCounter.endpoint()), address(bCounter));
+        bPreCrime = OmniCounterPreCrimeUpgradeable(
+            _deployContractAndProxy(
+                type(OmniCounterPreCrimeUpgradeable).creationCode,
+                abi.encode(address(bCounter.endpoint()), bCounter),
+                abi.encodeWithSelector(OmniCounterPreCrimeUpgradeable.intialize.selector, address(this))
+            )
+        );
         bPreCrime.setMaxBatchSize(10);
 
         PreCrimePeer[] memory bCounterPreCrimePeers = new PreCrimePeer[](1);
-        bCounterPreCrimePeers[0] = PreCrimePeer(
-            aEid,
-            addressToBytes32(address(aPreCrime)),
-            addressToBytes32(address(aCounter))
-        );
+        bCounterPreCrimePeers[0] =
+            PreCrimePeer(aEid, addressToBytes32(address(aPreCrime)), addressToBytes32(address(aCounter)));
         bPreCrime.setPreCrimePeers(bCounterPreCrimePeers);
 
         bCounter.setPreCrime(address(bPreCrime));
@@ -78,8 +84,8 @@ contract OmniCounterTest is TestHelper {
         uint256 counterBefore = bCounter.count();
 
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.VANILLA_TYPE, options);
 
         assertEq(bCounter.count(), counterBefore, "shouldn't be increased until packet is verified");
 
@@ -102,14 +108,14 @@ contract OmniCounterTest is TestHelper {
             eids[i] = bEid;
             types[i] = MsgCodec.VANILLA_TYPE;
             options[i] = option;
-            (uint256 nativeFee, ) = aCounter.quote(eids[i], types[i], options[i]);
+            (uint256 nativeFee,) = aCounter.quote(eids[i], types[i], options[i]);
             fee += nativeFee;
         }
 
         vm.expectRevert(); // Errors.InvalidAmount
-        aCounter.batchIncrement{ value: fee - 1 }(eids, types, options);
+        aCounter.batchIncrement{value: fee - 1}(eids, types, options);
 
-        aCounter.batchIncrement{ value: fee }(eids, types, options);
+        aCounter.batchIncrement{value: fee}(eids, types, options);
         verifyPackets(bEid, addressToBytes32(address(bCounter)));
 
         assertEq(bCounter.count(), counterBefore + batchSize, "batchIncrement assertion failure");
@@ -118,12 +124,10 @@ contract OmniCounterTest is TestHelper {
     function test_nativeDrop_increment() public {
         uint256 balanceBefore = address(bCounter).balance;
 
-        bytes memory options = OptionsBuilder
-            .newOptions()
-            .addExecutorLzReceiveOption(200000, 0)
+        bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0)
             .addExecutorNativeDropOption(1 gwei, addressToBytes32(address(bCounter)));
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.VANILLA_TYPE, options);
 
         // verify packet to bCounter manually
         verifyPackets(bEid, addressToBytes32(address(bCounter)));
@@ -150,12 +154,10 @@ contract OmniCounterTest is TestHelper {
         uint256 countBefore = bCounter.count();
         uint256 composedCountBefore = bCounter.composedCount();
 
-        bytes memory options = OptionsBuilder
-            .newOptions()
-            .addExecutorLzReceiveOption(200000, 0)
-            .addExecutorLzComposeOption(0, 200000, 0);
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.COMPOSED_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.COMPOSED_TYPE, options);
+        bytes memory options =
+            OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0).addExecutorLzComposeOption(0, 200000, 0);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.COMPOSED_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.COMPOSED_TYPE, options);
 
         verifyPackets(bEid, addressToBytes32(address(bCounter)), 0, address(bCounter));
 
@@ -169,8 +171,8 @@ contract OmniCounterTest is TestHelper {
         uint256 countBBefore = bCounter.count();
 
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(10000000, 10000000);
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.ABA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.ABA_TYPE, options);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.ABA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.ABA_TYPE, options);
 
         verifyPackets(bEid, addressToBytes32(address(bCounter)));
         assertEq(aCounter.count(), countABefore, "increment A assertion failure");
@@ -186,12 +188,10 @@ contract OmniCounterTest is TestHelper {
         uint256 countBBefore = bCounter.count();
         uint256 composedCountBBefore = bCounter.composedCount();
 
-        bytes memory options = OptionsBuilder
-            .newOptions()
-            .addExecutorLzReceiveOption(200000, 0)
+        bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0)
             .addExecutorLzComposeOption(0, 10000000, 10000000);
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.COMPOSED_ABA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.COMPOSED_ABA_TYPE, options);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.COMPOSED_ABA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.COMPOSED_ABA_TYPE, options);
 
         verifyPackets(bEid, addressToBytes32(address(bCounter)), 0, address(bCounter));
         assertEq(bCounter.count(), countBBefore + 1, "increment B1 assertion failure");
@@ -203,10 +203,10 @@ contract OmniCounterTest is TestHelper {
 
     function test_omniCounterPreCrime() public {
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
-        (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
+        (uint256 nativeFee,) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
 
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.VANILLA_TYPE, options);
+        aCounter.increment{value: nativeFee}(bEid, MsgCodec.VANILLA_TYPE, options);
         assertEq(aCounter.outboundCount(bEid), 2, "outboundCount assertion failure");
 
         // precrime should pass
@@ -234,7 +234,7 @@ contract OmniCounterTest is TestHelper {
         vm.startPrank(address(this));
 
         // precrime a broken increment
-        aCounter.brokenIncrement{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
+        aCounter.brokenIncrement{value: nativeFee}(bEid, MsgCodec.VANILLA_TYPE, options);
         assertEq(aCounter.outboundCount(bEid), 2, "outboundCount assertion failure"); // broken outbound increment
 
         packets = new bytes[](1);
