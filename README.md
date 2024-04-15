@@ -1,3 +1,7 @@
+> [!CAUTION]
+> This repository is not maintained. Please refer [monorepo](https://github.com/LayerZero-Labs/monorepo) for the latest version of the contracts and examples
+
+
 <div align="center">
   <a href="https://layerzero.network">
     <img alt="LayerZero" style="width: 20%" src="https://layerzero.network/static/logo.svg"/>
