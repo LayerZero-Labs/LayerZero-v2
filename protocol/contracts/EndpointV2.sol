@@ -15,44 +15,56 @@ import { MessagingComposer } from "./MessagingComposer.sol";
 import { MessageLibManager } from "./MessageLibManager.sol";
 import { MessagingContext } from "./MessagingContext.sol";
 
-// LayerZero EndpointV2 is fully backward compatible with LayerZero Endpoint(V1), but it also supports additional
-// features that Endpoint(V1) does not support now and may not in the future. We have also changed some terminology
-// to clarify pre-existing language that might have been confusing.
-//
-// The following is a list of terminology changes:
-//     -chainId -> eid
-//          - Rationale: chainId was a term we initially used to describe an endpoint on a specific chain. Since
-//          LayerZero supports non-EVMs we could not map the classic EVM chainIds to the LayerZero chainIds, making it
-//          confusing for developers. With the addition of EndpointV2 and its backward compatible nature, we would have
-//          two chainIds per chain that has Endpoint(V1), further confusing developers. We have decided to change the
-//          name to Endpoint Id, or eid, for simplicity and clarity.
-//     -adapterParams -> options
-//     -userApplication -> oapp. Omnichain Application
-//     -srcAddress -> sender
-//     -dstAddress -> receiver
-//          - Rationale: The sender/receiver on EVM is the address. However, on non-EVM chains, the sender/receiver could
-//          represented as a public key, or some other identifier. The term sender/receiver is more generic
-//     -payload -> message.
-//          - Rationale: The term payload is used in the context of a packet, which is a combination of the message and GUID
+/**
+ * @notice LayerZero EndpointV2 is fully backward compatible with LayerZero Endpoint(V1), but it also supports additional
+ *         features that Endpoint(V1) does not support now and may not in the future. We have also changed some terminology
+ *         to clarify pre-existing language that might have been confusing.
+ *         
+ *         The following is a list of terminology changes:
+ *          -chainId -> eid
+ *              - Rationale: chainId was a term we initially used to describe an endpoint on a specific chain. Since
+ *                       LayerZero supports non-EVMs we could not map the classic EVM chainIds to the LayerZero chainIds, 
+ *                       making it confusing for developers. With the addition of EndpointV2 and its backward compatible 
+ *                       nature, we would have two chainIds per chain that has Endpoint(V1), further confusing developers. 
+ *                       We have decided to change the name to Endpoint Id, or eid, for simplicity and clarity.
+ *          -adapterParams -> options
+ *          -userApplication -> oapp. Omnichain Application
+ *          -srcAddress -> sender
+ *          -dstAddress -> receiver
+ *              - Rationale: The sender/receiver on EVM is the address. However, on non-EVM chains, the sender/receiver could be
+ *                           represented as a public key, or some other identifier. The term sender/receiver is more generic.
+ *          -payload -> message.
+ *              - Rationale: The term payload is used in the context of a packet, which is a combination of the message and GUID.
+ */
 contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager, MessagingComposer, MessagingContext {
     address public lzToken;
 
     mapping(address oapp => address delegate) public delegates;
 
-    /// @param _eid the unique Endpoint Id for this deploy that all other Endpoints can use to send to it
+    /**
+     * @param _eid The unique Endpoint Id for this deploy that all other Endpoints can use to send to it.
+     * @param _owner The contract owner's address.
+     */
     constructor(uint32 _eid, address _owner) MessagingChannel(_eid) {
         _transferOwnership(_owner);
     }
 
-    /// @dev MESSAGING STEP 0
-    /// @notice This view function gives the application built on top of LayerZero the ability to requests a quote
-    /// with the same parameters as they would to send their message. Since the quotes are given on chain there is a
-    /// race condition in which the prices could change between the time the user gets their quote and the time they
-    /// submit their message. If the price moves up and the user doesn't send enough funds the transaction will revert,
-    /// if the price goes down the _refundAddress provided by the app will be refunded the difference.
-    /// @param _params the messaging parameters
-    /// @param _sender the sender of the message
-    function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory) {
+    /**
+     * @dev MESSAGING STEP 0
+     * @notice This view function gives the application built on top of LayerZero the ability to requests a quote
+     *         with the same parameters as they would to send their message. Since the quotes are given on chain 
+     *         there is a race condition in which the prices could change between the time the user gets their 
+     *         quote and the time they submit their message. If the price moves up and the user doesn't send enough 
+     *         funds the transaction will revert, if the price goes down the _refundAddress provided by the app will 
+     *         be refunded the difference.
+     * @param _params The messaging parameters.
+     * @param _sender The sender of the message.
+     * @return MessagingFee A `MessagingFee` struct containing the calculated gas fee in either the native token or ZRO token.
+     */
+    function quote(
+        MessagingParams calldata _params, 
+        address _sender
+    ) external view returns (MessagingFee memory) {
         // lzToken must be set to support payInLzToken
         if (_params.payInLzToken && lzToken == address(0x0)) revert Errors.LZ_LzTokenUnavailable();
 
@@ -77,9 +89,12 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         return ISendLib(_sendLibrary).quote(packet, _params.options, _params.payInLzToken);
     }
 
-    /// @dev MESSAGING STEP 1 - OApp need to transfer the fees to the endpoint before sending the message
-    /// @param _params the messaging parameters
-    /// @param _refundAddress the address to refund both the native and lzToken
+    /**
+     * @dev MESSAGING STEP 1 - OApp need to transfer the fees to the endpoint before sending the message
+     * @param _params The messaging parameters.
+     * @param _refundAddress The address to refund both the native and lzToken.
+     * @return MessagingReceipt A `MessagingReceipt` struct containing details of the message sent.
+     */
     function send(
         MessagingParams calldata _params,
         address _refundAddress
@@ -105,9 +120,13 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         return receipt;
     }
 
-    /// @dev internal function for sending the messages used by all external send methods
-    /// @param _sender the address of the application sending the message to the destination chain
-    /// @param _params the messaging parameters
+    /**
+     * @dev Internal function for sending the messages used by all external send methods.
+     * @param _sender The address of the application sending the message to the destination chain.
+     * @param _params The messaging parameters.
+     * @return MessagingReceipt A `MessagingReceipt` struct containing details of the message sent.
+     * @return address The send library address from sender.
+     */
     function _send(
         address _sender,
         MessagingParams calldata _params
@@ -143,12 +162,18 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         return (MessagingReceipt(packet.guid, latestNonce, fee), _sendLibrary);
     }
 
-    /// @dev MESSAGING STEP 2 - on the destination chain
-    /// @dev configured receive library verifies a message
-    /// @param _origin a struct holding the srcEid, nonce, and sender of the message
-    /// @param _receiver the receiver of the message
-    /// @param _payloadHash the payload hash of the message
-    function verify(Origin calldata _origin, address _receiver, bytes32 _payloadHash) external {
+    /**
+     * @dev MESSAGING STEP 2 - on the destination chain.
+     * @dev Configured receive library verifies a message.
+     * @param _origin A struct holding the srcEid, nonce, and sender of the message.
+     * @param _receiver The receiver of the message.
+     * @param _payloadHash The payload hash of the message.
+     */
+    function verify(
+        Origin calldata _origin, 
+        address _receiver, 
+        bytes32 _payloadHash
+    ) external {
         if (!isValidReceiveLibrary(_receiver, _origin.srcEid, msg.sender)) revert Errors.LZ_InvalidReceiveLibrary();
 
         uint64 lazyNonce = lazyInboundNonce[_receiver][_origin.srcEid][_origin.sender];
@@ -160,15 +185,18 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         emit PacketVerified(_origin, _receiver, _payloadHash);
     }
 
-    /// @dev MESSAGING STEP 3 - the last step
-    /// @dev execute a verified message to the designated receiver
-    /// @dev the execution provides the execution context (caller, extraData) to the receiver. the receiver can optionally assert the caller and validate the untrusted extraData
-    /// @dev cant reentrant because the payload is cleared before execution
-    /// @param _origin the origin of the message
-    /// @param _receiver the receiver of the message
-    /// @param _guid the guid of the message
-    /// @param _message the message
-    /// @param _extraData the extra data provided by the executor. this data is untrusted and should be validated.
+    /**
+     * @dev MESSAGING STEP 3 - the last step.
+     * @dev Execute a verified message to the designated receiver.
+     * @dev The execution provides the execution context (caller, extraData) to the receiver. The receiver can 
+            optionally assert the caller and validate the untrusted extraData.
+     * @dev Can't reentrant because the payload is cleared before execution.
+     * @param _origin The origin of the message.
+     * @param _receiver The receiver of the message.
+     * @param _guid The guid of the message.
+     * @param _message The message.
+     * @param _extraData The extra data provided by the executor. This data is untrusted and should be validated.
+     */
     function lzReceive(
         Origin calldata _origin,
         address _receiver,
@@ -182,12 +210,16 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         emit PacketDelivered(_origin, _receiver);
     }
 
-    /// @param _origin the origin of the message
-    /// @param _receiver the receiver of the message
-    /// @param _guid the guid of the message
-    /// @param _message the message
-    /// @param _extraData the extra data provided by the executor.
-    /// @param _reason the reason for failure
+    /**
+     * @param _origin The origin of the message.
+     * @param _receiver The receiver of the message.
+     * @param _guid The guid of the message.
+     * @param _gas The amount of gas.
+     * @param _value The value in wei.
+     * @param _message The message.
+     * @param _extraData The extra data provided by the executor.
+     * @param _reason The reason for failure.
+     */
     function lzReceiveAlert(
         Origin calldata _origin,
         address _receiver,
@@ -201,14 +233,22 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         emit LzReceiveAlert(_receiver, msg.sender, _origin, _guid, _gas, _value, _message, _extraData, _reason);
     }
 
-    /// @dev Oapp uses this interface to clear a message.
-    /// @dev this is a PULL mode versus the PUSH mode of lzReceive
-    /// @dev the cleared message can be ignored by the app (effectively burnt)
-    /// @dev authenticated by oapp
-    /// @param _origin the origin of the message
-    /// @param _guid the guid of the message
-    /// @param _message the message
-    function clear(address _oapp, Origin calldata _origin, bytes32 _guid, bytes calldata _message) external {
+    /**
+     * @dev Oapp uses this interface to clear a message.
+     * @dev This is a PULL mode versus the PUSH mode of lzReceive.
+     * @dev The cleared message can be ignored by the app (effectively burnt).
+     * @dev Authenticated by oapp.
+     * @param _oapp The oapp address.
+     * @param _origin The origin of the message.
+     * @param _guid The guid of the message.
+     * @param _message The message.
+     */
+    function clear(
+        address _oapp, 
+        Origin calldata _origin, 
+        bytes32 _guid, 
+        bytes calldata _message
+    ) external {
         _assertAuthorized(_oapp);
 
         bytes memory payload = abi.encodePacked(_guid, _message);
@@ -216,31 +256,44 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         emit PacketDelivered(_origin, _oapp);
     }
 
-    /// @dev allows reconfiguration to recover from wrong configurations
-    /// @dev users should never approve the EndpointV2 contract to spend their non-layerzero tokens
-    /// @dev override this function if the endpoint is charging ERC20 tokens as native
-    /// @dev only owner
-    /// @param _lzToken the new layer zero token address
-    function setLzToken(address _lzToken) public virtual onlyOwner {
+    /**
+     * @dev Allows reconfiguration to recover from wrong configurations.
+     * @dev Users should never approve the EndpointV2 contract to spend their non-LayerZero tokens.
+     * @dev Override this function if the endpoint is charging ERC20 tokens as native.
+     * @dev Only owner.
+     * @param _lzToken The new layer zero token address.
+     */
+    function setLzToken(
+        address _lzToken
+    ) public virtual onlyOwner {
         lzToken = _lzToken;
         emit LzTokenSet(_lzToken);
     }
 
-    /// @dev recover the token sent to this contract by mistake
-    /// @dev only owner
-    /// @param _token the token to recover. if 0x0 then it is native token
-    /// @param _to the address to send the token to
-    /// @param _amount the amount to send
-    function recoverToken(address _token, address _to, uint256 _amount) external onlyOwner {
+    /**
+     * @dev Recover the token sent to this contract by mistake.
+     * @dev Only owner.
+     * @param _token The token to recover. If 0x0 then it is native token.
+     * @param _to The address to send the token to.
+     * @param _amount The amount to send.
+     */
+    function recoverToken(
+        address _token, 
+        address _to, 
+        uint256 _amount
+    ) external onlyOwner {
         Transfer.nativeOrToken(_token, _to, _amount);
     }
 
-    /// @dev handling token payments on endpoint. the sender must approve the endpoint to spend the token
-    /// @dev internal function
-    /// @param _token the token to pay
-    /// @param _required the amount required
-    /// @param _supplied the amount supplied
-    /// @param _receiver the receiver of the token
+    /**
+     * @dev Handling token payments on endpoint. The sender must approve the endpoint to spend the token.
+     * @dev Internal function.
+     * @param _token The token to pay.
+     * @param _required The amount required.
+     * @param _supplied The amount supplied.
+     * @param _receiver The receiver of the token.
+     * @param _refundAddress The address to refund the excess to.
+     */
     function _payToken(
         address _token,
         uint256 _required,
@@ -259,13 +312,15 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         }
     }
 
-    /// @dev handling native token payments on endpoint
-    /// @dev override this if the endpoint is charging ERC20 tokens as native
-    /// @dev internal function
-    /// @param _required the amount required
-    /// @param _supplied the amount supplied
-    /// @param _receiver the receiver of the native token
-    /// @param _refundAddress the address to refund the excess to
+    /**
+     * @dev Handling native token payments on endpoint.
+     * @dev Override this if the endpoint is charging ERC20 tokens as native.
+     * @dev Internal function.
+     * @param _required The amount required.
+     * @param _supplied The amount supplied.
+     * @param _receiver The receiver of the native token.
+     * @param _refundAddress The address to refund the excess to.
+     */
     function _payNative(
         uint256 _required,
         uint256 _supplied,
@@ -283,7 +338,11 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         }
     }
 
-    /// @dev get the balance of the lzToken as the supplied lzToken fee if payInLzToken is true
+    /**
+     * @dev Get the balance of the lzToken as the supplied lzToken fee if payInLzToken is true.
+     * @param _payInLzToken Whether to return fee in ZRO token.
+     * @return supplied The balance of the lzToken as the supplied lzToken fee.
+     */
     function _suppliedLzToken(bool _payInLzToken) internal view returns (uint256 supplied) {
         if (_payInLzToken) {
             supplied = IERC20(lzToken).balanceOf(address(this));
@@ -296,12 +355,20 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         }
     }
 
-    /// @dev override this if the endpoint is charging ERC20 tokens as native
+    /**
+     * @dev Override this if the endpoint is charging ERC20 tokens as native.
+     * @return uint256 The value in wei for the message.
+     */
     function _suppliedNative() internal view virtual returns (uint256) {
         return msg.value;
     }
 
-    /// @dev Assert the required fees and the supplied fees are enough
+    /**
+     * @dev Assert the required fees and the supplied fees are enough.
+     * @param _required The `MessagingFee` struct containing the fee.
+     * @param _suppliedNativeFee The supplied native fee.
+     * @param _suppliedLzTokenFee The supplied fee in ZRO token.
+     */
     function _assertMessagingFee(
         MessagingFee memory _required,
         uint256 _suppliedNativeFee,
@@ -317,13 +384,18 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
         }
     }
 
-    /// @dev override this if the endpoint is charging ERC20 tokens as native
-    /// @return 0x0 if using native. otherwise the address of the native ERC20 token
+    /**
+     * @dev Override this if the endpoint is charging ERC20 tokens as native.
+     * @return address 0x0 if using native; otherwise, the address of the native ERC20 token.
+     */
     function nativeToken() external view virtual returns (address) {
         return address(0x0);
     }
 
-    /// @notice delegate is authorized by the oapp to configure anything in layerzero
+    /**
+     * @notice Delegate is authorized by the oapp to configure anything in LayerZero.
+     * @param _delegate The address to delegate to.
+     */
     function setDelegate(address _delegate) external {
         delegates[msg.sender] = _delegate;
         emit DelegateSet(msg.sender, _delegate);
@@ -340,7 +412,9 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
             ILayerZeroReceiver(_receiver).allowInitializePath(_origin);
     }
 
-    /// @dev bytes(0) payloadHash can never be submitted
+    /**
+     * @dev Bytes(0) payloadHash can never be submitted.
+     */
     function _verifiable(
         Origin calldata _origin,
         address _receiver,
@@ -351,7 +425,9 @@ contract EndpointV2 is ILayerZeroEndpointV2, MessagingChannel, MessageLibManager
             inboundPayloadHash[_receiver][_origin.srcEid][_origin.sender][_origin.nonce] != EMPTY_PAYLOAD_HASH; // only allow reverifying if it hasn't been executed
     }
 
-    /// @dev assert the caller to either be the oapp or the delegate
+    /**
+     * @dev Assert the caller to either be the oapp or the delegate.
+     */
     function _assertAuthorized(address _oapp) internal view override(MessagingChannel, MessageLibManager) {
         if (msg.sender != _oapp && msg.sender != delegates[_oapp]) revert Errors.LZ_Unauthorized();
     }
