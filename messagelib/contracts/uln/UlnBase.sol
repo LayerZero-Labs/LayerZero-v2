@@ -11,8 +11,8 @@ struct UlnConfig {
     uint8 requiredDVNCount; // 0 indicate DEFAULT, NIL_DVN_COUNT indicate NONE (to override the value of default)
     uint8 optionalDVNCount; // 0 indicate DEFAULT, NIL_DVN_COUNT indicate NONE (to override the value of default)
     uint8 optionalDVNThreshold; // (0, optionalDVNCount]
-    address[] requiredDVNs; // no duplicates. sorted an an ascending order. allowed overlap with optionalDVNs
-    address[] optionalDVNs; // no duplicates. sorted an an ascending order. allowed overlap with requiredDVNs
+    address[] requiredDVNs; // no duplicates. sorted an ascending order. allowed overlap with optionalDVNs
+    address[] optionalDVNs; // no duplicates. sorted an ascending order. allowed overlap with requiredDVNs
 }
 
 struct SetDefaultUlnConfigParam {
