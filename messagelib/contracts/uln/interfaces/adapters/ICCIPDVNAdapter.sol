@@ -13,7 +13,7 @@ interface ICCIPDVNAdapter {
 
     struct DstConfig {
         // https://docs.chain.link/ccip/supported-networks/v1_2_0/testnet#ethereum-sepolia
-        // https://docs.chain.link/ccip/supported-networks/v1_0_0/mainnet
+        // https://docs.chain.link/ccip/supported-networks/v1_2_0/mainnet
         uint64 chainSelector;
         uint16 multiplierBps;
         // https://github.com/smartcontractkit/ccip/blob/ccip-develop/contracts/src/v0.8/ccip/libraries/Client.sol#L22C51-L22C51
