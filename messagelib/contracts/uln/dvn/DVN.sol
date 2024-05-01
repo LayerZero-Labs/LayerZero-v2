@@ -2,13 +2,14 @@
 
 pragma solidity ^0.8.20;
 
-import { ILayerZeroUltraLightNodeV2 } from "@layerzerolabs/lz-evm-v1-0.7/contracts/interfaces/ILayerZeroUltraLightNodeV2.sol";
+import {ILayerZeroUltraLightNodeV2} from
+    "@layerzerolabs/lz-evm-v1-0.7/contracts/interfaces/ILayerZeroUltraLightNodeV2.sol";
 
-import { Worker } from "../../Worker.sol";
-import { MultiSig } from "./MultiSig.sol";
-import { IDVN } from "../interfaces/IDVN.sol";
-import { IDVNFeeLib } from "../interfaces/IDVNFeeLib.sol";
-import { IReceiveUlnE2 } from "../interfaces/IReceiveUlnE2.sol";
+import {Worker} from "../../Worker.sol";
+import {MultiSig} from "./MultiSig.sol";
+import {IDVN} from "../interfaces/IDVN.sol";
+import {IDVNFeeLib} from "../interfaces/IDVNFeeLib.sol";
+import {IReceiveUlnE2} from "../interfaces/IReceiveUlnE2.sol";
 
 struct ExecuteParam {
     uint32 vid;
@@ -142,7 +143,7 @@ contract DVN is Worker, MultiSig, IDVN {
 
         // generate and validate hash
         bytes32 hash = hashCallData(_param.vid, _param.target, _param.callData, _param.expiration);
-        (bool sigsValid, ) = verifySignatures(hash, _param.signatures);
+        (bool sigsValid,) = verifySignatures(hash, _param.signatures);
         if (!sigsValid) {
             revert DVN_InvalidSignatures();
         }
@@ -165,6 +166,18 @@ contract DVN is Worker, MultiSig, IDVN {
         emit SetDstConfig(_params);
     }
 
+    /// @dev for dvn to verify the payload by calling `verify` fn of ReceiveUln302 contract;
+    /// @param _receiveLib the receiveUln302 address on local chain (same as where dvn is on) to be called
+    ///         when dvn calls `verify` to verify the sent message.
+    ///         E.g. If message is sent from Ethereum to Polygon, then DVN (on Polygon) has to verify the
+    ///         sent message by calling verify function of `ReceiveUln302` (on Polygon).
+    function verify(address _receiveLib, bytes calldata _packetHeader, bytes32 _payloadHash, uint64 _confirmations)
+        external
+        onlySelfOrAdmin(ADMIN_ROLE)
+    {
+        IReceiveUlnE2(_receiveLib).verify(_packetHeader, _payloadHash, _confirmations);
+    }
+
     /// @dev takes a list of instructions and executes them in order
     /// @dev if any of the instructions fail, it will emit an error event and continue to execute the rest of the instructions
     /// @param _params array of ExecuteParam, includes target, callData, expiration, signatures
@@ -185,7 +198,7 @@ contract DVN is Worker, MultiSig, IDVN {
             bytes32 hash = hashCallData(param.vid, param.target, param.callData, param.expiration);
 
             // 3. check signatures
-            (bool sigsValid, ) = verifySignatures(hash, param.signatures);
+            (bool sigsValid,) = verifySignatures(hash, param.signatures);
             if (!sigsValid) {
                 emit VerifySignaturesFailed(i);
                 continue;
@@ -232,17 +245,15 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @dev dvn network can reject job from _sender by adding/removing them from allowlist/denylist
     /// @param _param assign job param
     /// @param _options dvn options
-    function assignJob(
-        AssignJobParam calldata _param,
-        bytes calldata _options
-    ) external payable onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_param.sender) returns (uint256 totalFee) {
+    function assignJob(AssignJobParam calldata _param, bytes calldata _options)
+        external
+        payable
+        onlyRole(MESSAGE_LIB_ROLE)
+        onlyAcl(_param.sender)
+        returns (uint256 totalFee)
+    {
         IDVNFeeLib.FeeParams memory feeParams = IDVNFeeLib.FeeParams(
-            priceFeed,
-            _param.dstEid,
-            _param.confirmations,
-            _param.sender,
-            quorum,
-            defaultMultiplierBps
+            priceFeed, _param.dstEid, _param.confirmations, _param.sender, quorum, defaultMultiplierBps
         );
         totalFee = IDVNFeeLib(workerFeeLib).getFeeOnSend(feeParams, dstConfig[_param.dstEid], _options);
     }
@@ -253,20 +264,14 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param //_outboundProofType outbound proof type
     /// @param _confirmations block confirmations
     /// @param _sender message sender address
-    function assignJob(
-        uint16 _dstEid,
-        uint16 /*_outboundProofType*/,
-        uint64 _confirmations,
-        address _sender
-    ) external onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_sender) returns (uint256 totalFee) {
-        IDVNFeeLib.FeeParams memory params = IDVNFeeLib.FeeParams(
-            priceFeed,
-            _dstEid,
-            _confirmations,
-            _sender,
-            quorum,
-            defaultMultiplierBps
-        );
+    function assignJob(uint16 _dstEid, uint16, /*_outboundProofType*/ uint64 _confirmations, address _sender)
+        external
+        onlyRole(MESSAGE_LIB_ROLE)
+        onlyAcl(_sender)
+        returns (uint256 totalFee)
+    {
+        IDVNFeeLib.FeeParams memory params =
+            IDVNFeeLib.FeeParams(priceFeed, _dstEid, _confirmations, _sender, quorum, defaultMultiplierBps);
         // ULNV2 does not have dvn options
         totalFee = IDVNFeeLib(workerFeeLib).getFeeOnSend(params, dstConfig[_dstEid], bytes(""));
         emit VerifierFeePaid(totalFee);
@@ -280,20 +285,14 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param _sender message sender address
     /// @param _options dvn options
     /// @return fee fee in native amount
-    function getFee(
-        uint32 _dstEid,
-        uint64 _confirmations,
-        address _sender,
-        bytes calldata _options
-    ) external view onlyAcl(_sender) returns (uint256 fee) {
-        IDVNFeeLib.FeeParams memory params = IDVNFeeLib.FeeParams(
-            priceFeed,
-            _dstEid,
-            _confirmations,
-            _sender,
-            quorum,
-            defaultMultiplierBps
-        );
+    function getFee(uint32 _dstEid, uint64 _confirmations, address _sender, bytes calldata _options)
+        external
+        view
+        onlyAcl(_sender)
+        returns (uint256 fee)
+    {
+        IDVNFeeLib.FeeParams memory params =
+            IDVNFeeLib.FeeParams(priceFeed, _dstEid, _confirmations, _sender, quorum, defaultMultiplierBps);
         return IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], _options);
     }
 
@@ -303,20 +302,14 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param //_outboundProofType outbound proof type
     /// @param _confirmations block confirmations
     /// @param _sender message sender address
-    function getFee(
-        uint16 _dstEid,
-        uint16 /*_outboundProofType*/,
-        uint64 _confirmations,
-        address _sender
-    ) public view onlyAcl(_sender) returns (uint256 fee) {
-        IDVNFeeLib.FeeParams memory params = IDVNFeeLib.FeeParams(
-            priceFeed,
-            _dstEid,
-            _confirmations,
-            _sender,
-            quorum,
-            defaultMultiplierBps
-        );
+    function getFee(uint16 _dstEid, uint16, /*_outboundProofType*/ uint64 _confirmations, address _sender)
+        public
+        view
+        onlyAcl(_sender)
+        returns (uint256 fee)
+    {
+        IDVNFeeLib.FeeParams memory params =
+            IDVNFeeLib.FeeParams(priceFeed, _dstEid, _confirmations, _sender, quorum, defaultMultiplierBps);
         return IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], bytes(""));
     }
 
@@ -324,12 +317,11 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param _callData call data
     /// @param _expiration expiration timestamp
     /// @return hash of above
-    function hashCallData(
-        uint32 _vid,
-        address _target,
-        bytes calldata _callData,
-        uint256 _expiration
-    ) public pure returns (bytes32) {
+    function hashCallData(uint32 _vid, address _target, bytes calldata _callData, uint256 _expiration)
+        public
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encodePacked(_vid, _target, _expiration, _callData));
     }
 
@@ -342,8 +334,7 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @return true if should check hash
     function _shouldCheckHash(bytes4 _functionSig) internal pure returns (bool) {
         // never check for these selectors to save gas
-        return
-            _functionSig != IReceiveUlnE2.verify.selector && // 0x0223536e, replaying won't change the state
-            _functionSig != ILayerZeroUltraLightNodeV2.updateHash.selector; // 0x704316e5, replaying will be revert at uln
+        return _functionSig != IReceiveUlnE2.verify.selector // 0x0223536e, replaying won't change the state
+            && _functionSig != ILayerZeroUltraLightNodeV2.updateHash.selector; // 0x704316e5, replaying will be revert at uln
     }
 }
