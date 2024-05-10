@@ -22,7 +22,7 @@ With LayerZero V2, developers have the power to create applications that can sea
 - Configure any number and type of [decentralized verifier networks (DVNs)](https://docs.layerzero.network/v2/home/modular-security/security-stack-dvns) to verify your application's cross-chain messages.
 - [Executors](https://docs.layerzero.network/v2/home/permissionless-execution/executors) that, for a fee, abstract away destination gas and automatically deliver messages on behalf of the source sender.
 
-Refer to the [LayerZero V2 Docs](https://docs.layerzero.network/v2) for implementing, handling, and debugging LayerZero contracts.
+Refer to the [LayerZero V2 Docs](https://docs.layerzero.network/v2) for implementing, handling and debugging LayerZero contracts.
 
 Join the `#dev-general` channel on [Discord](https://discord-layerzero.netlify.app/discord) to discuss technical issues.
 
