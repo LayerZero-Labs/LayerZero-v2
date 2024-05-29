@@ -3,9 +3,7 @@
   "version": "2.0.2",
   "private": true,
   "workspaces": [
-    "protocol",
-    "messagelib",
-    "oapp"
+    "packages/**"
   ],
   "scripts": {
     "clean": "$npm_execpath workspaces foreach --all run clean",

@@ -730,9 +730,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@layerzerolabs/lz-evm-messagelib-v2@workspace:^, @layerzerolabs/lz-evm-messagelib-v2@workspace:messagelib":
+"@layerzerolabs/lz-evm-messagelib-v2@workspace:^, @layerzerolabs/lz-evm-messagelib-v2@workspace:packages/layerzero-v2/evm/messagelib":
   version: 0.0.0-use.local
-  resolution: "@layerzerolabs/lz-evm-messagelib-v2@workspace:messagelib"
+  resolution: "@layerzerolabs/lz-evm-messagelib-v2@workspace:packages/layerzero-v2/evm/messagelib"
   dependencies:
     "@axelar-network/axelar-gmp-sdk-solidity": "npm:^5.6.3"
     "@chainlink/contracts-ccip": "npm:^0.7.6"
@@ -746,9 +746,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@layerzerolabs/lz-evm-oapp-v2@workspace:oapp":
+"@layerzerolabs/lz-evm-oapp-v2@workspace:packages/layerzero-v2/evm/oapp":
   version: 0.0.0-use.local
-  resolution: "@layerzerolabs/lz-evm-oapp-v2@workspace:oapp"
+  resolution: "@layerzerolabs/lz-evm-oapp-v2@workspace:packages/layerzero-v2/evm/oapp"
   dependencies:
     "@layerzerolabs/lz-evm-messagelib-v2": "workspace:^"
     "@layerzerolabs/lz-evm-protocol-v2": "workspace:^"
@@ -763,9 +763,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@layerzerolabs/lz-evm-protocol-v2@workspace:^, @layerzerolabs/lz-evm-protocol-v2@workspace:protocol":
+"@layerzerolabs/lz-evm-protocol-v2@workspace:^, @layerzerolabs/lz-evm-protocol-v2@workspace:packages/layerzero-v2/evm/protocol":
   version: 0.0.0-use.local
-  resolution: "@layerzerolabs/lz-evm-protocol-v2@workspace:protocol"
+  resolution: "@layerzerolabs/lz-evm-protocol-v2@workspace:packages/layerzero-v2/evm/protocol"
   dependencies:
     "@openzeppelin/contracts": "npm:^4.8.1"
     "@openzeppelin/contracts-upgradeable": "npm:^4.8.1"
