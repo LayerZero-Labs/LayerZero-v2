@@ -699,6 +699,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs":
+  version: 0.0.0-use.local
+  resolution: "@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs"
+  dependencies:
+    rimraf: "npm:^5.0.5"
+  languageName: unknown
+  linkType: soft
+
 "@layerzerolabs/layerzero-v2@workspace:.":
   version: 0.0.0-use.local
   resolution: "@layerzerolabs/layerzero-v2@workspace:."

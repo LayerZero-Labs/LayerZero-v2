@@ -1,0 +1,11 @@
+[package]
+name = "oapp"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+idl-build = ["anchor-lang/idl-build", 'endpoint/idl-build']
+
+[dependencies]
+anchor-lang = "0.29.0"
+endpoint = { path = "../../programs/endpoint", features = ["cpi"]}

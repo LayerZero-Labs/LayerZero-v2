@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "programs/*",
+    "libs/*",
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 20
+[profile.release.build-override]
+opt-level = 0
+incremental = false
+codegen-units = 20
+
+
+[profile.fast]
+codegen-units = 20
+inherits = "release"
+[profile.fast.build-override]
+opt-level = 0
+codegen-units = 20
