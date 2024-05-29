@@ -22,4 +22,5 @@ interface IDVN is IWorker, ILayerZeroDVN {
     event SetDstConfig(DstConfigParam[] params);
 
     function dstConfig(uint32 _dstEid) external view returns (uint64, uint16, uint128);
+    function verify(address _receiveLibRemote, bytes calldata _packetHeader, bytes32 _payloadHash,uint64 _confirmations) external;
 }

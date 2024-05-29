@@ -60,5 +60,8 @@
   "packageManager": "yarn@4.0.2",
   "engines": {
     "node": ">=18.12.0"
+  },
+  "dependencies": {
+    "corepack": "^0.26.0"
   }
 }

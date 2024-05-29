@@ -705,6 +705,7 @@ __metadata:
   dependencies:
     "@layerzerolabs/prettier-config-next": "npm:^2.0.1"
     "@layerzerolabs/solhint-config": "npm:^2.0.1"
+    corepack: "npm:^0.26.0"
     prettier: "npm:^3.1.0"
     rimraf: "npm:^5.0.5"
     solhint: "npm:^4.0.0"
@@ -2778,6 +2779,19 @@ __metadata:
   version: 1.0.3
   resolution: "core-util-is@npm:1.0.3"
   checksum: 9de8597363a8e9b9952491ebe18167e3b36e7707569eed0ebf14f8bba773611376466ae34575bca8cfe3c767890c859c74056084738f09d4e4a6f902b2ad7d99
+  languageName: node
+  linkType: hard
+
+"corepack@npm:^0.26.0":
+  version: 0.26.0
+  resolution: "corepack@npm:0.26.0"
+  bin:
+    corepack: ./dist/corepack.js
+    pnpm: ./dist/pnpm.js
+    pnpx: ./dist/pnpx.js
+    yarn: ./dist/yarn.js
+    yarnpkg: ./dist/yarnpkg.js
+  checksum: b882da8ff56e4755abe9193206ff92851f3daaa045d493afe6cab058e8484e914974aa04882d05ce1db7f4226f50017c75c7c644bf8d3c9dab6986bd9419d19a
   languageName: node
   linkType: hard
 
