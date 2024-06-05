@@ -20,7 +20,7 @@ idl-build = ["anchor-spl/idl-build", "messagelib-helper/idl-build", "worker-inte
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 primitive-types = { version = "0.12.1", default-features = false }
-solana-helper = { path = "../../../../../rust-crates/solana-helper" }
+solana-helper = { path = "../../solana-helper" }
 messagelib-helper = { path = "../../libs/messagelib-helper" }
 worker-interface = { path = "../worker-interface", features = ["cpi"] }
 utils = { path = "../../libs/utils" }

@@ -19,6 +19,6 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build", "messagelib-helper
 [dependencies]
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
-solana-helper = { path = "../../../../../rust-crates/solana-helper" }
+solana-helper = { path = "../../solana-helper" }
 messagelib-helper = { path = "../../libs/messagelib-helper" }
 utils = { path = "../../libs/utils" }

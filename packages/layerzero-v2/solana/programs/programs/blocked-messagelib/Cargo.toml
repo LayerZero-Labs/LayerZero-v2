@@ -17,5 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = "0.29.0"
-solana-helper = { path = "../../../../../rust-crates/solana-helper" }
+solana-helper = { path = "../../solana-helper" }
 messagelib-helper = { path = "../../libs/messagelib-helper" }
