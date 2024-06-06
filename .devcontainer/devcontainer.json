@@ -3,7 +3,7 @@
 {
 	"name": "Debian",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "docker.io/layerzerolabs/devcon:1.0.8",
+	"image": "docker.io/layerzerolabs/devcon:1.0.9",
   
 	"features": {
 	  "ghcr.io/devcontainers/features/common-utils:2": {
