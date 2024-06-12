@@ -244,6 +244,14 @@ contract OFTTest is TestHelper {
         assertEq(amountSD * aOFT.decimalConversionRate(), aOFT.toLD(uint64(amountSD)));
     }
 
+    function test_toSD_amountLDOutOfBounds_reverts() public {
+        uint256 maxUint64 = type(uint64).max;
+        uint256 outOfBounds = (maxUint64 + 1) * aOFT.decimalConversionRate();
+
+        vm.expectRevert(abi.encodeWithSelector(IOFT.Uint64OutOfBounds.selector, outOfBounds));
+        aOFT.toSD(outOfBounds);
+    }
+
     function test_toSD() public {
         uint256 amountLD = 1000000;
         assertEq(amountLD / aOFT.decimalConversionRate(), aOFT.toSD(amountLD));
