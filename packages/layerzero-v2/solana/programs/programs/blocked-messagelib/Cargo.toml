@@ -17,5 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = "0.29.0"
-solana-helper = { path = "../../solana-helper" }
+solana-helper = "0.1.0"
 messagelib-helper = { path = "../../libs/messagelib-helper" }
