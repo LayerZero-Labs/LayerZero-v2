@@ -1,5 +1,5 @@
 use crate::*;
-use anchor_lang::{solana_program::keccak::hash as keccak256, system_program};
+use anchor_lang::solana_program::keccak::hash as keccak256;
 use messagelib_helper::{
     endpoint_verify,
     packet_v1_codec::{self, PACKET_HEADER_SIZE},
@@ -23,8 +23,7 @@ pub struct CommitVerification<'info> {
         bump = default_receive_config.bump,
     )]
     pub default_receive_config: Account<'info, ReceiveConfig>,
-    /// This account is mutable for receiving the reclaimed lamports
-    #[account(mut, seeds = [ULN_SEED], bump = uln.bump)]
+    #[account(seeds = [ULN_SEED], bump = uln.bump)]
     pub uln: Account<'info, UlnSettings>,
 }
 
@@ -66,11 +65,7 @@ impl CommitVerification<'_> {
             params.payload_hash,
             &[ULN_SEED, &[ctx.accounts.uln.bump]],
             &ctx.remaining_accounts[dvns_size..],
-        )?;
-
-        // need to reclaim storage after verification, otherwise the lamports of uln account will be changed
-        // and endpoint_verify::verify() will fail
-        reclaim_storage(confirmation_accounts, ctx.accounts.uln.as_ref())
+        )
     }
 }
 
@@ -80,28 +75,6 @@ fn get_receive_config(
 ) -> Result<UlnConfig> {
     let custom_config = local_custom_config::<ReceiveConfig>(custom_config_acc)?;
     UlnConfig::get_config(&default_config.uln, &custom_config.uln)
-}
-
-fn reclaim_storage(confirmation_accounts: &[AccountInfo], sol_dest: &AccountInfo) -> Result<()> {
-    // close accounts
-    for acc in confirmation_accounts {
-        // skip if account already closed
-        if *acc.owner == system_program::ID {
-            continue;
-        }
-
-        // check if the account is writable to reclaim storage
-        require!(acc.is_writable, UlnError::InvalidConfirmation);
-
-        let lamports = acc.lamports();
-        sol_dest.add_lamports(lamports)?;
-        acc.sub_lamports(lamports)?;
-
-        acc.assign(&system_program::ID);
-        acc.realloc(0, false)?;
-    }
-
-    Ok(())
 }
 
 pub fn check_verifiable(
