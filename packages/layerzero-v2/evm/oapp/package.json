@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "clean": "rimraf cache out",
-    "build": "forge build --via-ir",
+    "build": "forge build",
     "test": "forge coverage --ir-minimum"
   },
   "dependencies": {

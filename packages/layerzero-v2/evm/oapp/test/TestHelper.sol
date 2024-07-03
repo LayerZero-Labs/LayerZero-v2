@@ -87,45 +87,46 @@ contract TestHelper is Test, OptionsHelper {
         IDVN.DstConfigParam[] dvnConfigParams;
     }
 
+    EndpointSetup endpointSetup;
+
     /**
      * @dev setup the endpoints
      * @param _endpointNum num of endpoints
      */
     function setUpEndpoints(uint8 _endpointNum, LibraryType _libraryType) public {
-        EndpointSetup memory setup;
-        setup.endpointList = new EndpointV2[](_endpointNum);
-        setup.eidList = new uint32[](_endpointNum);
-        setup.sendLibs = new address[](_endpointNum);
-        setup.receiveLibs = new address[](_endpointNum);
-        setup.signers = new address[](1);
-        setup.signers[0] = vm.addr(1);
+        endpointSetup.endpointList = new EndpointV2[](_endpointNum);
+        endpointSetup.eidList = new uint32[](_endpointNum);
+        endpointSetup.sendLibs = new address[](_endpointNum);
+        endpointSetup.receiveLibs = new address[](_endpointNum);
+        endpointSetup.signers = new address[](1);
+        endpointSetup.signers[0] = vm.addr(1);
 
         {
             // deploy endpoints
             for (uint8 i = 0; i < _endpointNum; i++) {
                 uint32 eid = i + 1;
-                setup.eidList[i] = eid;
-                setup.endpointList[i] = new EndpointV2(eid, address(this));
-                registerEndpoint(setup.endpointList[i]);
+                endpointSetup.eidList[i] = eid;
+                endpointSetup.endpointList[i] = new EndpointV2(eid, address(this));
+                registerEndpoint(endpointSetup.endpointList[i]);
             }
         }
 
         // deploy price feed
-        setup.priceFeed = new PriceFeed();
-        setup.priceFeed.initialize(address(this));
+        endpointSetup.priceFeed = new PriceFeed();
+        endpointSetup.priceFeed.initialize(address(this));
 
         for (uint8 i = 0; i < _endpointNum; i++) {
             if (_libraryType == LibraryType.UltraLightNode) {
-                address endpointAddr = address(setup.endpointList[i]);
+                address endpointAddr = address(endpointSetup.endpointList[i]);
 
                 LibrarySetup memory libSetup;
 
                 libSetup.sendUln = new SendUln302(payable(this), endpointAddr, TREASURY_GAS_CAP, TREASURY_GAS_FOR_FEE_CAP);
                 libSetup.receiveUln = new ReceiveUln302(endpointAddr);
-                setup.endpointList[i].registerLibrary(address(libSetup.sendUln));
-                setup.endpointList[i].registerLibrary(address(libSetup.receiveUln));
-                setup.sendLibs[i] = address(libSetup.sendUln);
-                setup.receiveLibs[i] = address(libSetup.receiveUln);
+                endpointSetup.endpointList[i].registerLibrary(address(libSetup.sendUln));
+                endpointSetup.endpointList[i].registerLibrary(address(libSetup.receiveUln));
+                endpointSetup.sendLibs[i] = address(libSetup.sendUln);
+                endpointSetup.receiveLibs[i] = address(libSetup.receiveUln);
 
                 libSetup.executor = new Executor();
 
@@ -140,7 +141,7 @@ contract TestHelper is Test, OptionsHelper {
                     endpointAddr,
                     address(0x0),
                     messageLibs,
-                    address(setup.priceFeed),
+                    address(endpointSetup.priceFeed),
                     address(this),
                     admins
                 );
@@ -148,7 +149,7 @@ contract TestHelper is Test, OptionsHelper {
                 libSetup.executorLib = new ExecutorFeeLibMock();
                 libSetup.executor.setWorkerFeeLib(address(libSetup.executorLib));
 
-                libSetup.dvn = new DVN(i + 1, messageLibs, address(setup.priceFeed), setup.signers, 1, admins);
+                libSetup.dvn = new DVN(i + 1, messageLibs, address(endpointSetup.priceFeed), endpointSetup.signers, 1, admins);
                 libSetup.dvnLib = new DVNFeeLib(1e18);
                 libSetup.dvn.setWorkerFeeLib(address(libSetup.dvnLib));
 
@@ -199,23 +200,23 @@ contract TestHelper is Test, OptionsHelper {
                         floorMarginUSD: 1e10
                     });
 
-                    uint128 denominator = setup.priceFeed.getPriceRatioDenominator();
+                    uint128 denominator = endpointSetup.priceFeed.getPriceRatioDenominator();
                     ILayerZeroPriceFeed.UpdatePrice[] memory prices = new ILayerZeroPriceFeed.UpdatePrice[](1);
                     prices[0] = ILayerZeroPriceFeed.UpdatePrice(
                         dstEid,
                         ILayerZeroPriceFeed.Price(1 * denominator, 1, 1)
                     );
-                    setup.priceFeed.setPrice(prices);
+                    endpointSetup.priceFeed.setPrice(prices);
                 }
 
                 libSetup.executor.setDstConfig(configParams.dstConfigParams);
                 libSetup.dvn.setDstConfig(configParams.dvnConfigParams);
 
             } else if (_libraryType == LibraryType.SimpleMessageLib) {
-                SimpleMessageLibMock messageLib = new SimpleMessageLibMock(payable(this), address(setup.endpointList[i]));
-                setup.endpointList[i].registerLibrary(address(messageLib));
-                setup.sendLibs[i] = address(messageLib);
-                setup.receiveLibs[i] = address(messageLib);
+                SimpleMessageLibMock messageLib = new SimpleMessageLibMock(payable(this), address(endpointSetup.endpointList[i]));
+                endpointSetup.endpointList[i].registerLibrary(address(messageLib));
+                endpointSetup.sendLibs[i] = address(messageLib);
+                endpointSetup.receiveLibs[i] = address(messageLib);
             } else {
                 revert("invalid library type");
             }
@@ -223,11 +224,11 @@ contract TestHelper is Test, OptionsHelper {
 
         // config up
         for (uint8 i = 0; i < _endpointNum; i++) {
-            EndpointV2 endpoint = setup.endpointList[i];
+            EndpointV2 endpoint = endpointSetup.endpointList[i];
             for (uint8 j = 0; j < _endpointNum; j++) {
                 if (i == j) continue;
-                endpoint.setDefaultSendLibrary(j + 1, setup.sendLibs[i]);
-                endpoint.setDefaultReceiveLibrary(j + 1, setup.receiveLibs[i], 0);
+                endpoint.setDefaultSendLibrary(j + 1, endpointSetup.sendLibs[i]);
+                endpoint.setDefaultReceiveLibrary(j + 1, endpointSetup.receiveLibs[i], 0);
             }
         }
     }
