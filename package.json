@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "clean": "$npm_execpath workspaces foreach --all run clean",
-    "build": "$npm_execpath workspaces foreach --all run build",
-    "test": "$npm_execpath workspaces foreach --all run test"
+    "build": "$npm_execpath workspaces foreach -Rpt --from '{@layerzerolabs/lz-evm-oapp-v2,@layerzerolabs/lz-evm-protocol-v2}' run build",
+    "test": "$npm_execpath workspaces foreach -Rpt --from '{@layerzerolabs/lz-evm-oapp-v2,@layerzerolabs/lz-evm-protocol-v2}' run test"
   },
   "resolutions": {
     "@typechain/hardhat": "^9.1.0",
