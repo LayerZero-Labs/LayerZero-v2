@@ -4,8 +4,8 @@
   "license": "MIT",
   "scripts": {
     "clean": "rimraf cache out",
-    "build": "forge build",
-    "test": "forge test"
+    "build": "forge build --via-ir",
+    "test": "forge coverage --ir-minimum"
   },
   "dependencies": {
     "@layerzerolabs/lz-evm-messagelib-v2": "workspace:^",

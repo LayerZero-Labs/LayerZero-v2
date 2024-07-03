@@ -7,6 +7,7 @@ out = "out"
 cache_path = "cache"
 optimizer = true
 optimizer_runs = 20_000
+via_ir = true
 
 allow_paths = [
     "../../../../.yarn/unplugged",
