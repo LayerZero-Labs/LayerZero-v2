@@ -101,7 +101,7 @@ abstract contract ReceiveUlnBase is UlnBase {
                 }
             }
             if (_config.optionalDVNCount == 0) {
-                // returns early if all required DVNs have signed and there are no optional DVNs
+                // returns early if all required DVNs have been signed and there are no optional DVNs
                 return true;
             }
         }
