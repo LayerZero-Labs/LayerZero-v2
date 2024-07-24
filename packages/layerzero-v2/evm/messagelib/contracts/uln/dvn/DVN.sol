@@ -279,7 +279,7 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param _confirmations block confirmations
     /// @param _sender message sender address
     /// @param _options dvn options
-    /// @return fee fee in native amount
+    /// @return fee in native amount
     function getFee(
         uint32 _dstEid,
         uint64 _confirmations,
