@@ -104,6 +104,12 @@ interface IOFT {
     function sharedDecimals() external view returns (uint8);
 
     /**
+     * @notice Retrieves the decimal conversion rate of the OFT.
+     * @return decimalConversionRate The decimal conversion rate of the OFT.
+     */
+    function decimalConversionRate() external view returns (uint256);
+
+    /**
      * @notice Provides a quote for OFT-related operations.
      * @param _sendParam The parameters for the send operation.
      * @return limit The OFT limit information.
