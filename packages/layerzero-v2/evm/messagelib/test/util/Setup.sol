@@ -168,7 +168,8 @@ library Setup {
         IExecutor.DstConfigParam[] memory dstConfigParams = new IExecutor.DstConfigParam[](1);
         dstConfigParams[0] = IExecutor.DstConfigParam({
             dstEid: remoteEid,
-            baseGas: 5000,
+            lzReceiveBaseGas: 5000,
+            lzComposeBaseGas: 0,
             multiplierBps: 10000,
             floorMarginUSD: 1e10,
             nativeCap: 1 gwei
@@ -180,7 +181,8 @@ library Setup {
         IExecutor.DstConfigParam[] memory dstConfigParams = new IExecutor.DstConfigParam[](1);
         dstConfigParams[0] = IExecutor.DstConfigParam({
             dstEid: remoteEid,
-            baseGas: 5000,
+            lzReceiveBaseGas: 5000,
+            lzComposeBaseGas: 0,
             multiplierBps: 10000,
             floorMarginUSD: 1e10,
             nativeCap: 1 gwei

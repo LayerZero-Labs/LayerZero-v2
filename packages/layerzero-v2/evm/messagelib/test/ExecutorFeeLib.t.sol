@@ -42,7 +42,7 @@ contract ExecutorFeeLibTest is Test {
         priceFeed = new PriceFeedMock();
         executorFeeLib = new ExecutorFeeLib(1e18);
         priceFeed.setup(gasFee, priceRatio, nativePriceUSD);
-        config = IExecutor.DstConfig(baseGas, multiplierBps, floorMarginUSD, nativeDropCap);
+        config = IExecutor.DstConfig(baseGas, multiplierBps, floorMarginUSD, nativeDropCap, 0);
     }
 
     function test_getFee_noOptions_revert() public {
@@ -77,7 +77,7 @@ contract ExecutorFeeLibTest is Test {
     }
 
     function test_getFee_lzReceiveOption_defaultMultiplier() public {
-        config = IExecutor.DstConfig(baseGas, 0, 0, nativeDropCap);
+        config = IExecutor.DstConfig(baseGas, 0, 0, nativeDropCap, 0);
         uint256 dstFee = (dstAmount * priceRatio) / priceFeed.getPriceRatioDenominator();
 
         uint256 expected = ((gasFee + dstFee) * defaultMultiplierBps) / 10000;
@@ -99,7 +99,7 @@ contract ExecutorFeeLibTest is Test {
     }
 
     function test_getFee_lzReceiveOption_specificMultiplier() public {
-        config = IExecutor.DstConfig(baseGas, multiplierBps, 0, nativeDropCap);
+        config = IExecutor.DstConfig(baseGas, multiplierBps, 0, nativeDropCap, 0);
         uint256 dstFee = (dstAmount * priceRatio) / priceFeed.getPriceRatioDenominator();
 
         uint256 expected = ((gasFee + dstFee) * multiplierBps) / 10000;
@@ -285,7 +285,7 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        config = IExecutor.DstConfig(baseGas, defaultMultiplierBps, 0, 0);
+        config = IExecutor.DstConfig(baseGas, defaultMultiplierBps, 0, 0, 0);
 
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, uint128(0));
         uint256 actual = executorFeeLib.getFee(
@@ -307,7 +307,7 @@ contract ExecutorFeeLibTest is Test {
             calldataSize,
             defaultMultiplierBps
         );
-        config = IExecutor.DstConfig(baseGas, defaultMultiplierBps, 0, 0);
+        config = IExecutor.DstConfig(baseGas, defaultMultiplierBps, 0, 0, 0);
 
         bytes memory executorOption = abi.encodePacked(OPTION_TYPE_LZRECEIVE, dstGas, uint128(0));
         uint256 actual = executorFeeLib.getFeeOnSend(
