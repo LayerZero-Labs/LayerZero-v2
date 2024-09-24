@@ -5,13 +5,57 @@ pragma solidity ^0.8.20;
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { Proxied } from "hardhat-deploy/solc_0.8/proxy/Proxied.sol";
 
-import { ILayerZeroEndpointV2, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import { PacketV1Codec } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/PacketV1Codec.sol";
 
 import { IUltraLightNode301 } from "./uln/uln301/interfaces/IUltraLightNode301.sol";
 import { IExecutor } from "./interfaces/IExecutor.sol";
 import { IExecutorFeeLib } from "./interfaces/IExecutorFeeLib.sol";
 import { WorkerUpgradeable } from "./upgradeable/WorkerUpgradeable.sol";
+
+interface ILayerZeroEndpointV2 {
+    function eid() external view returns (uint32);
+
+    function lzReceive(
+        Origin calldata _origin,
+        address _receiver,
+        bytes32 _guid,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external payable;
+
+    function lzReceiveAlert(
+        Origin calldata _origin,
+        address _receiver,
+        bytes32 _guid,
+        uint256 _gas,
+        uint256 _value,
+        bytes calldata _message,
+        bytes calldata _extraData,
+        bytes calldata _reason
+    ) external;
+
+    function lzCompose(
+        address _from,
+        address _to,
+        bytes32 _guid,
+        uint16 _index,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external payable;
+
+    function lzComposeAlert(
+        address _from,
+        address _to,
+        bytes32 _guid,
+        uint16 _index,
+        uint256 _gas,
+        uint256 _value,
+        bytes calldata _message,
+        bytes calldata _extraData,
+        bytes calldata _reason
+    ) external;
+}
 
 contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IExecutor {
     using PacketV1Codec for bytes;
@@ -49,10 +93,11 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         for (uint256 i = 0; i < _params.length; i++) {
             DstConfigParam memory param = _params[i];
             dstConfig[param.dstEid] = DstConfig(
-                param.baseGas,
+                param.lzReceiveBaseGas,
                 param.multiplierBps,
                 param.floorMarginUSD,
-                param.nativeCap
+                param.nativeCap,
+                param.lzComposeBaseGas
             );
         }
         emit DstConfigSet(_params);
@@ -83,6 +128,66 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         IUltraLightNode301(receiveUln301).commitVerification(_packet, _gasLimit);
     }
 
+    function execute302(ExecutionParams calldata _executionParams) external payable onlyRole(ADMIN_ROLE) nonReentrant {
+        try
+        ILayerZeroEndpointV2(endpoint).lzReceive{ value: msg.value, gas: _executionParams.gasLimit }(
+            _executionParams.origin,
+            _executionParams.receiver,
+            _executionParams.guid,
+            _executionParams.message,
+            _executionParams.extraData
+        )
+        {
+            // do nothing
+        } catch (bytes memory reason) {
+            ILayerZeroEndpointV2(endpoint).lzReceiveAlert(
+                _executionParams.origin,
+                _executionParams.receiver,
+                _executionParams.guid,
+                _executionParams.gasLimit,
+                msg.value,
+                _executionParams.message,
+                _executionParams.extraData,
+                reason
+            );
+        }
+    }
+
+    function compose302(
+        address _from,
+        address _to,
+        bytes32 _guid,
+        uint16 _index,
+        bytes calldata _message,
+        bytes calldata _extraData,
+        uint256 _gasLimit
+    ) external payable onlyRole(ADMIN_ROLE) nonReentrant {
+        try
+        ILayerZeroEndpointV2(endpoint).lzCompose{ value: msg.value, gas: _gasLimit }(
+            _from,
+            _to,
+            _guid,
+            _index,
+            _message,
+            _extraData
+        )
+        {
+            // do nothing
+        } catch (bytes memory reason) {
+            ILayerZeroEndpointV2(endpoint).lzComposeAlert(
+                _from,
+                _to,
+                _guid,
+                _index,
+                _gasLimit,
+                msg.value,
+                _message,
+                _extraData,
+                reason
+            );
+        }
+    }
+
     function nativeDropAndExecute302(
         NativeDropParams[] calldata _nativeDropParams,
         uint256 _nativeDropGasLimit,
@@ -97,14 +202,28 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         );
 
         uint256 value = msg.value - spent;
-        // ignore the execution result
+        try
         ILayerZeroEndpointV2(endpoint).lzReceive{ value: value, gas: _executionParams.gasLimit }(
             _executionParams.origin,
             _executionParams.receiver,
             _executionParams.guid,
             _executionParams.message,
             _executionParams.extraData
-        );
+        )
+        {
+            // do nothing
+        } catch (bytes memory reason) {
+            ILayerZeroEndpointV2(endpoint).lzReceiveAlert(
+                _executionParams.origin,
+                _executionParams.receiver,
+                _executionParams.guid,
+                _executionParams.gasLimit,
+                value,
+                _executionParams.message,
+                _executionParams.extraData,
+                reason
+            );
+        }
     }
 
     // --- Message Lib ---
@@ -113,7 +232,7 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         address _sender,
         uint256 _calldataSize,
         bytes calldata _options
-    ) external onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_sender) returns (uint256 fee) {
+    ) external onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_sender) whenNotPaused returns (uint256 fee) {
         IExecutorFeeLib.FeeParams memory params = IExecutorFeeLib.FeeParams(
             priceFeed,
             _dstEid,
