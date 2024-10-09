@@ -6,27 +6,43 @@ on:
   pull_request:
     branches: [$default-branch, main]
   
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
 jobs:
   lint-build-test:
     name: Lint, Build & Test
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/layerzero-labs/devcon:1.1.4-bookworm
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      options: --privileged
+    env:
+      HOME: /root
+
     steps:
+      - name: Initialize docker services
+        run: |
+          umount /var/run/docker.sock
+          /usr/local/share/docker-init.sh
+
       - name: Check out
-        uses: actions/checkout@v3
-      - name: Install foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash && \
-          eval "$(sed -n '/foundry/p' ~/.bashrc)" && \
-          echo $PATH | tee -a $GITHUB_PATH
-      - name: Install chain tools
-        run: |
-          foundryup
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      
       - name: Yarn install
         run: |
           yarn install --immutable
+
       - name: Build
         run: |
           yarn build
+
       - name: Test
         run: |
           yarn test
