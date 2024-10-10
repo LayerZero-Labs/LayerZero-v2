@@ -32,11 +32,12 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external returns (uint256 fee) {
-        if (_dstConfig.baseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
+        if (_dstConfig.lzReceiveBaseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
 
         (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
             _isV1Eid(_params.dstEid),
-            _dstConfig.baseGas,
+            _dstConfig.lzReceiveBaseGas,
+            _dstConfig.lzComposeBaseGas,
             _dstConfig.nativeCap,
             _options
         );
@@ -49,19 +50,10 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
             uint128 nativePriceUSD
         ) = ILayerZeroPriceFeed(_params.priceFeed).estimateFeeOnSend(_params.dstEid, _params.calldataSize, totalGas);
 
-        fee = _applyPremiumToGas(
-            totalGasFee,
-            _dstConfig.multiplierBps,
-            _params.defaultMultiplierBps,
-            _dstConfig.floorMarginUSD,
-            nativePriceUSD
-        );
-        fee += _convertAndApplyPremiumToValue(
-            totalDstAmount,
-            priceRatio,
-            priceRatioDenominator,
-            _params.defaultMultiplierBps
-        );
+        uint16 multiplierBps = _dstConfig.multiplierBps == 0 ? _params.defaultMultiplierBps : _dstConfig.multiplierBps;
+
+        fee = _applyPremiumToGas(totalGasFee, multiplierBps, _dstConfig.floorMarginUSD, nativePriceUSD);
+        fee += _convertAndApplyPremiumToValue(totalDstAmount, priceRatio, priceRatioDenominator, multiplierBps);
     }
 
     // ================================ View ================================
@@ -70,11 +62,12 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256 fee) {
-        if (_dstConfig.baseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
+        if (_dstConfig.lzReceiveBaseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
 
         (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
             _isV1Eid(_params.dstEid),
-            _dstConfig.baseGas,
+            _dstConfig.lzReceiveBaseGas,
+            _dstConfig.lzComposeBaseGas,
             _dstConfig.nativeCap,
             _options
         );
@@ -86,26 +79,18 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
             uint128 nativePriceUSD
         ) = ILayerZeroPriceFeed(_params.priceFeed).estimateFeeByEid(_params.dstEid, _params.calldataSize, totalGas);
 
-        fee = _applyPremiumToGas(
-            totalGasFee,
-            _dstConfig.multiplierBps,
-            _params.defaultMultiplierBps,
-            _dstConfig.floorMarginUSD,
-            nativePriceUSD
-        );
-        fee += _convertAndApplyPremiumToValue(
-            totalDstAmount,
-            priceRatio,
-            priceRatioDenominator,
-            _params.defaultMultiplierBps
-        );
+        uint16 multiplierBps = _dstConfig.multiplierBps == 0 ? _params.defaultMultiplierBps : _dstConfig.multiplierBps;
+
+        fee = _applyPremiumToGas(totalGasFee, multiplierBps, _dstConfig.floorMarginUSD, nativePriceUSD);
+        fee += _convertAndApplyPremiumToValue(totalDstAmount, priceRatio, priceRatioDenominator, multiplierBps);
     }
 
     // ================================ Internal ================================
     // @dev decode executor options into dstAmount and totalGas
     function _decodeExecutorOptions(
         bool _v1Eid,
-        uint64 _baseGas,
+        uint64 _lzReceiveBaseGas,
+        uint64 _lzComposeBaseGas,
         uint128 _nativeCap,
         bytes calldata _options
     ) internal pure returns (uint256 dstAmount, uint256 totalGas) {
@@ -115,8 +100,9 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
 
         uint256 cursor = 0;
         bool ordered = false;
-        totalGas = _baseGas;
+        totalGas = _lzReceiveBaseGas; // lz receive only called once
 
+        bool v1Eid = _v1Eid; // stack too deep
         uint256 lzReceiveGas;
         while (cursor < _options.length) {
             (uint8 optionType, bytes calldata option, uint256 newCursor) = _options.nextExecutorOption(cursor);
@@ -126,7 +112,7 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
                 (uint128 gas, uint128 value) = ExecutorOptions.decodeLzReceiveOption(option);
 
                 // endpoint v1 does not support lzReceive with value
-                if (_v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
+                if (v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
 
                 dstAmount += value;
                 lzReceiveGas += gas;
@@ -135,11 +121,16 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
                 dstAmount += nativeDropAmount;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_LZCOMPOSE) {
                 // endpoint v1 does not support lzCompose
-                if (_v1Eid) revert Executor_UnsupportedOptionType(optionType);
+                if (v1Eid) revert Executor_UnsupportedOptionType(optionType);
 
                 (, uint128 gas, uint128 value) = ExecutorOptions.decodeLzComposeOption(option);
+                if (gas == 0) revert Executor_ZeroLzComposeGasProvided();
+
                 dstAmount += value;
-                totalGas += gas;
+                // lz compose can be called multiple times, based on unique index
+                // to simplify the quoting, we add lzComposeBaseGas for each lzComposeOption received
+                // if the same index has multiple compose options, the gas will be added multiple times
+                totalGas += gas + _lzComposeBaseGas;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_ORDERED_EXECUTION) {
                 ordered = true;
             } else {
@@ -158,14 +149,11 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
 
     function _applyPremiumToGas(
         uint256 _fee,
-        uint16 _bps,
-        uint16 _defaultBps,
+        uint16 _multiplierBps,
         uint128 _marginUSD,
         uint128 _nativePriceUSD
     ) internal view returns (uint256) {
-        uint16 multiplierBps = _bps == 0 ? _defaultBps : _bps;
-
-        uint256 feeWithMultiplier = (_fee * multiplierBps) / 10000;
+        uint256 feeWithMultiplier = (_fee * _multiplierBps) / 10000;
 
         if (_nativePriceUSD == 0 || _marginUSD == 0) {
             return feeWithMultiplier;
@@ -179,10 +167,10 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         uint256 _value,
         uint128 _ratio,
         uint128 _denom,
-        uint16 _defaultBps
+        uint16 _multiplierBps
     ) internal pure returns (uint256 fee) {
         if (_value > 0) {
-            fee = (((_value * _ratio) / _denom) * _defaultBps) / 10000;
+            fee = (((_value * _ratio) / _denom) * _multiplierBps) / 10000;
         }
     }
 
