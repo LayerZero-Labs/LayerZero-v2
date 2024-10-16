@@ -53,3 +53,6 @@ The contracts related to the append-only, on-chain [MessageLibs](https://docs.la
 - **DVN**: Developers can run a custom DVN by deploying a DVN contract on every chain they want to support. See the [Build DVN](https://docs.layerzero.network/v2/developers/evm/off-chain/build-dvns) guide to create your own security setup.
 
 - **Executor**: Developers can deploy a custom Executor to ensure the seamless execution of messages on the destination chain. See the [Executor](https://docs.layerzero.network/v2/developers/evm/off-chain/build-executors) guide.
+
+## Verify Contracts
+- [Solana](./packages/layerzero-v2/solana/programs/verify-contracts.md)
