@@ -1,5 +1,5 @@
 use crate::*;
-use anchor_lang::solana_program::{instruction::Instruction, program::invoke};
+use anchor_lang::solana_program::{instruction::Instruction, program::invoke, system_program};
 use oapp::{
     endpoint::{
         self, cpi::accounts::LzReceiveAlert, instructions::LzReceiveAlertParams, program::Endpoint,
@@ -74,6 +74,11 @@ impl Execute<'_> {
                 ExecutorError::InsufficientBalance
             );
         }
+        require!(
+            ctx.accounts.executor.owner.key() == system_program::ID,
+            ExecutorError::InvalidOwner
+        );
+        require!(ctx.accounts.executor.data_is_empty(), ExecutorError::InvalidSize);
         Ok(())
     }
 }
