@@ -207,7 +207,7 @@ Generate the checksum for the downloaded program:
 sha256sum /tmp/endpoint.so
 ```
 
-### Step 3.3: Compare the Results{#program-hash}
+### Step 3.3: Compare the Results <a id="program-hash"></a>
 
 Now, compare the checksums of the built program and the downloaded program. They should match if the deployed bytecode is identical to your local build.
 
