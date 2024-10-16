@@ -19,4 +19,5 @@ pub enum ExecutorError {
     InsufficientBalance,
     EidNotSupported,
     ExecutorIsAdmin,
+    InvalidOwner,
 }
