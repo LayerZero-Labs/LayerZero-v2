@@ -102,6 +102,8 @@ Check out the specific commit required for this verification:
 git checkout 37c598b3e6e218c5e00c8b0dcd42f984e5b13147
 ```
 
+Refer to the [Program Hash Table](#program-hash) to find the commit associated with different programs.
+
 ### Step 2.4: Install Node Version Manager (NVM) and Node.js
 
 To manage Node.js versions, install `nvm` (Node Version Manager). This is required for running JavaScript tools involved in building the monorepo.
@@ -205,16 +207,18 @@ Generate the checksum for the downloaded program:
 sha256sum /tmp/endpoint.so
 ```
 
-### Step 3.3: Compare the Results
+### Step 3.3: Compare the Results <a id="program-hash"></a>
 
 Now, compare the checksums of the built program and the downloaded program. They should match if the deployed bytecode is identical to your local build.
 
-| Program            | Address                                      | Updated      | SHA256                                                           |
+| Program            | Address                                      | Commit      | SHA256                                                           |
 | ------------------ | -------------------------------------------- | ------------ | ---------------------------------------------------------------- |
-| blocked-messagelib | 2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB | May 29, 2024 | f92e599beb2fdfa53e7061ce4421f91b561c2d927a722ec3399f13a42edbe125 |
-| dvn                | HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW | May 29, 2024 | b241d72e5b7fca532db12f22e128824c9316a887edbecc97f1f76fb0113e9127 |
-| endpoint           | 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 | May 29, 2024 | caa868d80b000c488e60e99828e366e773dde877ccc92b67f81df03b608639d4 |
-| oft                | HRPXLCqspQocTjfcX4rvAPaY9q6Gwb1rrD3xXWrfJWdW | May 29, 2024 | cd470fa5a7d287b4145068a546da32d5e21c71b3406d094280583e32644255b7 |
-| pricefeed          | 8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP | May 29, 2024 | e7349c171c43c971044ea0ddc4c6f75b7b1395afde2b3d9243c5e2dce7ba9459 |
+| blocked-messagelib | 2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB | 37c598b | f92e599beb2fdfa53e7061ce4421f91b561c2d927a722ec3399f13a42edbe125 |
+| dvn                | HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW | 37c598b | b241d72e5b7fca532db12f22e128824c9316a887edbecc97f1f76fb0113e9127 |
+| endpoint           | 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 | 37c598b | caa868d80b000c488e60e99828e366e773dde877ccc92b67f81df03b608639d4 |
+| oft                | HRPXLCqspQocTjfcX4rvAPaY9q6Gwb1rrD3xXWrfJWdW | 37c598b | cd470fa5a7d287b4145068a546da32d5e21c71b3406d094280583e32644255b7 |
+| pricefeed          | 8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP | 37c598b | e7349c171c43c971044ea0ddc4c6f75b7b1395afde2b3d9243c5e2dce7ba9459 |
+| uln                | 7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH | 7aebbd7 | 3f5e4b54a281804aade7d24efd7957b30663e2f9a1f5e88ca4a6d539848f6e06 |     |
+
 
 If the checksums match, the verification is successful.
