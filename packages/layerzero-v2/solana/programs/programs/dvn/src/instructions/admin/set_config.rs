@@ -32,6 +32,7 @@ pub enum AdminConfig {
     DefaultMultiplierBps(u16),
     DstConfigs(Vec<DstConfig>),
     PriceFeed(Pubkey),
+    RemoveDstConfigs(Vec<u32>),
 }
 
 impl AdminConfig {
@@ -48,6 +49,9 @@ impl AdminConfig {
             },
             AdminConfig::PriceFeed(price_feed) => {
                 config.price_feed = *price_feed;
+            },
+            AdminConfig::RemoveDstConfigs(dst_eids) => {
+                config.remove_dst_configs(dst_eids.clone())?;
             },
         }
         Ok(())
