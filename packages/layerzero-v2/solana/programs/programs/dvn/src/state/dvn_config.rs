@@ -74,6 +74,13 @@ impl DvnConfig {
         }
         Ok(())
     }
+
+    pub fn remove_dst_configs(&mut self, dst_eids: Vec<u32>) -> Result<()> {
+        for eid in dst_eids {
+            sorted_list_helper::remove_from_sorted_list_by_eid(&mut self.dst_configs, eid)?;
+        }
+        Ok(())
+    }
 }
 
 impl sorted_list_helper::EID for DstConfig {
