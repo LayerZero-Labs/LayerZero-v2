@@ -16,9 +16,13 @@ Install Homebrew by running the following command:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-Once Homebrew is installed, the next step is to launch a virtual machine using `tart`, a tool to manage macOS virtual machines. We will clone a base macOS Sonoma image and run the virtual machine.
+Once Homebrew is installed, the next step is to install `tart`, a tool to manage macOS virtual machines.
 
-Clone the image and launch the virtual machine:
+```bash
+brew install cirruslabs/cli/tart
+```
+
+Clone the base macOS Sonoma image and launch the virtual machine:
 
 ```bash
 tart clone ghcr.io/cirruslabs/macos-sonoma-base:latest sonoma-base
@@ -58,6 +62,8 @@ Create a new user account with the name `carmencheng` and grant administrative p
 sudo sysadminctl -addUser carmencheng -fullName "" -password admin
 sudo dscl . -append /Groups/admin GroupMembership carmencheng
 ```
+
+Note:  You *must* use `charmencheng` as the username due to tooling limitations.
 
 After creating the account, switch to it by running:
 
@@ -99,6 +105,7 @@ git clone https://github.com/LayerZero-Labs/LayerZero-v2.git ~/Desktop/layerzero
 Check out the specific commit required for this verification:
 
 ```bash
+cd Desktop/layerzero/monorepo
 git checkout 37c598b3e6e218c5e00c8b0dcd42f984e5b13147
 ```
 
@@ -186,6 +193,13 @@ cd ~/Desktop/layerzero/monorepo
 yarn
 ```
 
+Note: Ensure you confirm when prompted to install yarn:
+
+```text
+! Corepack is about to download https://repo.yarnpkg.com/4.0.2/packages/yarnpkg-cli/bin/yarn.js
+? Do you want to continue? [Y/n] y
+```
+
 ---
 
 ## Step 3: Build and Verify the Solana Contracts
@@ -222,9 +236,9 @@ Now, compare the program hash of the built program and the on-chain program. The
 | blocked-messagelib | 2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB | 37c598b | aarch64-apple-darwin | e8f5412527e5138f626299c9b78a2e2f859d306f4c744472d7a2fde34988f3b1 |
 | dvn                | HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW | 37c598b | aarch64-apple-darwin | 98c89ebdd94b2563d3aabba118ce012965c344e98c70600f66365dae2d66de39 |
 | endpoint           | 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 | 37c598b | aarch64-apple-darwin | 9012552d8a15d230791e2582e6320eff872a651fb110d2198020ed12e5547e74 |
-| executor           | 6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn | 2b168f1 | aarch64-apple-darwin | b17a413d00a54e8c666cf57797884504702ac032e8022fb0fa9c84516ef534f1 |
+| executor           | 6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn | 2b168f1 | aarch64-apple-darwin | d008606dd83a99a74b81cbb2ef13efccee6307a3bf2b666755533c1a95d0e1b3 |
 | oft                | HRPXLCqspQocTjfcX4rvAPaY9q6Gwb1rrD3xXWrfJWdW | 37c598b | aarch64-apple-darwin | b4feeed20ca0ff9be4398b5478c10ba7fd06746605d5f57552d36bc73f5ecc20 |
 | pricefeed          | 8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP | 37c598b | aarch64-apple-darwin | 5209029bd51341cc70af6d1d82d182dae6dd90076265c7300434d0c5b6e8f2d6 |
-| uln                | 7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH | 7aebbd7 | aarch64-apple-darwin | 325085140b5d375d2250732a231120076f45ca8a582caf56b54fc9c33319d9af |
+| uln                | 7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH | 7aebbd7 | aarch64-apple-darwin | 7858f4f904581b65e187d6227be5f0452b581ffa6dba3c51d3762cd825154b46 |
 
 If the checksums match, the verification is successful.
