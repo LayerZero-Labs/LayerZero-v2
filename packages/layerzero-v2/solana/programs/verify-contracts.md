@@ -16,9 +16,13 @@ Install Homebrew by running the following command:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-Once Homebrew is installed, the next step is to launch a virtual machine using `tart`, a tool to manage macOS virtual machines. We will clone a base macOS Sonoma image and run the virtual machine.
+Once Homebrew is installed, the next step is to install `tart`, a tool to manage macOS virtual machines.
 
-Clone the image and launch the virtual machine:
+```bash
+brew install cirruslabs/cli/tart
+```
+
+Clone the base macOS Sonoma image and launch the virtual machine:
 
 ```bash
 tart clone ghcr.io/cirruslabs/macos-sonoma-base:latest sonoma-base
@@ -58,6 +62,8 @@ Create a new user account with the name `carmencheng` and grant administrative p
 sudo sysadminctl -addUser carmencheng -fullName "" -password admin
 sudo dscl . -append /Groups/admin GroupMembership carmencheng
 ```
+
+Note:  You *must* use `charmencheng` as the username due to tooling limitations.
 
 After creating the account, switch to it by running:
 
@@ -99,6 +105,7 @@ git clone https://github.com/LayerZero-Labs/LayerZero-v2.git ~/Desktop/layerzero
 Check out the specific commit required for this verification:
 
 ```bash
+cd ~/Desktop/layerzero/monorepo
 git checkout 37c598b3e6e218c5e00c8b0dcd42f984e5b13147
 ```
 
@@ -184,6 +191,13 @@ Before building the program, navigate to the cloned LayerZero-v2 repository and 
 ```bash
 cd ~/Desktop/layerzero/monorepo
 yarn
+```
+
+Note: Ensure you confirm when prompted to install yarn:
+
+```text
+! Corepack is about to download https://repo.yarnpkg.com/4.0.2/packages/yarnpkg-cli/bin/yarn.js
+? Do you want to continue? [Y/n] y
 ```
 
 ---
