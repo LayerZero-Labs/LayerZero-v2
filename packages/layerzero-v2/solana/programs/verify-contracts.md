@@ -105,7 +105,7 @@ git clone https://github.com/LayerZero-Labs/LayerZero-v2.git ~/Desktop/layerzero
 Check out the specific commit required for this verification:
 
 ```bash
-cd Desktop/layerzero/monorepo
+cd ~/Desktop/layerzero/monorepo
 git checkout 37c598b3e6e218c5e00c8b0dcd42f984e5b13147
 ```
 
