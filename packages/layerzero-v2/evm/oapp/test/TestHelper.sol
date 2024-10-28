@@ -64,121 +64,127 @@ contract TestHelper is Test, OptionsHelper {
         executorValueCap = _valueCap;
     }
 
+    struct EndpointSetup {
+        EndpointV2[] endpointList;
+        uint32[] eidList;
+        address[] sendLibs;
+        address[] receiveLibs;
+        address[] signers;
+        PriceFeed priceFeed;
+    }
+
+    struct LibrarySetup {
+        SendUln302 sendUln;
+        ReceiveUln302 receiveUln;
+        Executor executor;
+        DVN dvn;
+        ExecutorFeeLib executorLib;
+        DVNFeeLib dvnLib;
+    }
+
+    struct ConfigParams {
+        IExecutor.DstConfigParam[] dstConfigParams;
+        IDVN.DstConfigParam[] dvnConfigParams;
+    }
+
+    EndpointSetup endpointSetup;
+
     /**
      * @dev setup the endpoints
      * @param _endpointNum num of endpoints
      */
     function setUpEndpoints(uint8 _endpointNum, LibraryType _libraryType) public {
-        EndpointV2[] memory endpointList = new EndpointV2[](_endpointNum);
-        uint32[] memory eidList = new uint32[](_endpointNum);
+        endpointSetup.endpointList = new EndpointV2[](_endpointNum);
+        endpointSetup.eidList = new uint32[](_endpointNum);
+        endpointSetup.sendLibs = new address[](_endpointNum);
+        endpointSetup.receiveLibs = new address[](_endpointNum);
+        endpointSetup.signers = new address[](1);
+        endpointSetup.signers[0] = vm.addr(1);
 
-        // deploy _excludedContracts
-        for (uint8 i = 0; i < _endpointNum; i++) {
-            uint32 eid = i + 1;
-            eidList[i] = eid;
-            endpointList[i] = new EndpointV2(eid, address(this));
-            registerEndpoint(endpointList[i]);
+        {
+            // deploy endpoints
+            for (uint8 i = 0; i < _endpointNum; i++) {
+                uint32 eid = i + 1;
+                endpointSetup.eidList[i] = eid;
+                endpointSetup.endpointList[i] = new EndpointV2(eid, address(this));
+                registerEndpoint(endpointSetup.endpointList[i]);
+            }
         }
 
-        // deploy
-        address[] memory sendLibs = new address[](_endpointNum);
-        address[] memory receiveLibs = new address[](_endpointNum);
-
-        address[] memory signers = new address[](1);
-        signers[0] = vm.addr(1);
-
-        PriceFeed priceFeed = new PriceFeed();
-        priceFeed.initialize(address(this));
+        // deploy price feed
+        endpointSetup.priceFeed = new PriceFeed();
+        endpointSetup.priceFeed.initialize(address(this));
 
         for (uint8 i = 0; i < _endpointNum; i++) {
             if (_libraryType == LibraryType.UltraLightNode) {
-                address endpointAddr = address(endpointList[i]);
+                address endpointAddr = address(endpointSetup.endpointList[i]);
 
-                SendUln302 sendUln;
-                ReceiveUln302 receiveUln;
-                {
-                    sendUln = new SendUln302(payable(this), endpointAddr, TREASURY_GAS_CAP, TREASURY_GAS_FOR_FEE_CAP);
-                    receiveUln = new ReceiveUln302(endpointAddr);
-                    endpointList[i].registerLibrary(address(sendUln));
-                    endpointList[i].registerLibrary(address(receiveUln));
-                    sendLibs[i] = address(sendUln);
-                    receiveLibs[i] = address(receiveUln);
-                }
+                LibrarySetup memory libSetup;
 
-                Executor executor = new Executor();
-                DVN dvn;
-                {
-                    address[] memory admins = new address[](1);
-                    admins[0] = address(this);
+                libSetup.sendUln = new SendUln302(payable(this), endpointAddr, TREASURY_GAS_CAP, TREASURY_GAS_FOR_FEE_CAP);
+                libSetup.receiveUln = new ReceiveUln302(endpointAddr);
+                endpointSetup.endpointList[i].registerLibrary(address(libSetup.sendUln));
+                endpointSetup.endpointList[i].registerLibrary(address(libSetup.receiveUln));
+                endpointSetup.sendLibs[i] = address(libSetup.sendUln);
+                endpointSetup.receiveLibs[i] = address(libSetup.receiveUln);
 
-                    address[] memory messageLibs = new address[](2);
-                    messageLibs[0] = address(sendUln);
-                    messageLibs[1] = address(receiveUln);
+                libSetup.executor = new Executor();
 
-                    executor.initialize(
-                        endpointAddr,
-                        address(0x0),
-                        messageLibs,
-                        address(priceFeed),
-                        address(this),
-                        admins
-                    );
-                    ExecutorFeeLib executorLib = new ExecutorFeeLibMock();
-                    executor.setWorkerFeeLib(address(executorLib));
+                address[] memory admins = new address[](1);
+                admins[0] = address(this);
 
-                    dvn = new DVN(i + 1, messageLibs, address(priceFeed), signers, 1, admins);
-                    DVNFeeLib dvnLib = new DVNFeeLib(1e18);
-                    dvn.setWorkerFeeLib(address(dvnLib));
-                }
+                address[] memory messageLibs = new address[](2);
+                messageLibs[0] = address(libSetup.sendUln);
+                messageLibs[1] = address(libSetup.receiveUln);
 
-                uint32 endpointNum = _endpointNum;
-                IExecutor.DstConfigParam[] memory dstConfigParams = new IExecutor.DstConfigParam[](endpointNum);
-                IDVN.DstConfigParam[] memory dvnConfigParams = new IDVN.DstConfigParam[](endpointNum);
-                for (uint8 j = 0; j < endpointNum; j++) {
+                libSetup.executor.initialize(
+                    endpointAddr,
+                    address(0x0),
+                    messageLibs,
+                    address(endpointSetup.priceFeed),
+                    address(this),
+                    admins
+                );
+
+                libSetup.executorLib = new ExecutorFeeLibMock();
+                libSetup.executor.setWorkerFeeLib(address(libSetup.executorLib));
+
+                libSetup.dvn = new DVN(i + 1, messageLibs, address(endpointSetup.priceFeed), endpointSetup.signers, 1, admins);
+                libSetup.dvnLib = new DVNFeeLib(1e18);
+                libSetup.dvn.setWorkerFeeLib(address(libSetup.dvnLib));
+
+                ConfigParams memory configParams;
+                configParams.dstConfigParams = new IExecutor.DstConfigParam[](_endpointNum);
+                configParams.dvnConfigParams = new IDVN.DstConfigParam[](_endpointNum);
+
+                for (uint8 j = 0; j < _endpointNum; j++) {
                     if (i == j) continue;
                     uint32 dstEid = j + 1;
 
                     address[] memory defaultDVNs = new address[](1);
                     address[] memory optionalDVNs = new address[](0);
-                    defaultDVNs[0] = address(dvn);
+                    defaultDVNs[0] = address(libSetup.dvn);
 
-                    {
-                        SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
-                        UlnConfig memory ulnConfig = UlnConfig(
-                            100,
-                            uint8(defaultDVNs.length),
-                            uint8(optionalDVNs.length),
-                            0,
-                            defaultDVNs,
-                            optionalDVNs
-                        );
-                        params[0] = SetDefaultUlnConfigParam(dstEid, ulnConfig);
-                        sendUln.setDefaultUlnConfigs(params);
-                    }
+                    SetDefaultUlnConfigParam[] memory ulnParams = new SetDefaultUlnConfigParam[](1);
+                    UlnConfig memory ulnConfig = UlnConfig(
+                        100,
+                        uint8(defaultDVNs.length),
+                        uint8(optionalDVNs.length),
+                        0,
+                        defaultDVNs,
+                        optionalDVNs
+                    );
+                    ulnParams[0] = SetDefaultUlnConfigParam(dstEid, ulnConfig);
+                    libSetup.sendUln.setDefaultUlnConfigs(ulnParams);
+                    libSetup.receiveUln.setDefaultUlnConfigs(ulnParams);
 
-                    {
-                        SetDefaultExecutorConfigParam[] memory params = new SetDefaultExecutorConfigParam[](1);
-                        ExecutorConfig memory executorConfig = ExecutorConfig(10000, address(executor));
-                        params[0] = SetDefaultExecutorConfigParam(dstEid, executorConfig);
-                        sendUln.setDefaultExecutorConfigs(params);
-                    }
-
-                    {
-                        SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
-                        UlnConfig memory ulnConfig = UlnConfig(
-                            100,
-                            uint8(defaultDVNs.length),
-                            uint8(optionalDVNs.length),
-                            0,
-                            defaultDVNs,
-                            optionalDVNs
-                        );
-                        params[0] = SetDefaultUlnConfigParam(dstEid, ulnConfig);
-                        receiveUln.setDefaultUlnConfigs(params);
-                    }
+                    SetDefaultExecutorConfigParam[] memory execParams = new SetDefaultExecutorConfigParam[](1);
+                    ExecutorConfig memory execConfig = ExecutorConfig(10000, address(libSetup.executor));
+                    execParams[0] = SetDefaultExecutorConfigParam(dstEid, execConfig);
+                    libSetup.sendUln.setDefaultExecutorConfigs(execParams);
 
                     // executor config
-                    dstConfigParams[j] = IExecutor.DstConfigParam({
+                    configParams.dstConfigParams[j] = IExecutor.DstConfigParam({
                         dstEid: dstEid,
                         lzReceiveBaseGas: 5000,
                         lzComposeBaseGas: 0,
@@ -188,28 +194,30 @@ contract TestHelper is Test, OptionsHelper {
                     });
 
                     // dvn config
-                    dvnConfigParams[j] = IDVN.DstConfigParam({
+                    configParams.dvnConfigParams[j] = IDVN.DstConfigParam({
                         dstEid: dstEid,
                         gas: 5000,
                         multiplierBps: 10000,
                         floorMarginUSD: 1e10
                     });
 
-                    uint128 denominator = priceFeed.getPriceRatioDenominator();
+                    uint128 denominator = endpointSetup.priceFeed.getPriceRatioDenominator();
                     ILayerZeroPriceFeed.UpdatePrice[] memory prices = new ILayerZeroPriceFeed.UpdatePrice[](1);
                     prices[0] = ILayerZeroPriceFeed.UpdatePrice(
                         dstEid,
                         ILayerZeroPriceFeed.Price(1 * denominator, 1, 1)
                     );
-                    priceFeed.setPrice(prices);
+                    endpointSetup.priceFeed.setPrice(prices);
                 }
-                executor.setDstConfig(dstConfigParams);
-                dvn.setDstConfig(dvnConfigParams);
+
+                libSetup.executor.setDstConfig(configParams.dstConfigParams);
+                libSetup.dvn.setDstConfig(configParams.dvnConfigParams);
+
             } else if (_libraryType == LibraryType.SimpleMessageLib) {
-                SimpleMessageLibMock messageLib = new SimpleMessageLibMock(payable(this), address(endpointList[i]));
-                endpointList[i].registerLibrary(address(messageLib));
-                sendLibs[i] = address(messageLib);
-                receiveLibs[i] = address(messageLib);
+                SimpleMessageLibMock messageLib = new SimpleMessageLibMock(payable(this), address(endpointSetup.endpointList[i]));
+                endpointSetup.endpointList[i].registerLibrary(address(messageLib));
+                endpointSetup.sendLibs[i] = address(messageLib);
+                endpointSetup.receiveLibs[i] = address(messageLib);
             } else {
                 revert("invalid library type");
             }
@@ -217,11 +225,11 @@ contract TestHelper is Test, OptionsHelper {
 
         // config up
         for (uint8 i = 0; i < _endpointNum; i++) {
-            EndpointV2 endpoint = endpointList[i];
+            EndpointV2 endpoint = endpointSetup.endpointList[i];
             for (uint8 j = 0; j < _endpointNum; j++) {
                 if (i == j) continue;
-                endpoint.setDefaultSendLibrary(j + 1, sendLibs[i]);
-                endpoint.setDefaultReceiveLibrary(j + 1, receiveLibs[i], 0);
+                endpoint.setDefaultSendLibrary(j + 1, endpointSetup.sendLibs[i]);
+                endpoint.setDefaultReceiveLibrary(j + 1, endpointSetup.receiveLibs[i], 0);
             }
         }
     }
