@@ -738,7 +738,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@layerzerolabs/lz-evm-messagelib-v2@workspace:^, @layerzerolabs/lz-evm-messagelib-v2@workspace:packages/layerzero-v2/evm/messagelib":
+"@layerzerolabs/lz-evm-messagelib-v2@workspace:packages/layerzero-v2/evm/messagelib":
   version: 0.0.0-use.local
   resolution: "@layerzerolabs/lz-evm-messagelib-v2@workspace:packages/layerzero-v2/evm/messagelib"
   dependencies:
@@ -751,23 +751,6 @@ __metadata:
     hardhat-deploy: "npm:^0.11.44"
     rimraf: "npm:^5.0.5"
     solidity-bytes-utils: "npm:^0.8.0"
-  languageName: unknown
-  linkType: soft
-
-"@layerzerolabs/lz-evm-oapp-v2@workspace:packages/layerzero-v2/evm/oapp":
-  version: 0.0.0-use.local
-  resolution: "@layerzerolabs/lz-evm-oapp-v2@workspace:packages/layerzero-v2/evm/oapp"
-  dependencies:
-    "@layerzerolabs/lz-evm-messagelib-v2": "workspace:^"
-    "@layerzerolabs/lz-evm-protocol-v2": "workspace:^"
-    "@layerzerolabs/lz-evm-v1-0.7": "npm:^2.0.1"
-    "@openzeppelin/contracts": "npm:^4.8.1"
-    "@openzeppelin/contracts-upgradeable": "npm:^4.8.1"
-    hardhat-deploy: "npm:^0.11.44"
-    rimraf: "npm:^5.0.5"
-    solidity-bytes-utils: "npm:^0.8.0"
-  peerDependencies:
-    solidity-bytes-utils: ^0.8.0
   languageName: unknown
   linkType: soft
 

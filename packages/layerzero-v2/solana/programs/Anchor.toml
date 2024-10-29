@@ -16,7 +16,6 @@ messagelib_interface = "J8tfaWEsewRGacgvAeQsXLTRTuUQz5FGyUuqDW2TpiTJ"
 pricefeed = "8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP"
 simple_messagelib = "6GsmxMTHAAiFKfemuM4zBjumTjNSX5CAiw4xSSXM2Toy"
 uln = "7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH"
-oft = "HRPXLCqspQocTjfcX4rvAPaY9q6Gwb1rrD3xXWrfJWdW"
 
 [registry]
 url = "https://api.apr.dev"
