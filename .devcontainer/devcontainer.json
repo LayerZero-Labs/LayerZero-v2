@@ -79,7 +79,7 @@
 	},
   
 	"initializeCommand": {
-	  "mkdir-aws": "mkdir -p ${localEnv:HOME}/.aws",
+	  "mkdir-aws": "mkdir -p ${localEnv:HOME}/.aws/latest/metadata",
 	  "touch-zsh-history": "touch ${localEnv:HOME}/.zsh_history"
 	},
   
