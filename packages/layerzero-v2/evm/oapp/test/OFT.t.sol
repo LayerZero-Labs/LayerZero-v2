@@ -99,14 +99,15 @@ contract OFTTest is TestHelper {
         assertEq(interfaceId, expectedId);
     }
 
-    function test_send_oft() public {
-        uint256 tokensToSend = 1 ether;
+    function test_send_oft(uint256 tokensToSend) public {
+        vm.assume(tokensToSend > 0.001 ether && tokensToSend < 100 ether); // avoid reverting due to SlippageExceeded
+
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
         SendParam memory sendParam = SendParam(
             bEid,
             addressToBytes32(userB),
             tokensToSend,
-            tokensToSend,
+            (tokensToSend * 9_900) / 10_000, // allow 1% slippage
             options,
             "",
             ""
@@ -117,15 +118,20 @@ contract OFTTest is TestHelper {
         assertEq(bOFT.balanceOf(userB), initialBalance);
 
         vm.prank(userA);
-        aOFT.send{ value: fee.nativeFee }(sendParam, fee, payable(address(this)));
+        (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) = aOFT.send{ value: fee.nativeFee }(
+            sendParam,
+            fee,
+            payable(address(this))
+        );
         verifyPackets(bEid, addressToBytes32(address(bOFT)));
 
-        assertEq(aOFT.balanceOf(userA), initialBalance - tokensToSend);
-        assertEq(bOFT.balanceOf(userB), initialBalance + tokensToSend);
+        assertEq(msgReceipt.fee.nativeFee, fee.nativeFee);
+        assertEq(aOFT.balanceOf(userA), initialBalance - oftReceipt.amountSentLD);
+        assertEq(bOFT.balanceOf(userB), initialBalance + oftReceipt.amountReceivedLD);
     }
 
-    function test_send_oft_compose_msg() public {
-        uint256 tokensToSend = 1 ether;
+    function test_send_oft_compose_msg(uint256 tokensToSend) public {
+        vm.assume(tokensToSend > 0.001 ether && tokensToSend < 100 ether); // avoid reverting due to SlippageExceeded
 
         OFTComposerMock composer = new OFTComposerMock();
 
@@ -138,7 +144,7 @@ contract OFTTest is TestHelper {
             bEid,
             addressToBytes32(address(composer)),
             tokensToSend,
-            tokensToSend,
+            (tokensToSend * 9_900) / 10_000, // allow 1% slippage
             options,
             composeMsg,
             ""
@@ -170,8 +176,8 @@ contract OFTTest is TestHelper {
         );
         this.lzCompose(dstEid_, from_, options_, guid_, to_, composerMsg_);
 
-        assertEq(aOFT.balanceOf(userA), initialBalance - tokensToSend);
-        assertEq(bOFT.balanceOf(address(composer)), tokensToSend);
+        assertEq(aOFT.balanceOf(userA), initialBalance - oftReceipt.amountSentLD);
+        assertEq(bOFT.balanceOf(address(composer)), oftReceipt.amountReceivedLD);
 
         assertEq(composer.from(), from_);
         assertEq(composer.guid(), guid_);
@@ -180,12 +186,12 @@ contract OFTTest is TestHelper {
         assertEq(composer.extraData(), composerMsg_); // default to setting the extraData to the message as well to test
     }
 
-    function test_oft_compose_codec() public {
-        uint64 nonce = 1;
-        uint32 srcEid = 2;
-        uint256 amountCreditLD = 3;
-        bytes memory composeMsg = hex"1234";
-
+    function test_oft_compose_codec(
+        uint64 nonce,
+        uint32 srcEid,
+        uint256 amountCreditLD,
+        bytes memory composeMsg
+    ) public {
         bytes memory message = OFTComposeMsgCodec.encode(
             nonce,
             srcEid,
@@ -239,13 +245,12 @@ contract OFTTest is TestHelper {
         aOFT.debit(amountToSendLD, minAmountToCreditLD, dstEid);
     }
 
-    function test_toLD() public {
-        uint64 amountSD = 1000;
+    function test_toLD(uint64 amountSD) public {
         assertEq(amountSD * aOFT.decimalConversionRate(), aOFT.toLD(uint64(amountSD)));
     }
 
-    function test_toSD() public {
-        uint256 amountLD = 1000000;
+    function test_toSD(uint256 amountLD) public {
+        vm.assume(amountLD <= type(uint64).max); // avoid reverting due to overflow
         assertEq(amountLD / aOFT.decimalConversionRate(), aOFT.toSD(amountLD));
     }
 
@@ -337,15 +342,12 @@ contract OFTTest is TestHelper {
         composeMsg = OFTMsgCodec.composeMsg(message);
     }
 
-    function test_oft_build_msg() public {
-        uint32 dstEid = bEid;
-        bytes32 to = addressToBytes32(userA);
-        uint256 amountToSendLD = 1.23456789 ether;
+    function test_oft_build_msg(uint32 dstEid, bytes32 to, uint256 amountToSendLD, bytes memory composeMsg) public {
+        vm.assume(composeMsg.length > 0); // ensure there is a composed payload
         uint256 minAmountToCreditLD = aOFT.removeDust(amountToSendLD);
 
         // params for buildMsgAndOptions
         bytes memory extraOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
-        bytes memory composeMsg = hex"1234";
         SendParam memory sendParam = SendParam(
             dstEid,
             to,
@@ -370,10 +372,7 @@ contract OFTTest is TestHelper {
         assertEq(composeMsg_, expectedComposeMsg);
     }
 
-    function test_oft_build_msg_no_compose_msg() public {
-        uint32 dstEid = bEid;
-        bytes32 to = addressToBytes32(userA);
-        uint256 amountToSendLD = 1.23456789 ether;
+    function test_oft_build_msg_no_compose_msg(uint32 dstEid, bytes32 to, uint256 amountToSendLD) public {
         uint256 minAmountToCreditLD = aOFT.removeDust(amountToSendLD);
 
         // params for buildMsgAndOptions
@@ -438,8 +437,7 @@ contract OFTTest is TestHelper {
         aOFT.setEnforcedOptions(enforcedOptions); // doesnt revert cus option type 3
     }
 
-    function test_combine_options() public {
-        uint32 eid = 1;
+    function test_combine_options(uint32 eid, uint128 nativeDropGas, address user) public {
         uint16 msgType = 1;
 
         bytes memory enforcedOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
@@ -448,56 +446,55 @@ contract OFTTest is TestHelper {
         aOFT.setEnforcedOptions(enforcedOptionsArray);
 
         bytes memory extraOptions = OptionsBuilder.newOptions().addExecutorNativeDropOption(
-            1.2345 ether,
-            addressToBytes32(userA)
+            nativeDropGas,
+            addressToBytes32(user)
         );
 
         bytes memory expectedOptions = OptionsBuilder
             .newOptions()
             .addExecutorLzReceiveOption(200000, 0)
-            .addExecutorNativeDropOption(1.2345 ether, addressToBytes32(userA));
+            .addExecutorNativeDropOption(nativeDropGas, addressToBytes32(user));
 
         bytes memory combinedOptions = aOFT.combineOptions(eid, msgType, extraOptions);
         assertEq(combinedOptions, expectedOptions);
     }
 
-    function test_combine_options_no_extra_options() public {
-        uint32 eid = 1;
+    function test_combine_options_no_extra_options(uint32 eid, uint128 gasLimit, uint128 nativeDrop) public {
         uint16 msgType = 1;
 
-        bytes memory enforcedOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
+        bytes memory enforcedOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(gasLimit, nativeDrop);
         EnforcedOptionParam[] memory enforcedOptionsArray = new EnforcedOptionParam[](1);
         enforcedOptionsArray[0] = EnforcedOptionParam(eid, msgType, enforcedOptions);
         aOFT.setEnforcedOptions(enforcedOptionsArray);
 
-        bytes memory expectedOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
+        bytes memory expectedOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(gasLimit, nativeDrop);
 
         bytes memory combinedOptions = aOFT.combineOptions(eid, msgType, "");
         assertEq(combinedOptions, expectedOptions);
     }
 
-    function test_combine_options_no_enforced_options() public {
-        uint32 eid = 1;
-        uint16 msgType = 1;
-
+    function test_combine_options_no_enforced_options(
+        uint32 eid,
+        uint16 msgType,
+        uint128 nativeDropGas,
+        address user
+    ) public {
         bytes memory extraOptions = OptionsBuilder.newOptions().addExecutorNativeDropOption(
-            1.2345 ether,
-            addressToBytes32(userA)
+            nativeDropGas,
+            addressToBytes32(user)
         );
 
         bytes memory expectedOptions = OptionsBuilder.newOptions().addExecutorNativeDropOption(
-            1.2345 ether,
-            addressToBytes32(userA)
+            nativeDropGas,
+            addressToBytes32(user)
         );
 
         bytes memory combinedOptions = aOFT.combineOptions(eid, msgType, extraOptions);
         assertEq(combinedOptions, expectedOptions);
     }
 
-    function test_oapp_inspector_inspect() public {
-        uint32 dstEid = bEid;
-        bytes32 to = addressToBytes32(userA);
-        uint256 amountToSendLD = 1.23456789 ether;
+    function test_oapp_inspector_inspect(uint32 dstEid, address user, uint256 amountToSendLD) public {
+        bytes32 to = addressToBytes32(user);
         uint256 minAmountToCreditLD = aOFT.removeDust(amountToSendLD);
 
         // params for buildMsgAndOptions

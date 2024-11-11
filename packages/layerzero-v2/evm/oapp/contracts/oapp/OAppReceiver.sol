@@ -15,7 +15,7 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
 
     // @dev The version of the OAppReceiver implementation.
     // @dev Version is bumped when changes are made to this contract.
-    uint64 internal constant RECEIVER_VERSION = 1;
+    uint64 internal constant RECEIVER_VERSION = 2;
 
     /**
      * @notice Retrieves the OApp version information.
@@ -31,14 +31,24 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
     }
 
     /**
-     * @notice Retrieves the address responsible for 'sending' composeMsg's to the Endpoint.
-     * @return sender The address responsible for 'sending' composeMsg's to the Endpoint.
+     * @notice Indicates whether an address is an approved composeMsg sender to the Endpoint.
+     * @dev _origin The origin information containing the source endpoint and sender address.
+     *  - srcEid: The source chain endpoint ID.
+     *  - sender: The sender address on the src chain.
+     *  - nonce: The nonce of the message.
+     * @dev _message The lzReceive payload.
+     * @param _sender The sender address.
+     * @return isSender Is a valid sender.
      *
-     * @dev Applications can optionally choose to implement a separate composeMsg sender that is NOT the bridging layer.
-     * @dev The default sender IS the OApp implementer.
+     * @dev Applications can optionally choose to implement separate composeMsg senders that are NOT the bridging layer.
+     * @dev The default sender IS the OAppReceiver implementer.
      */
-    function composeMsgSender() public view virtual returns (address sender) {
-        return address(this);
+    function isComposeMsgSender(
+        Origin calldata /*_origin*/,
+        bytes calldata /*_message*/,
+        address _sender
+    ) public view virtual returns (bool) {
+        return _sender == address(this);
     }
 
     /**

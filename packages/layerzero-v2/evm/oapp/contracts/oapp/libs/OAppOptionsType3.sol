@@ -26,6 +26,19 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
      * if you are only making a standard LayerZero message ie. lzReceive() WITHOUT sendCompose().
      */
     function setEnforcedOptions(EnforcedOptionParam[] calldata _enforcedOptions) public virtual onlyOwner {
+        _setEnforcedOptions(_enforcedOptions);
+    }
+
+    /**
+     * @dev Sets the enforced options for specific endpoint and message type combinations.
+     * @param _enforcedOptions An array of EnforcedOptionParam structures specifying enforced options.
+     *
+     * @dev Provides a way for the OApp to enforce things like paying for PreCrime, AND/OR minimum dst lzReceive gas amounts etc.
+     * @dev These enforced options can vary as the potential options/execution on the remote may differ as per the msgType.
+     * eg. Amount of lzReceive() gas necessary to deliver a lzCompose() message adds overhead you dont want to pay
+     * if you are only making a standard LayerZero message ie. lzReceive() WITHOUT sendCompose().
+     */
+    function _setEnforcedOptions(EnforcedOptionParam[] memory _enforcedOptions) internal virtual {
         for (uint256 i = 0; i < _enforcedOptions.length; i++) {
             // @dev Enforced options are only available for optionType 3, as type 1 and 2 dont support combining.
             _assertOptionsType3(_enforcedOptions[i].options);
@@ -75,8 +88,11 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
      * @dev Internal function to assert that options are of type 3.
      * @param _options The options to be checked.
      */
-    function _assertOptionsType3(bytes calldata _options) internal pure virtual {
-        uint16 optionsType = uint16(bytes2(_options[0:2]));
+    function _assertOptionsType3(bytes memory _options) internal pure virtual {
+        uint16 optionsType;
+        assembly {
+            optionsType := mload(add(_options, 2))
+        }
         if (optionsType != OPTION_TYPE_3) revert InvalidOptions(_options);
     }
 }

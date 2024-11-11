@@ -135,7 +135,7 @@ abstract contract PreCrime is Ownable, IPreCrime {
         if (_packets.length > maxBatchSize) revert PacketOversize(maxBatchSize, _packets.length);
 
         // check packets nonce, sequence order
-        // packets should group by srcEid and sender, then sort by nonce ascending
+        // packets should ordered in ascending order by srcEid, sender, nonce
         if (_packets.length > 0) {
             uint32 srcEid;
             bytes32 sender;
@@ -146,8 +146,12 @@ abstract contract PreCrime is Ownable, IPreCrime {
                 // skip if not from trusted peer
                 if (!IOAppPreCrimeSimulator(simulator).isPeer(packet.origin.srcEid, packet.origin.sender)) continue;
 
-                // start from a new chain or a new source oApp
-                if (packet.origin.srcEid != srcEid || packet.origin.sender != sender) {
+                if (
+                    packet.origin.srcEid < srcEid || (packet.origin.srcEid == srcEid && packet.origin.sender < sender)
+                ) {
+                    revert PacketUnsorted();
+                } else if (packet.origin.srcEid != srcEid || packet.origin.sender != sender) {
+                    // start from a new chain or a new source oApp
                     srcEid = packet.origin.srcEid;
                     sender = packet.origin.sender;
                     nonce = _getInboundNonce(srcEid, sender);

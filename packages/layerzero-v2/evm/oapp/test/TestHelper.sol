@@ -123,11 +123,11 @@ contract TestHelper is Test, OptionsHelper {
                         address(this),
                         admins
                     );
-                    ExecutorFeeLib executorLib = new ExecutorFeeLibMock();
+                    ExecutorFeeLib executorLib = new ExecutorFeeLibMock(1);
                     executor.setWorkerFeeLib(address(executorLib));
 
-                    dvn = new DVN(i + 1, messageLibs, address(priceFeed), signers, 1, admins);
-                    DVNFeeLib dvnLib = new DVNFeeLib(1e18);
+                    dvn = new DVN(i + 1, i + 1, messageLibs, address(priceFeed), signers, 1, admins);
+                    DVNFeeLib dvnLib = new DVNFeeLib(i + 1, 1e18);
                     dvn.setWorkerFeeLib(address(dvnLib));
                 }
 
