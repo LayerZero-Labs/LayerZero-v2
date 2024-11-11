@@ -6,8 +6,9 @@ import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/I
 
 import { IWorker } from "./IWorker.sol";
 import { ILayerZeroExecutor } from "./ILayerZeroExecutor.sol";
+import { ILayerZeroReadExecutor } from "./ILayerZeroReadExecutor.sol";
 
-interface IExecutor is IWorker, ILayerZeroExecutor {
+interface IExecutor is IWorker, ILayerZeroExecutor, ILayerZeroReadExecutor {
     struct DstConfigParam {
         uint32 dstEid;
         uint64 lzReceiveBaseGas;

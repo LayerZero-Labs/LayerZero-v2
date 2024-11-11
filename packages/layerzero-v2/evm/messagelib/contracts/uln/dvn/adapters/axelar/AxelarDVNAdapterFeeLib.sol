@@ -75,22 +75,22 @@ contract AxelarDVNAdapterFeeLib is OwnableUpgradeable, Proxied, IAxelarDVNAdapte
         if (_dstConfig.nativeGasFee == 0) revert AxelarDVNAdapter_EidNotSupported(_param.dstEid);
         if (_options.length > 0) revert AxelarDVNAdapter_OptionsUnsupported();
 
-        uint256 axelarFee = _getAxelarFee(_dstConfig.nativeGasFee);
-        totalFee = _applyPremium(_dstConfig.multiplierBps, _param.defaultMultiplierBps, axelarFee);
+        totalFee = _applyPremium(_dstConfig.multiplierBps, _param.defaultMultiplierBps, _dstConfig.nativeGasFee);
 
+        uint256 feeToAxelar = _getAxelarFeeWithBuffer(_dstConfig.nativeGasFee);
         // withdraw from uln to fee lib if not enough balance
         uint256 balance = address(this).balance;
-        if (balance < axelarFee) {
+        if (balance < feeToAxelar) {
             dvn.withdrawToFeeLib(_sendLib);
 
             // revert if still not enough
             balance = address(this).balance;
-            if (balance < axelarFee) revert AxelarDVNAdapter_InsufficientBalance(balance, axelarFee);
+            if (balance < feeToAxelar) revert AxelarDVNAdapter_InsufficientBalance(balance, feeToAxelar);
         }
 
         // pay axelar gas service
-        gasService.payNativeGasForContractCall{ value: axelarFee }(
-            address(this), // sender
+        gasService.payNativeGasForContractCall{ value: feeToAxelar }(
+            msg.sender, // sender
             _dstConfig.chainName, // destinationChain
             _dstConfig.peer, // destinationAddress
             _payload, // payload
@@ -102,16 +102,15 @@ contract AxelarDVNAdapterFeeLib is OwnableUpgradeable, Proxied, IAxelarDVNAdapte
         Param calldata _param,
         IAxelarDVNAdapter.DstConfig calldata _dstConfig,
         bytes calldata _options
-    ) external view returns (uint256 totalFee) {
+    ) external pure returns (uint256 totalFee) {
         if (_dstConfig.nativeGasFee == 0) revert AxelarDVNAdapter_EidNotSupported(_param.dstEid);
         if (_options.length > 0) revert AxelarDVNAdapter_OptionsUnsupported();
 
-        uint256 axelarFee = _getAxelarFee(_dstConfig.nativeGasFee);
-        totalFee = _applyPremium(_dstConfig.multiplierBps, _param.defaultMultiplierBps, axelarFee);
+        totalFee = _applyPremium(_dstConfig.multiplierBps, _param.defaultMultiplierBps, _dstConfig.nativeGasFee);
     }
 
     // ================================ Internal ================================
-    function _getAxelarFee(uint256 _nativeGasFee) internal view returns (uint256) {
+    function _getAxelarFeeWithBuffer(uint256 _nativeGasFee) internal view returns (uint256) {
         return (_nativeGasFee * nativeGasFeeMultiplierBps) / BPS_DENOMINATOR;
     }
 

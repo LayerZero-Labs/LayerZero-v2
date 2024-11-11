@@ -74,25 +74,28 @@ contract OmniCounterTest is TestHelper {
     }
 
     // classic message passing A -> B
-    function test_increment() public {
+    function test_increment(uint8 numIncrements) public {
+        vm.assume(numIncrements > 0 && numIncrements < 10); // upper bound to ensure tests don't run too long
         uint256 counterBefore = bCounter.count();
 
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
         (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
-        aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
-
+        for (uint8 i = 0; i < numIncrements; i++) {
+            aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
+        }
         assertEq(bCounter.count(), counterBefore, "shouldn't be increased until packet is verified");
 
         // verify packet to bCounter manually
         verifyPackets(bEid, addressToBytes32(address(bCounter)));
 
-        assertEq(bCounter.count(), counterBefore + 1, "increment assertion failure");
+        assertEq(bCounter.count(), counterBefore + numIncrements, "increment assertion failure");
     }
 
-    function test_batchIncrement() public {
+    function test_batchIncrement(uint256 batchSize) public {
+        vm.assume(batchSize > 0 && batchSize < 10);
+
         uint256 counterBefore = bCounter.count();
 
-        uint256 batchSize = 5;
         uint32[] memory eids = new uint32[](batchSize);
         uint8[] memory types = new uint8[](batchSize);
         bytes[] memory options = new bytes[](batchSize);
@@ -115,20 +118,21 @@ contract OmniCounterTest is TestHelper {
         assertEq(bCounter.count(), counterBefore + batchSize, "batchIncrement assertion failure");
     }
 
-    function test_nativeDrop_increment() public {
+    function test_nativeDrop_increment(uint128 nativeDropGas) public {
+        vm.assume(nativeDropGas <= 100000000000000000); // avoid encountering Executor_NativeAmountExceedsCap
         uint256 balanceBefore = address(bCounter).balance;
 
         bytes memory options = OptionsBuilder
             .newOptions()
             .addExecutorLzReceiveOption(200000, 0)
-            .addExecutorNativeDropOption(1 gwei, addressToBytes32(address(bCounter)));
+            .addExecutorNativeDropOption(nativeDropGas, addressToBytes32(address(bCounter)));
         (uint256 nativeFee, ) = aCounter.quote(bEid, MsgCodec.VANILLA_TYPE, options);
         aCounter.increment{ value: nativeFee }(bEid, MsgCodec.VANILLA_TYPE, options);
 
         // verify packet to bCounter manually
         verifyPackets(bEid, addressToBytes32(address(bCounter)));
 
-        assertEq(address(bCounter).balance, balanceBefore + 1 gwei, "nativeDrop assertion failure");
+        assertEq(address(bCounter).balance, balanceBefore + nativeDropGas, "nativeDrop assertion failure");
 
         // transfer funds out
         address payable receiver = payable(address(0xABCD));
@@ -136,13 +140,13 @@ contract OmniCounterTest is TestHelper {
         // withdraw with non admin
         vm.startPrank(receiver);
         vm.expectRevert();
-        bCounter.withdraw(receiver, 1 gwei);
+        bCounter.withdraw(receiver, nativeDropGas);
         vm.stopPrank();
 
         // withdraw with admin
-        bCounter.withdraw(receiver, 1 gwei);
+        bCounter.withdraw(receiver, nativeDropGas);
         assertEq(address(bCounter).balance, 0, "withdraw assertion failure");
-        assertEq(receiver.balance, 1 gwei, "withdraw assertion failure");
+        assertEq(receiver.balance, nativeDropGas, "withdraw assertion failure");
     }
 
     // classic message passing A -> B1 -> B2

@@ -17,6 +17,8 @@ library OptionsUtil {
     uint16 internal constant TYPE_2 = 2; // legacy options type 2
     uint16 internal constant TYPE_3 = 3;
 
+    uint8 internal constant OPTION_TYPE_LZ_READ = 5;
+
     function newOptions() internal pure returns (bytes memory) {
         return abi.encodePacked(TYPE_3);
     }
@@ -28,6 +30,16 @@ library OptionsUtil {
     ) internal pure returns (bytes memory) {
         bytes memory option = ExecutorOptions.encodeLzReceiveOption(_gas, _value);
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_LZRECEIVE, option);
+    }
+
+    function addExecutorLzReadOption(
+        bytes memory _options,
+        uint128 _gas,
+        uint32 _size,
+        uint128 _value
+    ) internal pure returns (bytes memory) {
+        bytes memory option = encodeLzReadOption(_gas, _size, _value);
+        return addExecutorOption(_options, OPTION_TYPE_LZ_READ, option);
     }
 
     function addExecutorNativeDropOption(
@@ -118,5 +130,9 @@ library OptionsUtil {
 
     function trimType(bytes memory _options) internal pure returns (bytes memory) {
         return _options.slice(2, _options.length - 2);
+    }
+
+    function encodeLzReadOption(uint128 _gas, uint32 _size, uint128 _value) internal pure returns (bytes memory) {
+        return _value == 0 ? abi.encodePacked(_gas, _size) : abi.encodePacked(_gas, _size, _value);
     }
 }

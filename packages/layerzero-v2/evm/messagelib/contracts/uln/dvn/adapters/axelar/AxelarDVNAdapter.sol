@@ -30,24 +30,34 @@ interface ISendLibBase {
 ///     refer to https://docs.axelar.dev/dev/general-message-passing/recovery#manually-execute-a-transfer
 /// @dev As the Gas is estimated off-chain, we need to update the gas fee periodically on-chain by calling `setNativeGasFee` with the new fee.
 contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter {
-    mapping(string axelarChain => string peer) public peers; // by chain name
+    mapping(string srcChainName => SrcConfig) public srcConfig; // by chain name
     mapping(uint32 dstEid => DstConfig) public dstConfig; // by dstEid
 
     // set default multiplier to 2.5x
     constructor(
         address[] memory _admins,
         address _gateway
-    ) AxelarExecutable(_gateway) DVNAdapterBase(msg.sender, _admins, 12000) {}
+    ) AxelarExecutable(_gateway) DVNAdapterBase(msg.sender, _admins, 10000) {}
 
     // ========================= OnlyAdmin =========================
     function setDstConfig(DstConfigParam[] calldata _params) external onlyRole(ADMIN_ROLE) {
         for (uint256 i = 0; i < _params.length; i++) {
             DstConfigParam calldata param = _params[i];
 
-            delete peers[dstConfig[param.dstEid].chainName]; // delete old peer in case chain name by dstEid is updated
-            peers[param.chainName] = param.peer; // update peer
+            uint32 eid = param.eid % 30000;
 
-            dstConfig[param.dstEid] = DstConfig(param.chainName, param.peer, param.multiplierBps, param.nativeGasFee); // update config by dstEid
+            // set once per chainName
+            // only one adapter per dvn that services both endpoint v1 and v2
+            // we standardize the eid stored here with mod 30000
+            if (bytes(dstConfig[eid].chainName).length == 0) {
+                dstConfig[eid].chainName = param.chainName;
+                dstConfig[eid].peer = param.peer;
+                srcConfig[param.chainName].eid = eid;
+                srcConfig[param.chainName].peer = param.peer;
+            }
+
+            dstConfig[eid].multiplierBps = param.multiplierBps;
+            dstConfig[eid].nativeGasFee = param.nativeGasFee;
         }
 
         emit DstConfigSet(_params);
@@ -63,7 +73,7 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
     function setNativeGasFee(NativeGasFeeParam[] calldata _params) external onlyRole(ADMIN_ROLE) {
         for (uint256 i = 0; i < _params.length; i++) {
             NativeGasFeeParam calldata param = _params[i];
-            dstConfig[param.dstEid].nativeGasFee = param.nativeGasFee;
+            dstConfig[param.dstEid % 30000].nativeGasFee = param.nativeGasFee;
         }
         emit NativeGasFeeSet(_params);
     }
@@ -88,7 +98,7 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
             sender: _param.sender,
             defaultMultiplierBps: defaultMultiplierBps
         });
-        DstConfig memory config = dstConfig[_param.dstEid];
+        DstConfig memory config = dstConfig[_param.dstEid % 30000];
 
         bytes memory payload = _encode(receiveLib, _param.packetHeader, _param.payloadHash);
 
@@ -117,7 +127,7 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
             defaultMultiplierBps
         );
 
-        totalFee = IAxelarDVNAdapterFeeLib(workerFeeLib).getFee(feeLibParam, dstConfig[_dstEid], _options);
+        totalFee = IAxelarDVNAdapterFeeLib(workerFeeLib).getFee(feeLibParam, dstConfig[_dstEid % 30000], _options);
     }
 
     // ========================= Internal =========================
@@ -126,15 +136,16 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
         string calldata _sourceAddress,
         bytes calldata _payload
     ) internal override {
-        // assert peer is the same as the source chain
-        _assertPeer(_sourceChain, _sourceAddress);
+        SrcConfig memory config = srcConfig[_sourceChain];
 
-        _decodeAndVerify(_payload);
+        // assert peer is the same as the source chain
+        _assertPeer(_sourceChain, _sourceAddress, config.peer);
+
+        _decodeAndVerify(config.eid, _payload);
     }
 
-    function _assertPeer(string memory _sourceChain, string memory _sourceAddress) private view {
-        string memory sourcePeer = peers[_sourceChain];
-        if (keccak256(bytes(_sourceAddress)) != keccak256(bytes(sourcePeer))) {
+    function _assertPeer(string memory _sourceChain, string memory _sourceAddress, string memory peer) private pure {
+        if (keccak256(bytes(_sourceAddress)) != keccak256(bytes(peer))) {
             revert AxelarDVNAdapter_UntrustedPeer(_sourceChain, _sourceAddress);
         }
     }

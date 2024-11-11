@@ -420,17 +420,47 @@ contract DVNTest is Test {
         dvn.assignJob(ILayerZeroDVN.AssignJobParam(0, "", "", 0, sender), "");
     }
 
+    function test_Revert_AssignJob_Read_NotByMessageLib() public {
+        vm.expectRevert();
+        dvn.assignJob(address(1), "", "", "");
+    }
+
+    function test_Revert_AssignJob_Read_NotAcl_Denied() public {
+        // set deniedSender to denylist
+        address deniedSender = address(1);
+        vm.prank(address(dvn));
+        dvn.grantRole(DENYLIST, deniedSender);
+
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
+        vm.prank(address(fixtureV2.sendUln302));
+        dvn.assignJob(deniedSender, "", "", "");
+    }
+
+    function test_Revert_AssignJob_Read_NotAcl_NotInAllowList() public {
+        // set allowed sender to allowlist
+        address allowedSender = address(1);
+        vm.prank(address(dvn));
+        dvn.grantRole(ALLOWLIST, allowedSender);
+
+        address sender = address(2);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
+        vm.prank(address(fixtureV2.sendUln302));
+        dvn.assignJob(sender, "", "", "");
+    }
+
     function test_GetFee() public {
         // mock feeLib getFee
         address workerFeeLib = dvn.workerFeeLib();
-        vm.mockCall(workerFeeLib, abi.encodeWithSelector(IDVNFeeLib.getFee.selector), abi.encode(100));
+        string memory sig = "getFee((address,uint32,uint64,address,uint64,uint16),(uint64,uint16,uint128),bytes)";
+        vm.mockCall(workerFeeLib, abi.encodeWithSignature(sig), abi.encode(100));
         assertEq(dvn.getFee(0, 0, address(0), ""), 100, "fee is mocked by 100");
     }
 
     function test_GetFee_UlnV2() public {
         // mock feeLib getFee
         address workerFeeLib = dvn.workerFeeLib();
-        vm.mockCall(workerFeeLib, abi.encodeWithSelector(IDVNFeeLib.getFee.selector), abi.encode(100));
+        string memory sig = "getFee((address,uint32,uint64,address,uint64,uint16),(uint64,uint16,uint128),bytes)";
+        vm.mockCall(workerFeeLib, abi.encodeWithSignature(sig), abi.encode(100));
         assertEq(dvn.getFee(0, 0, 0, address(0)), 100, "fee is mocked by 100");
     }
 
@@ -453,6 +483,35 @@ contract DVNTest is Test {
         address sender = address(2);
         vm.expectRevert(IWorker.Worker_NotAllowed.selector);
         dvn.getFee(0, 0, sender, "");
+    }
+
+    function test_GetFee_Read() public {
+        // mock feeLib getFee for Read
+        address workerFeeLib = dvn.workerFeeLib();
+        string memory sig = "getFee((address,address,uint64,uint16),(uint64,uint16,uint128),bytes,bytes)";
+        vm.mockCall(workerFeeLib, abi.encodeWithSignature(sig), abi.encode(100));
+        assertEq(dvn.getFee(address(0), "", "", ""), 100, "fee is mocked by 100");
+    }
+
+    function test_Revert_GetFee_Read_NotAcl_Denied() public {
+        // set deniedSender to denylist
+        address deniedSender = address(1);
+        vm.prank(address(dvn));
+        dvn.grantRole(DENYLIST, deniedSender);
+
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
+        dvn.getFee(deniedSender, "", "", "");
+    }
+
+    function test_Revert_GetFee_Read_NotAcl_NotInAllowList() public {
+        // set allowed sender to allowlist
+        address allowedSender = address(1);
+        vm.prank(address(dvn));
+        dvn.grantRole(ALLOWLIST, allowedSender);
+
+        address sender = address(2);
+        vm.expectRevert(IWorker.Worker_NotAllowed.selector);
+        dvn.getFee(sender, "", "", "");
     }
 
     function test_WithdrawFee() public {

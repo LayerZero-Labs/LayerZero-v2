@@ -7,9 +7,9 @@ import { BytesLib } from "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import { AddressCast } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/AddressCast.sol";
 
-import { UlnOptions as UlnOptionsImpl } from "../contracts/uln/libs/UlnOptions.sol";
+import { UlnOptions as UlnOptionsImpl } from "../../contracts/uln/libs/UlnOptions.sol";
 
-import { OptionsUtil } from "./util/OptionsUtil.sol";
+import { OptionsUtil } from "../util/OptionsUtil.sol";
 
 library UlnOptions {
     function decode(

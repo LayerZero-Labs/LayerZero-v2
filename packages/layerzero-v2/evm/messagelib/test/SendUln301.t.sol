@@ -83,7 +83,7 @@ contract SendUln301Test is Test {
         uint256 mockExecutorFee = 2;
         vm.mockCall(
             address(fixtureV1.executor),
-            abi.encodeWithSelector(fixtureV1.executor.getFee.selector),
+            abi.encodeWithSignature("getFee(uint32,address,uint256,bytes)"),
             abi.encode(mockExecutorFee)
         );
 

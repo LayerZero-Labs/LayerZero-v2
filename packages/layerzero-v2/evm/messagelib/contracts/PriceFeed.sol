@@ -10,6 +10,17 @@ import { Transfer } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Trans
 
 import { ILayerZeroPriceFeed } from "./interfaces/ILayerZeroPriceFeed.sol";
 
+enum ModelType {
+    DEFAULT,
+    ARB_STACK,
+    OP_STACK
+}
+
+struct SetEidToModelTypeParam {
+    uint32 dstEid;
+    ModelType modelType;
+}
+
 // PriceFeed is updated based on v1 eids
 // v2 eids will fall to the convention of v1 eid + 30,000
 contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
@@ -27,6 +38,9 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
     uint128 public ARBITRUM_COMPRESSION_PERCENT;
 
     ILayerZeroEndpointV2 public endpoint;
+
+    // for the destination endpoint id, return the fee model type
+    mapping(uint32 => ModelType) public eidToModelType;
 
     // ============================ Constructor ===================================
 
@@ -61,6 +75,13 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
 
     function setArbitrumCompressionPercent(uint128 _compressionPercent) external onlyOwner {
         ARBITRUM_COMPRESSION_PERCENT = _compressionPercent;
+    }
+
+    // set the fee ModelType for the destination eid
+    function setEidToModelType(SetEidToModelTypeParam[] calldata _params) external onlyOwner {
+        for (uint i = 0; i < _params.length; i++) {
+            eidToModelType[_params[i].dstEid] = _params[i].modelType;
+        }
     }
 
     function setEndpoint(address _endpoint) external onlyOwner {
@@ -154,10 +175,19 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         uint256 _callDataSize,
         uint256 _gas
     ) external view returns (uint256 fee, uint128 priceRatio) {
+        // legacy if-statement uses very little gas, can keep using it until future upgrade
         if (_dstEid == 110 || _dstEid == 10143 || _dstEid == 20143) {
             return _estimateFeeWithArbitrumModel(_dstEid, _callDataSize, _gas);
         } else if (_dstEid == 111 || _dstEid == 10132 || _dstEid == 20132) {
             return _estimateFeeWithOptimismModel(_dstEid, _callDataSize, _gas);
+        }
+
+        // fee model type is configured per eid
+        ModelType _modelType = eidToModelType[_dstEid];
+        if (_modelType == ModelType.OP_STACK) {
+            return _estimateFeeWithOptimismModel(_dstEid, _callDataSize, _gas);
+        } else if (_modelType == ModelType.ARB_STACK) {
+            return _estimateFeeWithArbitrumModel(_dstEid, _callDataSize, _gas);
         } else {
             return _estimateFeeWithDefaultModel(_dstEid, _callDataSize, _gas);
         }
@@ -172,7 +202,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         _defaultModelPrice[_dstEid] = Price(priceRatio, gasPriceInUnit, gasPerByte);
     }
 
-    function _getL1LookupId(uint32 _l2Eid) internal pure returns (uint32) {
+    function _getL1LookupIdForOptimismModel(uint32 _l2Eid) internal view returns (uint32) {
         uint32 l2Eid = _l2Eid % 30_000;
         if (l2Eid == 111) {
             return 101;
@@ -181,7 +211,15 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         } else if (l2Eid == 20132) {
             return 20121; // ethereum-goerli
         }
-        revert LZ_PriceFeed_UnknownL2Eid(l2Eid);
+
+        if (eidToModelType[l2Eid] != ModelType.OP_STACK) revert LZ_PriceFeed_NotAnOPStack(_l2Eid);
+        if (l2Eid < 10000) {
+            return 101;
+        } else if (l2Eid < 20000) {
+            return 10161; // ethereum-sepolia
+        } else {
+            return 20121; // ethereum-goerli
+        }
     }
 
     function _estimateFeeWithDefaultModel(
@@ -207,9 +245,18 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
             (fee, priceRatio) = _estimateFeeWithArbitrumModel(dstEid, _callDataSize, _gas);
         } else if (dstEid == 111 || dstEid == 10132 || dstEid == 20132) {
             (fee, priceRatio) = _estimateFeeWithOptimismModel(dstEid, _callDataSize, _gas);
+        }
+
+        // lookup map stuff
+        ModelType _modelType = eidToModelType[dstEid];
+        if (_modelType == ModelType.OP_STACK) {
+            (fee, priceRatio) = _estimateFeeWithOptimismModel(dstEid, _callDataSize, _gas);
+        } else if (_modelType == ModelType.ARB_STACK) {
+            (fee, priceRatio) = _estimateFeeWithArbitrumModel(dstEid, _callDataSize, _gas);
         } else {
             (fee, priceRatio) = _estimateFeeWithDefaultModel(dstEid, _callDataSize, _gas);
         }
+
         priceRatioDenominator = PRICE_RATIO_DENOMINATOR;
         priceUSD = _nativePriceUSD;
     }
@@ -219,7 +266,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
         uint256 _callDataSize,
         uint256 _gas
     ) internal view returns (uint256 fee, uint128 priceRatio) {
-        uint32 ethereumId = _getL1LookupId(_dstEid);
+        uint32 ethereumId = _getL1LookupIdForOptimismModel(_dstEid);
 
         // L1 fee
         Price storage ethereumPrice = _defaultModelPrice[ethereumId];

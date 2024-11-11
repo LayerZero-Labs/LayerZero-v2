@@ -57,6 +57,20 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
     }
 
     /**
+     * @notice Retrieves interfaceID and the version of the OFT.
+     * @return interfaceId The interface ID.
+     * @return version The version.
+     *
+     * @dev interfaceId: This specific interface ID is '0x02e49c2c'.
+     * @dev version: Indicates a cross-chain compatible msg encoding with other OFTs.
+     * @dev If a new feature is added to the OFT cross-chain msg encoding, the version will be incremented.
+     * ie. localOFT version(x,1) CAN send messages to remoteOFT version(x,1)
+     */
+    function oftVersion() external pure virtual returns (bytes4 interfaceId, uint64 version) {
+        return (type(IOFT).interfaceId, 1);
+    }
+
+    /**
      * @dev Retrieves the shared decimals of the OFT.
      * @return The shared decimals of the OFT.
      *
@@ -66,7 +80,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
      * For tokens exceeding this totalSupply(), they will need to override the sharedDecimals function with something smaller.
      * ie. 4 sharedDecimals would be 1,844,674,407,370,955.1615
      */
-    function sharedDecimals() public pure virtual returns (uint8) {
+    function sharedDecimals() public view virtual returns (uint8) {
         return 6;
     }
 
@@ -165,6 +179,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
         // - amountSentLD is the amount in local decimals that was ACTUALLY sent/debited from the sender.
         // - amountReceivedLD is the amount in local decimals that will be received/credited to the recipient on the remote OFT instance.
         (uint256 amountSentLD, uint256 amountReceivedLD) = _debit(
+            msg.sender,
             _sendParam.amountLD,
             _sendParam.minAmountLD,
             _sendParam.dstEid
@@ -349,6 +364,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
 
     /**
      * @dev Internal function to perform a debit operation.
+     * @param _from The address to debit.
      * @param _amountLD The amount to send in local decimals.
      * @param _minAmountLD The minimum amount to send in local decimals.
      * @param _dstEid The destination endpoint ID.
@@ -359,6 +375,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
      * @dev Depending on OFT implementation the _amountLD could differ from the amountReceivedLD.
      */
     function _debit(
+        address _from,
         uint256 _amountLD,
         uint256 _minAmountLD,
         uint32 _dstEid

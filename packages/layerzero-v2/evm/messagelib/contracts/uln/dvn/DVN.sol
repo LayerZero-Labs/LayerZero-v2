@@ -6,6 +6,7 @@ import { ILayerZeroUltraLightNodeV2 } from "@layerzerolabs/lz-evm-v1-0.7/contrac
 
 import { Worker } from "../../Worker.sol";
 import { MultiSig } from "./MultiSig.sol";
+import { ReadLib1002 } from "../readlib/ReadLib1002.sol";
 import { IDVN } from "../interfaces/IDVN.sol";
 import { IDVNFeeLib } from "../interfaces/IDVNFeeLib.sol";
 import { IReceiveUlnE2 } from "../interfaces/IReceiveUlnE2.sol";
@@ -22,6 +23,7 @@ contract DVN is Worker, MultiSig, IDVN {
     // to uniquely identify this DVN instance
     // set to endpoint v1 eid if available OR endpoint v2 eid % 30_000
     uint32 public immutable vid;
+    uint32 public immutable localEidV2; // endpoint-v2 only, for read call
 
     mapping(uint32 dstEid => DstConfig) public dstConfig;
     mapping(bytes32 executableHash => bool used) public usedHashes;
@@ -44,6 +46,7 @@ contract DVN is Worker, MultiSig, IDVN {
 
     /// @dev DVN doesn't have a roleAdmin (address(0x0))
     /// @dev Supports all of ULNv2, ULN301, ULN302 and more
+    /// @param _localEidV2 local endpoint-v2 eid
     /// @param _vid unique identifier for this DVN instance
     /// @param _messageLibs array of message lib addresses that are granted the MESSAGE_LIB_ROLE
     /// @param _priceFeed price feed address
@@ -51,6 +54,7 @@ contract DVN is Worker, MultiSig, IDVN {
     /// @param _quorum quorum for multisig
     /// @param _admins array of admin addresses that are granted the ADMIN_ROLE
     constructor(
+        uint32 _localEidV2,
         uint32 _vid,
         address[] memory _messageLibs,
         address _priceFeed,
@@ -59,6 +63,7 @@ contract DVN is Worker, MultiSig, IDVN {
         address[] memory _admins
     ) Worker(_messageLibs, _priceFeed, 12000, address(0x0), _admins) MultiSig(_signers, _quorum) {
         vid = _vid;
+        localEidV2 = _localEidV2;
     }
 
     // ========================= Modifier =========================
@@ -272,6 +277,25 @@ contract DVN is Worker, MultiSig, IDVN {
         emit VerifierFeePaid(totalFee);
     }
 
+    /// @dev to support CmdLib
+    // @param _packetHeader - version + nonce + path
+    // @param _cmd - the command to be executed to obtain the payload
+    // @param _options - options
+    function assignJob(
+        address _sender,
+        bytes calldata /*_packetHeader*/,
+        bytes calldata _cmd,
+        bytes calldata _options
+    ) external payable onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_sender) returns (uint256 fee) {
+        IDVNFeeLib.FeeParamsForRead memory feeParams = IDVNFeeLib.FeeParamsForRead(
+            priceFeed,
+            _sender,
+            quorum,
+            defaultMultiplierBps
+        );
+        fee = IDVNFeeLib(workerFeeLib).getFeeOnSend(feeParams, dstConfig[localEidV2], _cmd, _options);
+    }
+
     // ========================= View =========================
 
     /// @dev getFee can revert if _sender doesn't pass ACL
@@ -294,7 +318,7 @@ contract DVN is Worker, MultiSig, IDVN {
             quorum,
             defaultMultiplierBps
         );
-        return IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], _options);
+        fee = IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], _options);
     }
 
     /// @dev to support ULNv2
@@ -317,7 +341,26 @@ contract DVN is Worker, MultiSig, IDVN {
             quorum,
             defaultMultiplierBps
         );
-        return IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], bytes(""));
+        fee = IDVNFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], bytes(""));
+    }
+
+    /// @dev to support CmdLib
+    // @param _packetHeader - version + nonce + path
+    // @param _cmd - the command to be executed to obtain the payload
+    // @param _options - options
+    function getFee(
+        address _sender,
+        bytes calldata /*_packetHeader*/,
+        bytes calldata _cmd,
+        bytes calldata _options
+    ) external view onlyAcl(_sender) returns (uint256 fee) {
+        IDVNFeeLib.FeeParamsForRead memory feeParams = IDVNFeeLib.FeeParamsForRead(
+            priceFeed,
+            _sender,
+            quorum,
+            defaultMultiplierBps
+        );
+        fee = IDVNFeeLib(workerFeeLib).getFee(feeParams, dstConfig[localEidV2], _cmd, _options);
     }
 
     /// @param _target target address
@@ -344,6 +387,7 @@ contract DVN is Worker, MultiSig, IDVN {
         // never check for these selectors to save gas
         return
             _functionSig != IReceiveUlnE2.verify.selector && // 0x0223536e, replaying won't change the state
+            _functionSig != ReadLib1002.verify.selector && // 0xab750e75, replaying won't change the state
             _functionSig != ILayerZeroUltraLightNodeV2.updateHash.selector; // 0x704316e5, replaying will be revert at uln
     }
 }

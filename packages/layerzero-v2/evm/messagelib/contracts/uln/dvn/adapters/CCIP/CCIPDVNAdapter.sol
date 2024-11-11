@@ -22,10 +22,10 @@ import { ICCIPDVNAdapterFeeLib } from "../../../interfaces/adapters/ICCIPDVNAdap
 contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdapter {
     address private constant NATIVE_GAS_TOKEN_ADDRESS = address(0);
 
-    IRouterClient public router;
+    IRouterClient public immutable router;
 
-    mapping(uint32 dstEid => DstConfig config) public dstConfig;
-    mapping(uint64 chainSelector => bytes peer) public peers;
+    mapping(uint32 dstEid => DstConfig) public dstConfig;
+    mapping(uint64 srcChainSelector => SrcConfig) public srcConfig;
 
     constructor(address[] memory _admins, address _router) DVNAdapterBase(msg.sender, _admins, 12000) {
         router = IRouterClient(_router);
@@ -38,23 +38,23 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
         for (uint256 i = 0; i < _params.length; i++) {
             DstConfigParam calldata param = _params[i];
 
-            delete peers[dstConfig[param.dstEid].chainSelector]; // delete old peer in case chain by dstEid is updated
-            peers[param.chainSelector] = param.peer;
+            uint32 eid = param.eid % 30000;
 
-            dstConfig[param.dstEid] = DstConfig({
-                chainSelector: param.chainSelector,
-                multiplierBps: param.multiplierBps,
-                gas: param.gas,
-                peer: param.peer
-            });
+            // set once per chainSelector
+            // only one adapter per dvn that services both endpoint v1 and v2
+            // we standardize the eid stored here with mod 30000
+            if (dstConfig[eid].chainSelector == 0) {
+                dstConfig[eid].chainSelector = param.chainSelector;
+                dstConfig[eid].peer = param.peer;
+                srcConfig[param.chainSelector].eid = eid;
+                srcConfig[param.chainSelector].peer = param.peer;
+            }
+
+            dstConfig[eid].multiplierBps = param.multiplierBps;
+            dstConfig[eid].gas = param.gas;
         }
 
         emit DstConfigSet(_params);
-    }
-
-    function setRouter(address _router) external onlyRole(ADMIN_ROLE) {
-        router = IRouterClient(_router);
-        emit RouterSet(_router);
     }
 
     // ========================= OnlyMessageLib =========================
@@ -71,7 +71,7 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
             defaultMultiplierBps
         );
 
-        DstConfig memory config = dstConfig[_param.dstEid];
+        DstConfig memory config = dstConfig[_param.dstEid % 30000];
 
         bytes memory data = _encode(receiveLib, _param.packetHeader, _param.payloadHash);
         Client.EVM2AnyMessage memory message = _createCCIPMessage(data, config.peer, config.gas);
@@ -95,9 +95,11 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
     function ccipReceive(Client.Any2EVMMessage calldata _message) external {
         if (msg.sender != address(router)) revert CCIPDVNAdapter_InvalidRouter(msg.sender);
 
-        _assertPeer(_message.sourceChainSelector, _message.sender);
+        SrcConfig memory config = srcConfig[_message.sourceChainSelector];
 
-        _decodeAndVerify(_message.data);
+        _assertPeer(_message.sourceChainSelector, _message.sender, config.peer);
+
+        _decodeAndVerify(config.eid, _message.data);
     }
 
     // ========================= View =========================
@@ -114,7 +116,7 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
             defaultMultiplierBps
         );
 
-        DstConfig memory config = dstConfig[_dstEid];
+        DstConfig memory config = dstConfig[_dstEid % 30000];
 
         bytes memory data = _encodeEmpty();
         Client.EVM2AnyMessage memory message = _createCCIPMessage(data, config.peer, config.gas);
@@ -141,9 +143,8 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
         });
     }
 
-    function _assertPeer(uint64 _sourceChainSelector, bytes memory _sourceAddress) private view {
-        bytes memory sourcePeer = peers[_sourceChainSelector];
-        if (keccak256(_sourceAddress) != keccak256(sourcePeer)) {
+    function _assertPeer(uint64 _sourceChainSelector, bytes memory _sourceAddress, bytes memory peer) private pure {
+        if (keccak256(_sourceAddress) != keccak256(peer)) {
             revert CCIPDVNAdapter_UntrustedPeer(_sourceChainSelector, _sourceAddress);
         }
     }

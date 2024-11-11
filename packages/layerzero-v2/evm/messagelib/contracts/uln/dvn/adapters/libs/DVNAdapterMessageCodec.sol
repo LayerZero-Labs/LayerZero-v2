@@ -12,6 +12,7 @@ library DVNAdapterMessageCodec {
     uint256 private constant RECEIVE_LIB_OFFSET = 0;
     uint256 private constant PAYLOAD_HASH_OFFSET = 32;
     uint256 private constant PACKET_HEADER_OFFSET = 64;
+    uint256 private constant SRC_EID_OFFSET = 73; // 64 + 1 + 8
 
     uint256 internal constant PACKET_HEADER_SIZE = 81; // version(uint8) + nonce(uint64) + path(uint32,bytes32,uint32,bytes32)
     uint256 internal constant MESSAGE_SIZE = 32 + 32 + PACKET_HEADER_SIZE; // receive_lib(bytes32) + payloadHash(bytes32) + packetHeader
@@ -32,5 +33,9 @@ library DVNAdapterMessageCodec {
         receiveLib = bytes32(_message[RECEIVE_LIB_OFFSET:PAYLOAD_HASH_OFFSET]).toAddress();
         payloadHash = bytes32(_message[PAYLOAD_HASH_OFFSET:PACKET_HEADER_OFFSET]);
         packetHeader = _message[PACKET_HEADER_OFFSET:];
+    }
+
+    function srcEid(bytes calldata _message) internal pure returns (uint32) {
+        return uint32(bytes4(_message[SRC_EID_OFFSET:SRC_EID_OFFSET + 4]));
     }
 }

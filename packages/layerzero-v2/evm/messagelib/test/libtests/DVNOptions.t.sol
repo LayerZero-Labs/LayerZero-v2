@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import { Test } from "forge-std/Test.sol";
 
-import { DVNOptions } from "../contracts/uln/libs/DVNOptions.sol";
+import { DVNOptions } from "../../contracts/uln/libs/DVNOptions.sol";
 
-import { OptionsUtil } from "./util/OptionsUtil.sol";
+import { OptionsUtil } from "../util/OptionsUtil.sol";
 
 contract DVNOptionsTest is Test {
     using OptionsUtil for bytes;

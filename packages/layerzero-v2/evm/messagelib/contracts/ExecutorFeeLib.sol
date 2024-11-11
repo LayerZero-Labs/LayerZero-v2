@@ -5,18 +5,20 @@ pragma solidity ^0.8.20;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 import { Transfer } from "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/Transfer.sol";
-import { ExecutorOptions } from "@layerzerolabs/lz-evm-protocol-v2/contracts/messagelib/libs/ExecutorOptions.sol";
 
 import { ILayerZeroPriceFeed } from "./interfaces/ILayerZeroPriceFeed.sol";
 import { IExecutor } from "./interfaces/IExecutor.sol";
 import { IExecutorFeeLib } from "./interfaces/IExecutorFeeLib.sol";
+import { ExecutorOptions } from "./libs/ExecutorOptions.sol";
 
 contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
     using ExecutorOptions for bytes;
 
     uint256 private immutable nativeDecimalsRate;
+    uint32 private immutable localEidV2; // endpoint-v2 only, for read call
 
-    constructor(uint256 _nativeDecimalsRate) {
+    constructor(uint32 _localEidV2, uint256 _nativeDecimalsRate) {
+        localEidV2 = _localEidV2;
         nativeDecimalsRate = _nativeDecimalsRate;
     }
 
@@ -31,29 +33,16 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         FeeParams calldata _params,
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
-    ) external returns (uint256 fee) {
-        if (_dstConfig.lzReceiveBaseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
+    ) external view returns (uint256 fee) {
+        fee = getFee(_params, _dstConfig, _options);
+    }
 
-        (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
-            _isV1Eid(_params.dstEid),
-            _dstConfig.lzReceiveBaseGas,
-            _dstConfig.lzComposeBaseGas,
-            _dstConfig.nativeCap,
-            _options
-        );
-
-        // for future versions where priceFeed charges a fee
-        (
-            uint256 totalGasFee,
-            uint128 priceRatio,
-            uint128 priceRatioDenominator,
-            uint128 nativePriceUSD
-        ) = ILayerZeroPriceFeed(_params.priceFeed).estimateFeeOnSend(_params.dstEid, _params.calldataSize, totalGas);
-
-        uint16 multiplierBps = _dstConfig.multiplierBps == 0 ? _params.defaultMultiplierBps : _dstConfig.multiplierBps;
-
-        fee = _applyPremiumToGas(totalGasFee, multiplierBps, _dstConfig.floorMarginUSD, nativePriceUSD);
-        fee += _convertAndApplyPremiumToValue(totalDstAmount, priceRatio, priceRatioDenominator, multiplierBps);
+    function getFeeOnSend(
+        FeeParamsForRead calldata _params,
+        IExecutor.DstConfig calldata _dstConfig,
+        bytes calldata _options
+    ) external view returns (uint256 fee) {
+        fee = getFee(_params, _dstConfig, _options);
     }
 
     // ================================ View ================================
@@ -61,10 +50,11 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         FeeParams calldata _params,
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
-    ) external view returns (uint256 fee) {
+    ) public view returns (uint256 fee) {
         if (_dstConfig.lzReceiveBaseGas == 0) revert Executor_EidNotSupported(_params.dstEid);
 
-        (uint256 totalDstAmount, uint256 totalGas) = _decodeExecutorOptions(
+        (uint256 totalValue, uint256 totalGas, ) = _decodeExecutorOptions(
+            false,
             _isV1Eid(_params.dstEid),
             _dstConfig.lzReceiveBaseGas,
             _dstConfig.lzComposeBaseGas,
@@ -82,69 +72,132 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
         uint16 multiplierBps = _dstConfig.multiplierBps == 0 ? _params.defaultMultiplierBps : _dstConfig.multiplierBps;
 
         fee = _applyPremiumToGas(totalGasFee, multiplierBps, _dstConfig.floorMarginUSD, nativePriceUSD);
-        fee += _convertAndApplyPremiumToValue(totalDstAmount, priceRatio, priceRatioDenominator, multiplierBps);
+        fee += _convertAndApplyPremiumToValue(totalValue, priceRatio, priceRatioDenominator, multiplierBps);
+    }
+
+    function getFee(
+        FeeParamsForRead calldata _params,
+        IExecutor.DstConfig calldata _dstConfig,
+        bytes calldata _options
+    ) public view returns (uint256 fee) {
+        if (_dstConfig.lzReceiveBaseGas == 0) revert Executor_EidNotSupported(localEidV2);
+
+        (uint256 totalValue, uint256 totalGas, uint32 calldataSize) = _decodeExecutorOptions(
+            true,
+            false, // endpoint v2 only
+            _dstConfig.lzReceiveBaseGas,
+            _dstConfig.lzComposeBaseGas,
+            _dstConfig.nativeCap,
+            _options
+        );
+
+        (
+            uint256 totalGasFee,
+            uint128 priceRatio,
+            uint128 priceRatioDenominator,
+            uint128 nativePriceUSD
+        ) = ILayerZeroPriceFeed(_params.priceFeed).estimateFeeByEid(localEidV2, calldataSize, totalGas);
+
+        uint16 multiplierBps = _dstConfig.multiplierBps == 0 ? _params.defaultMultiplierBps : _dstConfig.multiplierBps;
+
+        fee = _applyPremiumToGas(totalGasFee, multiplierBps, _dstConfig.floorMarginUSD, nativePriceUSD);
+        fee += _convertAndApplyPremiumToValue(totalValue, priceRatio, priceRatioDenominator, multiplierBps);
     }
 
     // ================================ Internal ================================
     // @dev decode executor options into dstAmount and totalGas
     function _decodeExecutorOptions(
+        bool _isRead,
         bool _v1Eid,
         uint64 _lzReceiveBaseGas,
         uint64 _lzComposeBaseGas,
         uint128 _nativeCap,
         bytes calldata _options
-    ) internal pure returns (uint256 dstAmount, uint256 totalGas) {
+    ) internal pure returns (uint256 totalValue, uint256 totalGas, uint32 calldataSize) {
+        ExecutorOptionsAgg memory aggOptions = _parseExecutorOptions(_options, _isRead, _v1Eid, _nativeCap);
+        totalValue = aggOptions.totalValue;
+        calldataSize = aggOptions.calldataSize;
+
+        // lz receive only called once
+        // lz compose can be called multiple times, based on unique index
+        // to simplify the quoting, we add lzComposeBaseGas for each lzComposeOption received
+        // if the same index has multiple compose options, the gas will be added multiple times
+        totalGas = _lzReceiveBaseGas + aggOptions.totalGas + _lzComposeBaseGas * aggOptions.numLzCompose;
+        if (aggOptions.ordered) {
+            totalGas = (totalGas * 102) / 100;
+        }
+    }
+
+    struct ExecutorOptionsAgg {
+        uint256 totalValue;
+        uint256 totalGas;
+        bool ordered;
+        uint32 calldataSize;
+        uint256 numLzCompose;
+    }
+
+    function _parseExecutorOptions(
+        bytes calldata _options,
+        bool _isRead,
+        bool _v1Eid,
+        uint128 _nativeCap
+    ) internal pure returns (ExecutorOptionsAgg memory options) {
         if (_options.length == 0) {
             revert Executor_NoOptions();
         }
 
         uint256 cursor = 0;
-        bool ordered = false;
-        totalGas = _lzReceiveBaseGas; // lz receive only called once
-
-        bool v1Eid = _v1Eid; // stack too deep
         uint256 lzReceiveGas;
+        uint32 calldataSize;
         while (cursor < _options.length) {
             (uint8 optionType, bytes calldata option, uint256 newCursor) = _options.nextExecutorOption(cursor);
             cursor = newCursor;
 
             if (optionType == ExecutorOptions.OPTION_TYPE_LZRECEIVE) {
+                // lzRead does not support lzReceive option
+                if (_isRead) revert Executor_UnsupportedOptionType(optionType);
                 (uint128 gas, uint128 value) = ExecutorOptions.decodeLzReceiveOption(option);
 
                 // endpoint v1 does not support lzReceive with value
-                if (v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
+                if (_v1Eid && value > 0) revert Executor_UnsupportedOptionType(optionType);
 
-                dstAmount += value;
+                options.totalValue += value;
                 lzReceiveGas += gas;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_NATIVE_DROP) {
+                // lzRead does not support nativeDrop option
+                if (_isRead) revert Executor_UnsupportedOptionType(optionType);
+
                 (uint128 nativeDropAmount, ) = ExecutorOptions.decodeNativeDropOption(option);
-                dstAmount += nativeDropAmount;
+                options.totalValue += nativeDropAmount;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_LZCOMPOSE) {
                 // endpoint v1 does not support lzCompose
-                if (v1Eid) revert Executor_UnsupportedOptionType(optionType);
+                if (_v1Eid) revert Executor_UnsupportedOptionType(optionType);
 
                 (, uint128 gas, uint128 value) = ExecutorOptions.decodeLzComposeOption(option);
                 if (gas == 0) revert Executor_ZeroLzComposeGasProvided();
 
-                dstAmount += value;
-                // lz compose can be called multiple times, based on unique index
-                // to simplify the quoting, we add lzComposeBaseGas for each lzComposeOption received
-                // if the same index has multiple compose options, the gas will be added multiple times
-                totalGas += gas + _lzComposeBaseGas;
+                options.totalValue += value;
+                options.totalGas += gas;
+                options.numLzCompose++;
             } else if (optionType == ExecutorOptions.OPTION_TYPE_ORDERED_EXECUTION) {
-                ordered = true;
+                options.ordered = true;
+            } else if (optionType == ExecutorOptions.OPTION_TYPE_LZREAD) {
+                if (!_isRead) revert Executor_UnsupportedOptionType(optionType);
+
+                (uint128 gas, uint32 size, uint128 value) = ExecutorOptions.decodeLzReadOption(option);
+                options.totalValue += value;
+                lzReceiveGas += gas;
+                calldataSize += size;
             } else {
                 revert Executor_UnsupportedOptionType(optionType);
             }
         }
         if (cursor != _options.length) revert Executor_InvalidExecutorOptions(cursor);
-        if (dstAmount > _nativeCap) revert Executor_NativeAmountExceedsCap(dstAmount, _nativeCap);
+        if (options.totalValue > _nativeCap) revert Executor_NativeAmountExceedsCap(options.totalValue, _nativeCap);
         if (lzReceiveGas == 0) revert Executor_ZeroLzReceiveGasProvided();
-        totalGas += lzReceiveGas;
-
-        if (ordered) {
-            totalGas = (totalGas * 102) / 100;
-        }
+        if (_isRead && calldataSize == 0) revert Executor_ZeroCalldataSizeProvided();
+        options.totalGas += lzReceiveGas;
+        options.calldataSize = calldataSize;
     }
 
     function _applyPremiumToGas(
@@ -177,6 +230,10 @@ contract ExecutorFeeLib is Ownable, IExecutorFeeLib {
     function _isV1Eid(uint32 _eid) internal pure virtual returns (bool) {
         // v1 eid is < 30000
         return _eid < 30000;
+    }
+
+    function version() external pure returns (uint64 major, uint8 minor) {
+        return (1, 1);
     }
 
     // send funds here to pay for price feed directly

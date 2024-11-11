@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 import { ExecutorFeeLib } from "@layerzerolabs/lz-evm-messagelib-v2/contracts/ExecutorFeeLib.sol";
 
 contract ExecutorFeeLibMock is ExecutorFeeLib {
-    constructor() ExecutorFeeLib(1e18) {}
+    constructor(uint32 _localEid) ExecutorFeeLib(_localEid, 1e18) {}
 
     function _isV1Eid(uint32 /*_eid*/) internal pure override returns (bool) {
         return false;

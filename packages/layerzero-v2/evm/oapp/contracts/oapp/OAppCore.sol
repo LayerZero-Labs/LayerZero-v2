@@ -41,6 +41,19 @@ abstract contract OAppCore is IOAppCore, Ownable {
      * @dev Peer is a bytes32 to accommodate non-evm chains.
      */
     function setPeer(uint32 _eid, bytes32 _peer) public virtual onlyOwner {
+        _setPeer(_eid, _peer);
+    }
+
+    /**
+     * @notice Sets the peer address (OApp instance) for a corresponding endpoint.
+     * @param _eid The endpoint ID.
+     * @param _peer The address of the peer to be associated with the corresponding endpoint.
+     *
+     * @dev Indicates that the peer is trusted to send LayerZero messages to this OApp.
+     * @dev Set this to bytes32(0) to remove the peer address.
+     * @dev Peer is a bytes32 to accommodate non-evm chains.
+     */
+    function _setPeer(uint32 _eid, bytes32 _peer) internal virtual {
         peers[_eid] = _peer;
         emit PeerSet(_eid, _peer);
     }

@@ -25,26 +25,12 @@ abstract contract OFT is OFTCore, ERC20 {
     ) ERC20(_name, _symbol) OFTCore(decimals(), _lzEndpoint, _delegate) {}
 
     /**
-     * @notice Retrieves interfaceID and the version of the OFT.
-     * @return interfaceId The interface ID.
-     * @return version The version.
-     *
-     * @dev interfaceId: This specific interface ID is '0x02e49c2c'.
-     * @dev version: Indicates a cross-chain compatible msg encoding with other OFTs.
-     * @dev If a new feature is added to the OFT cross-chain msg encoding, the version will be incremented.
-     * ie. localOFT version(x,1) CAN send messages to remoteOFT version(x,1)
-     */
-    function oftVersion() external pure virtual returns (bytes4 interfaceId, uint64 version) {
-        return (type(IOFT).interfaceId, 1);
-    }
-
-    /**
      * @dev Retrieves the address of the underlying ERC20 implementation.
      * @return The address of the OFT token.
      *
      * @dev In the case of OFT, address(this) and erc20 are the same contract.
      */
-    function token() external view returns (address) {
+    function token() public view returns (address) {
         return address(this);
     }
 
@@ -60,6 +46,7 @@ abstract contract OFT is OFTCore, ERC20 {
 
     /**
      * @dev Burns tokens from the sender's specified balance.
+     * @param _from The address to debit the tokens from.
      * @param _amountLD The amount of tokens to send in local decimals.
      * @param _minAmountLD The minimum amount to send in local decimals.
      * @param _dstEid The destination chain ID.
@@ -67,6 +54,7 @@ abstract contract OFT is OFTCore, ERC20 {
      * @return amountReceivedLD The amount received in local decimals on the remote.
      */
     function _debit(
+        address _from,
         uint256 _amountLD,
         uint256 _minAmountLD,
         uint32 _dstEid
@@ -77,7 +65,7 @@ abstract contract OFT is OFTCore, ERC20 {
         // therefore amountSentLD CAN differ from amountReceivedLD.
 
         // @dev Default OFT burns on src.
-        _burn(msg.sender, amountSentLD);
+        _burn(_from, amountSentLD);
     }
 
     /**
@@ -92,6 +80,7 @@ abstract contract OFT is OFTCore, ERC20 {
         uint256 _amountLD,
         uint32 /*_srcEid*/
     ) internal virtual override returns (uint256 amountReceivedLD) {
+        if (_to == address(0x0)) _to = address(0xdead); // _mint(...) does not support address(0x0)
         // @dev Default OFT mints on dst.
         _mint(_to, _amountLD);
         // @dev In the case of NON-default OFT, the _amountLD MIGHT not be == amountReceivedLD.
