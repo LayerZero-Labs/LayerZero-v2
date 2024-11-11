@@ -19,7 +19,7 @@ interface IAxelarDVNAdapter {
     }
 
     struct DstConfigParam {
-        uint32 dstEid;
+        uint32 eid;
         string chainName;
         string peer;
         uint16 multiplierBps;
@@ -31,6 +31,11 @@ interface IAxelarDVNAdapter {
         string peer;
         uint16 multiplierBps;
         uint256 nativeGasFee;
+    }
+
+    struct SrcConfig {
+        uint32 eid;
+        string peer;
     }
 
     event DstConfigSet(DstConfigParam[] params);

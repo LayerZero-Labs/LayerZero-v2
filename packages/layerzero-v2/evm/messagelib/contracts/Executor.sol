@@ -64,7 +64,7 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
 
     // endpoint v2
     address public endpoint;
-    uint32 public localEid;
+    uint32 public localEidV2;
 
     // endpoint v1
     address public receiveUln301;
@@ -80,7 +80,7 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         __ReentrancyGuard_init();
         __Worker_init(_messageLibs, _priceFeed, 12000, _roleAdmin, _admins);
         endpoint = _endpoint;
-        localEid = ILayerZeroEndpointV2(_endpoint).eid();
+        localEidV2 = ILayerZeroEndpointV2(_endpoint).eid();
         receiveUln301 = _receiveUln301;
     }
 
@@ -130,13 +130,13 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
 
     function execute302(ExecutionParams calldata _executionParams) external payable onlyRole(ADMIN_ROLE) nonReentrant {
         try
-        ILayerZeroEndpointV2(endpoint).lzReceive{ value: msg.value, gas: _executionParams.gasLimit }(
-            _executionParams.origin,
-            _executionParams.receiver,
-            _executionParams.guid,
-            _executionParams.message,
-            _executionParams.extraData
-        )
+            ILayerZeroEndpointV2(endpoint).lzReceive{ value: msg.value, gas: _executionParams.gasLimit }(
+                _executionParams.origin,
+                _executionParams.receiver,
+                _executionParams.guid,
+                _executionParams.message,
+                _executionParams.extraData
+            )
         {
             // do nothing
         } catch (bytes memory reason) {
@@ -163,14 +163,14 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         uint256 _gasLimit
     ) external payable onlyRole(ADMIN_ROLE) nonReentrant {
         try
-        ILayerZeroEndpointV2(endpoint).lzCompose{ value: msg.value, gas: _gasLimit }(
-            _from,
-            _to,
-            _guid,
-            _index,
-            _message,
-            _extraData
-        )
+            ILayerZeroEndpointV2(endpoint).lzCompose{ value: msg.value, gas: _gasLimit }(
+                _from,
+                _to,
+                _guid,
+                _index,
+                _message,
+                _extraData
+            )
         {
             // do nothing
         } catch (bytes memory reason) {
@@ -195,7 +195,7 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
     ) external payable onlyRole(ADMIN_ROLE) nonReentrant {
         uint256 spent = _nativeDrop(
             _executionParams.origin,
-            localEid,
+            localEidV2,
             _executionParams.receiver,
             _nativeDropParams,
             _nativeDropGasLimit
@@ -203,13 +203,13 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
 
         uint256 value = msg.value - spent;
         try
-        ILayerZeroEndpointV2(endpoint).lzReceive{ value: value, gas: _executionParams.gasLimit }(
-            _executionParams.origin,
-            _executionParams.receiver,
-            _executionParams.guid,
-            _executionParams.message,
-            _executionParams.extraData
-        )
+            ILayerZeroEndpointV2(endpoint).lzReceive{ value: value, gas: _executionParams.gasLimit }(
+                _executionParams.origin,
+                _executionParams.receiver,
+                _executionParams.guid,
+                _executionParams.message,
+                _executionParams.extraData
+            )
         {
             // do nothing
         } catch (bytes memory reason) {
@@ -243,6 +243,19 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
         fee = IExecutorFeeLib(workerFeeLib).getFeeOnSend(params, dstConfig[_dstEid], _options);
     }
 
+    // assignJob for CmdLib
+    function assignJob(
+        address _sender,
+        bytes calldata _options
+    ) external onlyRole(MESSAGE_LIB_ROLE) onlyAcl(_sender) whenNotPaused returns (uint256 fee) {
+        IExecutorFeeLib.FeeParamsForRead memory params = IExecutorFeeLib.FeeParamsForRead(
+            priceFeed,
+            _sender,
+            defaultMultiplierBps
+        );
+        fee = IExecutorFeeLib(workerFeeLib).getFeeOnSend(params, dstConfig[localEidV2], _options);
+    }
+
     // --- Only ACL ---
     function getFee(
         uint32 _dstEid,
@@ -258,6 +271,18 @@ contract Executor is WorkerUpgradeable, ReentrancyGuardUpgradeable, Proxied, IEx
             defaultMultiplierBps
         );
         fee = IExecutorFeeLib(workerFeeLib).getFee(params, dstConfig[_dstEid], _options);
+    }
+
+    function getFee(
+        address _sender,
+        bytes calldata _options
+    ) external view onlyAcl(_sender) whenNotPaused returns (uint256 fee) {
+        IExecutorFeeLib.FeeParamsForRead memory params = IExecutorFeeLib.FeeParamsForRead(
+            priceFeed,
+            _sender,
+            defaultMultiplierBps
+        );
+        fee = IExecutorFeeLib(workerFeeLib).getFee(params, dstConfig[localEidV2], _options);
     }
 
     function _nativeDrop(

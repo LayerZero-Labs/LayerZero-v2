@@ -28,7 +28,11 @@ contract EndpointV2ViewUpgradeable is Initializable {
     }
 
     function initializable(Origin memory _origin, address _receiver) public view returns (bool) {
-        return endpoint.initializable(_origin, _receiver);
+        try endpoint.initializable(_origin, _receiver) returns (bool _initializable) {
+            return _initializable;
+        } catch {
+            return false;
+        }
     }
 
     /// @dev check if a message is verifiable.

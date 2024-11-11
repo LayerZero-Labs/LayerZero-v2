@@ -16,18 +16,35 @@ contract MultiSigTest is MultiSig, Test {
         return signers;
     }
 
+    function test_getSigners() public {
+        address[] memory signers = this.getSigners();
+        assertEq(signers[0], vm.addr(2));
+        assertEq(signers[1], vm.addr(3));
+        assertEq(signers.length, 2);
+    }
+
+    function test_isSigner() public {
+        assertEq(isSigner(vm.addr(2)), true);
+        assertEq(isSigner(vm.addr(3)), true);
+        assertEq(isSigner(vm.addr(4)), false);
+    }
+
     function test_setSigner() public {
         // only two signers
-        assertEq(signers[vm.addr(2)], true);
-        assertEq(signers[vm.addr(3)], true);
-        assertEq(signers[vm.addr(4)], false);
-        assertEq(signerSize, 2);
+        assertEq(signers(vm.addr(2)), true);
+        assertEq(signers(vm.addr(3)), true);
+        assertEq(signers(vm.addr(4)), false);
+        assertEq(signerSize(), 2);
 
         // add a new signer
         address newSigner = vm.addr(4);
         bool active = true;
         _setSigner(newSigner, active);
-        assertEq(signerSize, 3);
+        assertEq(signerSize(), 3);
+
+        // cant add address(0) as a signer
+        vm.expectRevert(abi.encodeWithSelector(MultiSig_InvalidSigner.selector));
+        _setSigner(address(0), active);
 
         // cant add a signer twice
         vm.expectRevert(abi.encodeWithSelector(MultiSig_StateAlreadySet.selector, newSigner, active));
@@ -35,7 +52,7 @@ contract MultiSigTest is MultiSig, Test {
 
         // remove a signer
         _setSigner(newSigner, !active);
-        assertEq(signerSize, 2);
+        assertEq(signerSize(), 2);
 
         // signer size must be >= quorum after removing a signer
         vm.expectRevert(abi.encodeWithSelector(MultiSig_SignersSizeIsLessThanQuorum.selector, uint64(1), uint64(2)));

@@ -13,12 +13,19 @@ interface IExecutorFeeLib {
         uint16 defaultMultiplierBps;
     }
 
+    struct FeeParamsForRead {
+        address priceFeed;
+        address sender;
+        uint16 defaultMultiplierBps;
+    }
+
     error Executor_NoOptions();
     error Executor_NativeAmountExceedsCap(uint256 amount, uint256 cap);
     error Executor_UnsupportedOptionType(uint8 optionType);
     error Executor_InvalidExecutorOptions(uint256 cursor);
     error Executor_ZeroLzReceiveGasProvided();
     error Executor_ZeroLzComposeGasProvided();
+    error Executor_ZeroCalldataSizeProvided();
     error Executor_EidNotSupported(uint32 eid);
 
     function getFeeOnSend(
@@ -32,4 +39,18 @@ interface IExecutorFeeLib {
         IExecutor.DstConfig calldata _dstConfig,
         bytes calldata _options
     ) external view returns (uint256 fee);
+
+    function getFeeOnSend(
+        FeeParamsForRead calldata _params,
+        IExecutor.DstConfig calldata _dstConfig,
+        bytes calldata _options
+    ) external returns (uint256 fee);
+
+    function getFee(
+        FeeParamsForRead calldata _params,
+        IExecutor.DstConfig calldata _dstConfig,
+        bytes calldata _options
+    ) external view returns (uint256 fee);
+
+    function version() external view returns (uint64 major, uint8 minor);
 }

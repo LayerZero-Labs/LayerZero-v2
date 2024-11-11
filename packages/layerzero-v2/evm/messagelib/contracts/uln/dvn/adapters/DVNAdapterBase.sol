@@ -80,7 +80,9 @@ abstract contract DVNAdapterBase is Worker, ILayerZeroDVN {
             DVNAdapterMessageCodec.encode(bytes32(0), new bytes(DVNAdapterMessageCodec.PACKET_HEADER_SIZE), bytes32(0));
     }
 
-    function _decodeAndVerify(bytes calldata _payload) internal {
+    function _decodeAndVerify(uint32 _srcEid, bytes calldata _payload) internal {
+        require((DVNAdapterMessageCodec.srcEid(_payload) % 30000) == _srcEid, "DVNAdapterBase: invalid srcEid");
+
         (address receiveLib, bytes memory packetHeader, bytes32 payloadHash) = DVNAdapterMessageCodec.decode(_payload);
 
         IReceiveUln(receiveLib).verify(packetHeader, payloadHash, MAX_CONFIRMATIONS);

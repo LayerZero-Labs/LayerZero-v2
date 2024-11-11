@@ -263,12 +263,12 @@ library Setup {
         signers[0] = address(this);
         address[] memory admins = new address[](1);
         admins[0] = address(this);
-        DVN dvn = new DVN(eid, libs, priceFeed, signers, 1, admins);
+        DVN dvn = new DVN(eid, eid, libs, priceFeed, signers, 1, admins);
 
         IDVN.DstConfigParam[] memory dstConfigParams = new IDVN.DstConfigParam[](1);
         dstConfigParams[0] = IDVN.DstConfigParam({ dstEid: eid, gas: 5000, multiplierBps: 0, floorMarginUSD: 0 });
         dvn.setDstConfig(dstConfigParams);
-        DVNFeeLib dvnFeeLib = new DVNFeeLib(1e18);
+        DVNFeeLib dvnFeeLib = new DVNFeeLib(eid, 1e18);
         dvn.setWorkerFeeLib(address(dvnFeeLib));
 
         return dvn;
@@ -282,7 +282,7 @@ library Setup {
         address priceFeed
     ) internal returns (Executor) {
         Executor executor = new Executor();
-        ExecutorFeeLib executorFeeLib = new ExecutorFeeLib(1e18);
+        ExecutorFeeLib executorFeeLib = new ExecutorFeeLib(1, 1e18);
         {
             address[] memory admins = new address[](1);
             admins[0] = address(this);

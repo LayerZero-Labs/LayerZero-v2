@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 
 interface ICCIPDVNAdapter {
     struct DstConfigParam {
-        uint32 dstEid;
+        uint32 eid;
         uint16 multiplierBps;
         uint64 chainSelector;
         uint256 gas;
@@ -22,8 +22,12 @@ interface ICCIPDVNAdapter {
         uint256 gas;
     }
 
+    struct SrcConfig {
+        uint32 eid;
+        bytes peer;
+    }
+
     event DstConfigSet(DstConfigParam[] params);
-    event RouterSet(address router);
 
     error CCIPDVNAdapter_UntrustedPeer(uint64 chainSelector, bytes peer);
     error CCIPDVNAdapter_InvalidRouter(address router);

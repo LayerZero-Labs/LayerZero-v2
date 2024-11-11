@@ -37,7 +37,7 @@ interface ILayerZeroPriceFeed {
 
     error LZ_PriceFeed_OnlyPriceUpdater();
     error LZ_PriceFeed_InsufficientFee(uint256 provided, uint256 required);
-    error LZ_PriceFeed_UnknownL2Eid(uint32 l2Eid);
+    error LZ_PriceFeed_NotAnOPStack(uint32 l2Eid);
 
     function nativeTokenPriceUSD() external view returns (uint128);
 
