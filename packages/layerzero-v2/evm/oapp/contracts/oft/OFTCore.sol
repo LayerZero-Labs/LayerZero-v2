@@ -97,7 +97,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
     }
 
     /**
-     * @notice Provides a quote for OFT-related operations.
+     * @notice Provides the fee breakdown and settings data for an OFT.
      * @param _sendParam The parameters for the send operation.
      * @return oftLimit The OFT limit information.
      * @return oftFeeDetails The details of OFT fees.

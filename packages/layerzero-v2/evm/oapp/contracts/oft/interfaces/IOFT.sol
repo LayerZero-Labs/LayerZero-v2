@@ -104,7 +104,7 @@ interface IOFT {
     function sharedDecimals() external view returns (uint8);
 
     /**
-     * @notice Provides a quote for OFT-related operations.
+     * @notice Provides the fee breakdown and settings data for an OFT.
      * @param _sendParam The parameters for the send operation.
      * @return limit The OFT limit information.
      * @return oftFeeDetails The details of OFT fees.
