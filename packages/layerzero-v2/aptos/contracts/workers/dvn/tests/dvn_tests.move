@@ -375,9 +375,8 @@ module dvn::dvn_tests {
         std::timestamp::update_global_time_for_test_secs(1000);
 
         assert!(!is_admin(@9988), 0);
-        let admin = &create_signer_for_test(@9988);
         quorum_change_admin(
-            admin,
+            @9988,
             true,
             EXPIRATION,
             flatten(vector[signature_1, signature_2]),

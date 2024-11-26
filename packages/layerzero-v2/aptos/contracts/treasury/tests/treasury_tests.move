@@ -9,8 +9,8 @@ module treasury::treasury_tests {
     use endpoint_v2_common::universal_config;
     use endpoint_v2_common::zro_test_helpers::create_fa;
     use treasury::treasury::{
-        deposit_address_updated, get_native_bp, get_zro_fee, init_module_for_test, native_bp_set, pay_fee,
-        set_native_bp, set_zro_enabled, set_zro_fee, update_deposit_address, zro_enabled_set, zro_fee_set,
+        deposit_address_updated_event, get_native_bp, get_zro_fee, init_module_for_test, native_bp_set_event, pay_fee,
+        set_native_bp, set_zro_enabled, set_zro_fee, update_deposit_address, zro_enabled_set_event, zro_fee_set_event,
     };
 
     #[test]
@@ -28,7 +28,7 @@ module treasury::treasury_tests {
         let new_deposit_address = @0x1234;
         account::create_account_for_test(new_deposit_address);
         update_deposit_address(lz, new_deposit_address);
-        assert!(was_event_emitted(&deposit_address_updated(new_deposit_address)), 0);
+        assert!(was_event_emitted(&deposit_address_updated_event(new_deposit_address)), 0);
 
         let payment_native = mint_native_token_for_test(2222);
         pay_fee(2000, &mut payment_native);
@@ -109,10 +109,10 @@ module treasury::treasury_tests {
         universal_config::set_zro_address(lz_admin, zro_addr);
 
         set_zro_enabled(lz, true);
-        assert!(was_event_emitted(&zro_enabled_set(true)), 0);
+        assert!(was_event_emitted(&zro_enabled_set_event(true)), 0);
 
         set_zro_enabled(lz, false);
-        assert!(was_event_emitted(&zro_enabled_set(true)), 0);
+        assert!(was_event_emitted(&zro_enabled_set_event(true)), 0);
     }
 
     #[test]
@@ -127,7 +127,7 @@ module treasury::treasury_tests {
         set_zro_enabled(lz, true);
 
         set_zro_fee(lz, 120);
-        assert!(was_event_emitted(&zro_fee_set(120)), 0);
+        assert!(was_event_emitted(&zro_fee_set_event(120)), 0);
         assert!(get_zro_fee() == 120, 1);
     }
 
@@ -139,7 +139,7 @@ module treasury::treasury_tests {
 
         let bp = get_native_bp();
         assert!(bp == 124, 0);
-        assert!(was_event_emitted(&native_bp_set(124)), 1)
+        assert!(was_event_emitted(&native_bp_set_event(124)), 1)
     }
 
     #[test]

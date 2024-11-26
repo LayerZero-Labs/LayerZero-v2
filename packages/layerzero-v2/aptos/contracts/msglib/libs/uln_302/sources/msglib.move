@@ -2,6 +2,7 @@
 module uln_302::msglib {
     use std::option::Option;
     use std::signer::address_of;
+    use std::event::emit;
 
     use endpoint_v2_common::bytes32;
     use endpoint_v2_common::packet_raw::bytes_to_raw_packet;
@@ -88,10 +89,11 @@ module uln_302::msglib {
     /// their fee library configuration
     public entry fun set_worker_config_for_fee_lib_routing_opt_in(worker: &signer, opt_in: bool) {
         let worker_address = address_of(move worker);
-        assert!(
-            uln_302_store::get_worker_config_for_fee_lib_routing_opt_in(worker_address) != opt_in,
-            ENO_STATUS_CHANGE
-        );
+        // Emit an event only if there is a change
+        if (uln_302_store::get_worker_config_for_fee_lib_routing_opt_in(worker_address) != opt_in) {
+            emit(WorkerConfigForFeeLibRoutingOptIn { worker: worker_address, opt_in })
+        };
+
         uln_302_store::set_worker_config_for_fee_lib_routing_opt_in(worker_address, opt_in);
     }
 
@@ -104,17 +106,16 @@ module uln_302::msglib {
     // ==================================================== Events ====================================================
 
     #[event]
-    struct SetWorkerOptInOut has drop, store {
+    struct WorkerConfigForFeeLibRoutingOptIn has drop, store {
         worker: address,
         opt_in: bool,
     }
 
     #[test_only]
-    public fun set_worker_opt_in_out_event(worker: address, opt_in: bool): SetWorkerOptInOut {
-        SetWorkerOptInOut { worker, opt_in }
+    public fun worker_config_for_fee_lib_routing_opt_in_event(
+        worker: address,
+        opt_in: bool,
+    ): WorkerConfigForFeeLibRoutingOptIn {
+        WorkerConfigForFeeLibRoutingOptIn { worker, opt_in }
     }
-
-    // ================================================== Error Codes =================================================
-
-    const ENO_STATUS_CHANGE: u64 = 1;
 }

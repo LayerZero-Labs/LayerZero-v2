@@ -517,11 +517,6 @@ module endpoint_v2::endpoint {
     }
 
     #[view]
-    public fun zro_enabled(): bool {
-        store::zro_enabled()
-    }
-
-    #[view]
     public fun has_payload_hash_view(src_eid: u32, sender: vector<u8>, nonce: u64, receiver: address): bool {
         has_payload_hash(src_eid, bytes32::to_bytes32(sender), nonce, receiver)
     }

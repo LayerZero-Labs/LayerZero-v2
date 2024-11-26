@@ -9,12 +9,13 @@ module endpoint_v2::store {
     use endpoint_v2_common::contract_identity::{Self, ContractSigner, DynamicCallRef};
 
     friend endpoint_v2::endpoint;
-    friend endpoint_v2::admin;
     friend endpoint_v2::channels;
     friend endpoint_v2::messaging_composer;
     friend endpoint_v2::msglib_manager;
     friend endpoint_v2::registration;
 
+    #[test_only]
+    friend endpoint_v2::admin;
     #[test_only]
     friend endpoint_v2::endpoint_tests;
     #[test_only]
@@ -28,7 +29,6 @@ module endpoint_v2::store {
 
     struct EndpointStore has key {
         contract_signer: ContractSigner,
-        zro_enabled: bool,
         oapps: Table<address, OAppStore>,
         composers: Table<address, ComposerStore>,
         msglibs: Table<u64, address>,
@@ -66,7 +66,6 @@ module endpoint_v2::store {
     fun init_module(account: &signer) {
         move_to(account, EndpointStore {
             contract_signer: contract_identity::create_contract_signer(account),
-            zro_enabled: false,
             oapps: table::new(),
             composers: table::new(),
             msglibs: table::new(),
@@ -91,14 +90,6 @@ module endpoint_v2::store {
         authorization: vector<u8>,
     ): DynamicCallRef acquires EndpointStore {
         contract_identity::make_dynamic_call_ref(&store().contract_signer, target_contract, authorization)
-    }
-
-    public(friend) fun set_zro_enabled(enabled: bool) acquires EndpointStore {
-        store_mut().zro_enabled = enabled;
-    }
-
-    public(friend) fun zro_enabled(): bool acquires EndpointStore {
-        store().zro_enabled
     }
 
     // OApp - Helpers

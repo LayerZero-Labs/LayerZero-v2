@@ -444,7 +444,9 @@ module dvn_fee_lib_0::dvn_fee_lib_tests {
             vector[@222],
             @0xfee11b,
         );
-        worker_common::multisig::initialize_for_worker_test_only(worker, 0, vector[]);
+        worker_common::multisig::initialize_for_worker_test_only(worker, 1, vector[
+            x"e1b271a7296266189d300d37814581a695ec1da2e8ffbbeb9b89d754ac88d7bbecbff48968853fb6bf19251a0265df162fd436b8308a5ca6db97ee3e8f6e541a",
+        ]);
 
         get_calldata_size_for_fee(worker);
     }

@@ -63,6 +63,20 @@ module worker_common::multisig_tests {
     }
 
     #[test]
+    #[expected_failure(abort_code = worker_common::multisig_store::EZERO_QUORUM)]
+    fun test_set_quorum_fails_if_zero() {
+        initialize_worker(WORKER, WORKER_ID_DVN(), WORKER, @0x501ead, vector[@123], vector[], @0xfee11b);
+
+        let signers = vector[
+            x"e1b271a7296266189d300d37814581a695ec1da2e8ffbbeb9b89d754ac88d7bbecbff48968853fb6bf19251a0265df162fd436b8308a5ca6db97ee3e8f6e541a",
+            x"505d1d231bb110780d1190b0a2ce9f2770350b295cbe970f127c4bc399cc406bb8c85d26b5afdbdc7316a065e4d4a3e4f27182310bf0d7c16da4b65ae787435d"
+        ];
+        let quorum = 1;
+        initialize_multisig(WORKER, quorum, signers);
+        set_quorum(&make_call_ref_for_test(WORKER), 0);
+    }
+
+    #[test]
     fun test_set_signers() {
         initialize_worker(WORKER, WORKER_ID_DVN(), WORKER, @0x501ead, vector[@123], vector[], @0xfee11b);
         let signers = vector[

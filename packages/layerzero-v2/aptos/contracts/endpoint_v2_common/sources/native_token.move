@@ -1,17 +1,17 @@
-/// This module provides a function to withdraw the gas token from an account's balance using FungibleAsset methods.
+/// This module provides a function to withdraw gas token using Coin methods.
 ///
-/// On some chains, it is necessary to withdraw the gas token using coin-based functions and have the balance converted
-/// to FungibleAsset. For those chains, this module should be used.
+/// This is necessary for chains that have a Coin representation of the gas token. The coin::withdraw function is aware
+/// of both Coin<AptosCoin> and FungibleAsset(@0xa) balances unlike the fungible_asset::withdraw function which is only
+/// aware of FungibleAsset(@0xa) balances.
 ///
-/// For chains that have a fully FungibleAsset-based, this conversion is not necessary. In these cases, this module can
-/// be used in place of the native_token.move module.
+/// This module should be swapped with native_token_fa.move for chains that have a fully FungibleAsset-based gas token.
 module endpoint_v2_common::native_token {
-    use std::fungible_asset::{FungibleAsset, Metadata};
-    use std::object;
-    use std::primary_fungible_store;
+    use std::aptos_coin::AptosCoin;
+    use std::coin;
+    use std::fungible_asset::FungibleAsset;
 
     public fun withdraw(account: &signer, amount: u64): FungibleAsset {
-        let metadata = object::address_to_object<Metadata>(@native_token_metadata_address);
-        primary_fungible_store::withdraw(move account, metadata, amount)
+        let coin = coin::withdraw<AptosCoin>(move account, amount);
+        coin::coin_to_fungible_asset(coin)
     }
 }

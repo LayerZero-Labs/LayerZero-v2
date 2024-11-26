@@ -52,6 +52,8 @@ module dvn::dvn {
         fee_lib: address,
     ) {
         assert!(address_of(account) == @dvn, EUNAUTHORIZED);
+        assert!(vector::length(&supported_msglibs) > 0, EDVN_MSGLIB_LESS_THAN_ONE);
+
         worker_config::initialize_for_worker(
             account,
             DVN_WORKER_ID(),
@@ -64,7 +66,6 @@ module dvn::dvn {
             fee_lib,
         );
         multisig::initialize_for_worker(move account, quorum, dvn_signers);
-        assert!(vector::length(&supported_msglibs) > 0, EDVN_MSGLIB_LESS_THAN_ONE);
     }
 
     // ================================== Protocol: DVN Verify (Admin /w Signatures) ==================================
@@ -246,15 +247,12 @@ module dvn::dvn {
     // ================================================= Signers Only =================================================
 
     /// Add or remove an admin using a quorum of dvn signers
-    /// The signer is only present to establish the transaction and prevent another account from attempting to replay
-    /// the same transaction.
     public entry fun quorum_change_admin(
-        account: &signer,
+        admin: address,
         active: bool,
         expiration: u64,
         signatures: vector<u8>,
     ) acquires DvnStore {
-        let admin = address_of(move account);
         let hash = create_quorum_change_admin_hash(admin, active, get_vid(), expiration);
         assert_all_and_add_to_history(call_ref(), &signatures, expiration, hash);
         worker_config::set_worker_admin(call_ref(), admin, active);

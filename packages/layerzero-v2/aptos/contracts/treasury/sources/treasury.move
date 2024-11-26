@@ -163,22 +163,22 @@ module treasury::treasury {
     }
 
     #[test_only]
-    public fun zro_enabled_set(enabled: bool): ZroEnabledSet {
+    public fun zro_enabled_set_event(enabled: bool): ZroEnabledSet {
         ZroEnabledSet { enabled }
     }
 
     #[test_only]
-    public fun native_bp_set(native_bp: u64): NativeBpSet {
+    public fun native_bp_set_event(native_bp: u64): NativeBpSet {
         NativeBpSet { native_bps: native_bp }
     }
 
     #[test_only]
-    public fun zro_fee_set(zro_fee: u64): ZroFeeSet {
+    public fun zro_fee_set_event(zro_fee: u64): ZroFeeSet {
         ZroFeeSet { zro_fee }
     }
 
     #[test_only]
-    public fun deposit_address_updated(new_deposit_address: address): DepositAddressUpdated {
+    public fun deposit_address_updated_event(new_deposit_address: address): DepositAddressUpdated {
         DepositAddressUpdated { new_deposit_address }
     }
 

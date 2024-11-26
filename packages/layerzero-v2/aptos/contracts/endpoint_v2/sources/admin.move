@@ -3,13 +3,6 @@ module endpoint_v2::admin {
     use std::signer::address_of;
 
     use endpoint_v2::msglib_manager;
-    use endpoint_v2::store;
-
-    /// Enable or disable the use of the ZRO token for fees
-    public entry fun set_zro_enabled(admin: &signer, enabled: bool) {
-        assert_admin(address_of(move admin));
-        store::set_zro_enabled(enabled);
-    }
 
     /// Register new message library
     /// A library must be registered to be called by this endpoint. Once registered, it cannot be unregistered. The
@@ -59,7 +52,7 @@ module endpoint_v2::admin {
     #[test_only]
     /// Test-only function to initialize the endpoint and EID
     public fun initialize_endpoint_for_test() {
-        store::init_module_for_test();
+        endpoint_v2::store::init_module_for_test();
     }
 
     // ================================================== Error Codes =================================================

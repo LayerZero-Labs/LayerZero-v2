@@ -114,6 +114,7 @@ module worker_common::multisig_store {
     public(friend) fun set_quorum(worker: address, quorum: u64) acquires SigningStore {
         let store = signing_store_mut(worker);
         let signer_count = vector::length(&store.signers);
+        assert!(quorum > 0, EZERO_QUORUM);
         assert!(quorum <= signer_count, ESIGNERS_LESS_THAN_QUORUM);
         store.quorum = quorum;
     }
@@ -193,4 +194,5 @@ module worker_common::multisig_store {
     const ESIGNER_NOT_FOUND: u64 = 10;
     const ESIGNER_ALREADY_EXISTS: u64 = 11;
     const EINVALID_SIGNER_LENGTH: u64 = 12;
+    const EZERO_QUORUM: u64 = 13;
 }
