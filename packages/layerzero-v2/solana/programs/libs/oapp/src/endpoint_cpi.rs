@@ -53,6 +53,9 @@ pub fn send(
     if sender != accounts[1].key() {
         return Err(ErrorCode::ConstraintAddress.into());
     }
+    if accounts.iter().filter(|acc| acc.key == &sender).count() > 1 {
+        return Err(ErrorCode::ConstraintAddress.into());
+    }
     let cpi_ctx = Send::construct_context(endpoint_program, accounts)?;
     let rtn = endpoint::cpi::send(cpi_ctx.with_signer(&[&seeds]), params)?;
     Ok(rtn.get())
