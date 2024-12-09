@@ -44,3 +44,11 @@ The public keypair(solana/keypair) files are backed up from the target/deploy fo
 ```shell
 solana program deploy --program-id ./keypair/xxx.json ./target/deploy/xxx.so
 ```
+
+## OFT
+
+The Solana OFT reference implementation has moved!
+
+Latest Implementation: [0.2.x](https://github.com/LayerZero-Labs/devtools/tree/main/examples/oft-solana)
+
+Original Implementation: [0.1.x](https://github.com/LayerZero-Labs/devtools/tree/solana_oftv1/examples/oft-solana)
