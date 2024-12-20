@@ -5,7 +5,7 @@ module endpoint_v2::msglib_manager_tests {
     use std::string;
     use std::timestamp;
 
-    use endpoint_v2::endpoint::{get_effective_send_library, get_registered_libraries, is_registered_msglib};
+    use endpoint_v2::endpoint::{get_effective_send_library, get_registered_libraries, is_registered_library};
     use endpoint_v2::msglib_manager::{
         default_receive_library_set_event,
         default_receive_library_timeout_set_event,
@@ -61,14 +61,14 @@ module endpoint_v2::msglib_manager_tests {
         // Register a new library
         register_library(@blocked_msglib);
         assert!(was_event_emitted(&library_registered_event(@blocked_msglib)), 2);
-        assert!(is_registered_msglib(@blocked_msglib), 0);
-        assert!(!is_registered_msglib(@simple_msglib), 1);
+        assert!(is_registered_library(@blocked_msglib), 0);
+        assert!(!is_registered_library(@simple_msglib), 1);
 
         // Register another library
         register_library(@simple_msglib);
         assert!(was_event_emitted(&library_registered_event(@simple_msglib)), 2);
-        assert!(is_registered_msglib(@blocked_msglib), 3);
-        assert!(is_registered_msglib(@simple_msglib), 4);
+        assert!(is_registered_library(@blocked_msglib), 3);
+        assert!(is_registered_library(@simple_msglib), 4);
 
         let msglibs = get_registered_libraries(0, 10);
         assert!(msglibs == vector[@blocked_msglib, @simple_msglib], 5);

@@ -72,6 +72,13 @@ module uln_302::msglib {
     }
 
     #[view]
+    /// Gets the ULN or Executor configuration for an eid on an OApp
+    /// Returns an empty string if it is not set for the OApp, which indicates a fallback to default
+    public fun get_app_config(oapp: address, eid: u32, config_type: u32): vector<u8> {
+        configuration::get_app_config(oapp, eid, config_type)
+    }
+
+    #[view]
     public fun get_verification_confirmations(
         header_hash: vector<u8>,
         payload_hash: vector<u8>,

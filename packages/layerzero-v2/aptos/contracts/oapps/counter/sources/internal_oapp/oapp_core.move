@@ -81,11 +81,12 @@ module counter::oapp_core {
     public entry fun set_config(
         account: &signer,
         msglib: address,
+        eid: u32,
         config_type: u32,
         config: vector<u8>,
     ) {
         assert_authorized(address_of(move account));
-        endpoint::set_config(&oapp_store::call_ref(), msglib, config_type, config)
+        endpoint::set_config(&oapp_store::call_ref(), msglib, eid, config_type, config)
     }
 
     /// Set the Send Library for an OApp

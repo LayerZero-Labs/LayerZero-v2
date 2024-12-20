@@ -4,12 +4,12 @@ module uln_302::configuration {
     use std::option;
     use std::vector;
 
-    use endpoint_v2_common::config_eid_tagged;
     use endpoint_v2_common::serde;
     use msglib_types::configs_executor::{Self, ExecutorConfig, new_executor_config};
-    use msglib_types::configs_uln::{Self, get_confirmations, get_optional_dvn_threshold,
-        get_optional_dvns, get_required_dvns, get_use_default_for_confirmations,
-        get_use_default_for_optional_dvns, get_use_default_for_required_dvns, new_uln_config, UlnConfig,
+    use msglib_types::configs_uln::{
+        Self, get_confirmations, get_optional_dvn_threshold, get_optional_dvns, get_required_dvns,
+        get_use_default_for_confirmations, get_use_default_for_optional_dvns, get_use_default_for_required_dvns,
+        new_uln_config, UlnConfig,
     };
     use uln_302::assert_valid_default_uln_config::assert_valid_default_uln_config;
     use uln_302::assert_valid_uln_config::assert_valid_uln_config;
@@ -43,7 +43,8 @@ module uln_302::configuration {
 
     // ===================================================== OApp =====================================================
 
-    // Gets the serialized configuration for an OApp eid and config type
+    /// Gets the serialized configuration for an OApp eid and config type, returning the default if the OApp
+    /// configuration is not set
     public(friend) fun get_config(oapp: address, eid: u32, config_type: u32): vector<u8> {
         if (config_type == CONFIG_TYPE_SEND_ULN()) {
             let config = get_send_uln_config(oapp, eid);
@@ -59,22 +60,46 @@ module uln_302::configuration {
         }
     }
 
-    public(friend) fun set_config(oapp: address, config_type: u32, config: vector<u8>) {
+    /// Get the configuration for an OApp eid and config type, returning an empty result if the OApp configuration is
+    /// not set (default configuration)
+    public(friend) fun get_app_config(oapp: address, eid: u32, config_type: u32): vector<u8> {
         if (config_type == CONFIG_TYPE_SEND_ULN()) {
-            let tagged_config = configs_uln::extract_uln_config_with_eid(&config, &mut 0);
-            let (eid, uln_config) = config_eid_tagged::get_eid_and_config(tagged_config);
-            set_send_uln_config(oapp, eid, uln_config);
+            let config = uln_302_store::get_send_uln_config(oapp, eid);
+            option::fold(config, b"", |bytes, config| {
+                serde::bytes_of(|buf| configs_uln::append_uln_config(buf, config))
+            })
         } else if (config_type == CONFIG_TYPE_RECV_ULN()) {
-            let tagged_config = configs_uln::extract_uln_config_with_eid(&config, &mut 0);
-            let (eid, uln_config) = config_eid_tagged::get_eid_and_config(tagged_config);
-            set_receive_uln_config(oapp, eid, uln_config);
+            let config = uln_302_store::get_receive_uln_config(oapp, eid);
+            option::fold(config, b"", |bytes, config| {
+                serde::bytes_of(|buf| configs_uln::append_uln_config(buf, config))
+            })
         } else if (config_type == CONFIG_TYPE_EXECUTOR()) {
-            let tagged_config = configs_executor::extract_executor_config_with_eid(&config, &mut 0);
-            let (eid, executor_config) = config_eid_tagged::get_eid_and_config(tagged_config);
-            set_executor_config(oapp, eid, executor_config);
+            let config = uln_302_store::get_executor_config(oapp, eid);
+            option::fold(config, b"", |bytes, config| {
+                serde::bytes_of(|buf| configs_executor::append_executor_config(buf, config))
+            })
         } else {
             abort EUNKNOWN_CONFIG_TYPE
         }
+    }
+
+    public(friend) fun set_config(oapp: address, eid: u32, config_type: u32, config: vector<u8>) {
+        let pos = 0;
+        if (config_type == CONFIG_TYPE_SEND_ULN()) {
+            let uln_config = configs_uln::extract_uln_config(&config, &mut pos);
+            set_send_uln_config(oapp, eid, uln_config);
+        } else if (config_type == CONFIG_TYPE_RECV_ULN()) {
+            let uln_config = configs_uln::extract_uln_config(&config, &mut pos);
+            set_receive_uln_config(oapp, eid, uln_config);
+        } else if (config_type == CONFIG_TYPE_EXECUTOR()) {
+            let executor_config = configs_executor::extract_executor_config(&config, &mut pos);
+            set_executor_config(oapp, eid, executor_config);
+        } else {
+            abort EUNKNOWN_CONFIG_TYPE
+        };
+
+        // If the entire config was not consumed, the config is invalid
+        assert!(vector::length(&config) == pos, EINVALID_CONFIG_LENGTH);
     }
 
     // ================================================= Receive Side =================================================
@@ -158,7 +183,6 @@ module uln_302::configuration {
             abort EEID_NOT_CONFIGURED
         }
     }
-
 
     public(friend) fun set_default_executor_config(eid: u32, config: ExecutorConfig) {
         assert_valid_default_executor_config(&config);
@@ -293,7 +317,8 @@ module uln_302::configuration {
 
     const EEID_NOT_CONFIGURED: u64 = 1;
     const EEXECUTOR_ADDRESS_IS_ZERO: u64 = 2;
-    const EINSUFFICIENT_DVNS_CONFIGURED: u64 = 3;
-    const EMAX_MESSAGE_SIZE_ZERO: u64 = 4;
-    const EUNKNOWN_CONFIG_TYPE: u64 = 5;
+    const EINVALID_CONFIG_LENGTH: u64 = 3;
+    const EINSUFFICIENT_DVNS_CONFIGURED: u64 = 4;
+    const EMAX_MESSAGE_SIZE_ZERO: u64 = 5;
+    const EUNKNOWN_CONFIG_TYPE: u64 = 6;
 }

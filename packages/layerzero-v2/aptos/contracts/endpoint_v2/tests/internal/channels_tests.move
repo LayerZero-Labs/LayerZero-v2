@@ -32,7 +32,7 @@ module endpoint_v2::channels_tests {
     use endpoint_v2::registration;
     use endpoint_v2::store;
     use endpoint_v2_common::bytes32;
-    use endpoint_v2_common::bytes32::from_bytes32;
+    use endpoint_v2_common::bytes32::{from_bytes32, to_bytes32};
     use endpoint_v2_common::guid;
     use endpoint_v2_common::guid::compute_guid;
     use endpoint_v2_common::native_token_test_helpers::{burn_token_for_test, mint_native_token_for_test};
@@ -412,6 +412,95 @@ module endpoint_v2::channels_tests {
             3,
         );  // 1 is nilified
         assert!(has_payload_hash(oapp, src_eid, sender, 2), 2);  // 2 is not nilified
+    }
+
+    #[test]
+    fun test_nilify_for_non_verified() {
+        let oapp = @123;
+        let src_eid = 0x2;
+        let sender = bytes32::from_address(@0x1234);
+        let payload = b"payload";
+        let payload_hash = bytes32::keccak256(payload);
+        store::init_module_for_test();
+        let oapp_signer = &create_signer_for_test(oapp);
+        register_oapp(oapp_signer, string::utf8(b"receiver"));
+        channels::register_receive_pathway(oapp, src_eid, sender);
+
+        // Inbound #1
+        inbound(oapp, src_eid, sender, 1, payload_hash);
+        assert!(has_payload_hash(oapp, src_eid, sender, 1), 0);
+        assert!(get_payload_hash(oapp, src_eid, sender, 1) == payload_hash, 1);
+
+        // Inbound #2
+        inbound(oapp, src_eid, sender, 2, payload_hash);
+        assert!(has_payload_hash(oapp, src_eid, sender, 2), 2);
+        assert!(get_payload_hash(oapp, src_eid, sender, 2) == payload_hash, 3);
+
+        assert!(inbound_nonce(oapp, src_eid, sender) == 2, 3);
+
+        let empty_payload_hash = x"0000000000000000000000000000000000000000000000000000000000000000";
+        // Nilify
+        nilify(
+            oapp,
+            src_eid,
+            sender,
+            3,
+            to_bytes32(empty_payload_hash),
+        );
+        assert!(was_event_emitted(
+            &packet_nilified_event(src_eid, from_bytes32(sender), oapp, 3, empty_payload_hash)
+        ), 4);
+
+        // inbound nonce increments to be beyond the nilified nonce
+        assert!(inbound_nonce(oapp, src_eid, sender) == 3, 3);
+        assert!(
+            get_payload_hash(oapp, src_eid, sender, 3) == bytes32::to_bytes32(
+                x"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            ),
+            3,
+        );  // 3 is nilified
+    }
+
+    #[test]
+    fun test_nilify_for_non_verified_2() {
+        let oapp = @123;
+        let src_eid = 0x2;
+        let sender = bytes32::from_address(@0x1234);
+        let payload = b"payload";
+        let payload_hash = bytes32::keccak256(payload);
+        store::init_module_for_test();
+        let oapp_signer = &create_signer_for_test(oapp);
+        register_oapp(oapp_signer, string::utf8(b"receiver"));
+        channels::register_receive_pathway(oapp, src_eid, sender);
+
+        // Inbound #1 (don't do second inbound so there is a gap)
+        inbound(oapp, src_eid, sender, 1, payload_hash);
+        assert!(has_payload_hash(oapp, src_eid, sender, 1), 0);
+        assert!(get_payload_hash(oapp, src_eid, sender, 1) == payload_hash, 1);
+
+        assert!(inbound_nonce(oapp, src_eid, sender) == 1, 3);
+
+        let empty_payload_hash = x"0000000000000000000000000000000000000000000000000000000000000000";
+        // Nilify
+        nilify(
+            oapp,
+            src_eid,
+            sender,
+            3,
+            to_bytes32(empty_payload_hash),
+        );
+        assert!(was_event_emitted(
+            &packet_nilified_event(src_eid, from_bytes32(sender), oapp, 3, empty_payload_hash)
+        ), 4);
+
+        // inbound nonce doesn't increment
+        assert!(inbound_nonce(oapp, src_eid, sender) == 1, 3);
+        assert!(
+            get_payload_hash(oapp, src_eid, sender, 3) == bytes32::to_bytes32(
+                x"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            ),
+            3,
+        );  // 3 is nilified
     }
 
     #[test]

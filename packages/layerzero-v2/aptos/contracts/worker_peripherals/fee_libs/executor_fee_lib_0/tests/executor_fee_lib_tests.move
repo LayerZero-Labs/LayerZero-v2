@@ -4,7 +4,6 @@ module executor_fee_lib_0::executor_fee_lib_tests {
     use std::account::create_signer_for_test;
 
     use endpoint_v2_common::bytes32;
-    use endpoint_v2_common::config_eid_tagged::{EidTagged, tag_with_eid};
     use endpoint_v2_common::contract_identity::make_call_ref_for_test;
     use endpoint_v2_common::native_token_test_helpers::initialize_native_token_for_test;
     use endpoint_v2_common::serde;
@@ -21,7 +20,7 @@ module executor_fee_lib_0::executor_fee_lib_tests {
         ARBITRUM_MODEL_TYPE, DEFAULT_MODEL_TYPE, EidModelPair, new_eid_model_pair, OPTIMISM_MODEL_TYPE,
     };
     use price_feed_module_0::price;
-    use price_feed_module_0::price::Price;
+    use price_feed_module_0::price::{EidTaggedPrice, tag_price_with_eid};
     use worker_common::worker_config::{Self, set_executor_dst_config};
 
     #[test]
@@ -63,21 +62,21 @@ module executor_fee_lib_0::executor_fee_lib_tests {
         let pairs_serialized = eid_model_pair::serialize_eid_model_pair_list(&eid_model_pairs);
         feeds::set_eid_models(feed, pairs_serialized);
 
-        let list = vector<EidTagged<Price>>[
-            tag_with_eid(101, eth_price), // First 6 EIDs are all of hardcoded types
-            tag_with_eid(110, arb_price),
-            tag_with_eid(111, opt_price),
-            tag_with_eid(10101, eth_price),
-            tag_with_eid(10143, arb_price),
-            tag_with_eid(10132, opt_price),
-            tag_with_eid(11000, opt_price), // optimism using L1 sepolia
-            tag_with_eid(10121, eth_goerli_price), // eth-goerli - used for arbitrum estimate
-            tag_with_eid(10161, eth_sepolia_price), // eth-sepolia - used for arbitrum estimate
+        let list = vector<EidTaggedPrice>[
+            tag_price_with_eid(101, eth_price), // First 6 EIDs are all of hardcoded types
+            tag_price_with_eid(110, arb_price),
+            tag_price_with_eid(111, opt_price),
+            tag_price_with_eid(10101, eth_price),
+            tag_price_with_eid(10143, arb_price),
+            tag_price_with_eid(10132, opt_price),
+            tag_price_with_eid(11000, opt_price), // optimism using L1 sepolia
+            tag_price_with_eid(10121, eth_goerli_price), // eth-goerli - used for arbitrum estimate
+            tag_price_with_eid(10161, eth_sepolia_price), // eth-sepolia - used for arbitrum estimate
 
-            tag_with_eid(24444, eth_price), // not hardcoded and not set - should default to "DEFAULT"
-            tag_with_eid(25555, arb_price), // configured to "ARBITRUM"
-            tag_with_eid(26666, opt_price), // configured to "OPTIMISM"
-            tag_with_eid(20121, eth_goerli_price), // eth-goerli - used for arbitrum estimate
+            tag_price_with_eid(24444, eth_price), // not hardcoded and not set - should default to "DEFAULT"
+            tag_price_with_eid(25555, arb_price), // configured to "ARBITRUM"
+            tag_price_with_eid(26666, opt_price), // configured to "OPTIMISM"
+            tag_price_with_eid(20121, eth_goerli_price), // eth-goerli - used for arbitrum estimate
         ];
         let prices_serialized = price::serialize_eid_tagged_price_list(&list);
         feeds::set_price(updater, @1111, prices_serialized);

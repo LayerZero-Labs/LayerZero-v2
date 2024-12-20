@@ -10,8 +10,7 @@ module endpoint_v2::endpoint {
     use endpoint_v2::messaging_receipt::MessagingReceipt;
     use endpoint_v2::msglib_manager;
     use endpoint_v2::registration;
-    use endpoint_v2::store;
-    use endpoint_v2::timeout::Timeout;
+    use endpoint_v2::timeout;
     use endpoint_v2_common::bytes32::{Self, Bytes32, from_bytes32};
     use endpoint_v2_common::contract_identity::{CallRef, get_call_ref_caller};
     use endpoint_v2_common::packet_raw;
@@ -108,11 +107,12 @@ module endpoint_v2::endpoint {
     public fun set_config(
         call_ref: &CallRef<EndpointOAppConfigTarget>,
         msglib: address,
+        eid: u32,
         config_type: u32,
         config: vector<u8>,
     ) {
         let oapp = get_oapp_caller(call_ref);
-        msglib_manager::set_config(oapp, msglib, config_type, config);
+        msglib_manager::set_config(oapp, msglib, eid, config_type, config);
     }
 
     // ==================================================== Sending ===================================================
@@ -296,7 +296,8 @@ module endpoint_v2::endpoint {
         channels::burn(oapp, src_eid, sender, nonce, payload_hash);
     }
 
-    // This maintains a packet's status as verified but prevents delivery until the packet is verified again
+    /// This maintains a packet's status as verified but prevents delivery until the packet is verified again
+    /// A non-verified nonce can be nilified by passing 0x00*32 as the payload hashs
     public fun nilify(
         call_ref: &CallRef<EndpointV2ReceivingTarget>,
         src_eid: u32,
@@ -507,7 +508,7 @@ module endpoint_v2::endpoint {
     }
 
     #[view]
-    public fun is_registered_msglib(msglib: address): bool {
+    public fun is_registered_library(msglib: address): bool {
         msglib_manager::is_registered_library(msglib)
     }
 
@@ -554,13 +555,13 @@ module endpoint_v2::endpoint {
 
     #[view]
     /// Get the default send library for the given destination EID
-    public fun get_default_send_lib(remote_eid: u32): address {
+    public fun get_default_send_library(remote_eid: u32): address {
         msglib_manager::get_default_send_library(remote_eid)
     }
 
     #[view]
     /// Get the default receive library for the given source EID
-    public fun get_default_receive_lib(remote_eid: u32): address {
+    public fun get_default_receive_library(remote_eid: u32): address {
         msglib_manager::get_default_receive_library(remote_eid)
     }
 
@@ -570,13 +571,23 @@ module endpoint_v2::endpoint {
     }
 
     #[view]
-    public fun get_receive_library_timeout(oapp: address, remote_eid: u32): Timeout {
-        store::get_receive_library_timeout(oapp, remote_eid)
+    public fun get_receive_library_timeout(oapp: address, remote_eid: u32): (u64, address) {
+        timeout::unpack_timeout(msglib_manager::get_receive_library_timeout(oapp, remote_eid))
     }
 
     #[view]
-    public fun get_default_receive_library_timeout(remote_eid: u32): Timeout {
-        store::get_default_receive_library_timeout(remote_eid)
+    public fun get_default_receive_library_timeout(remote_eid: u32): (u64, address) {
+        timeout::unpack_timeout(msglib_manager::get_default_receive_library_timeout(remote_eid))
+    }
+
+    #[view]
+    public fun is_registered_oapp(oapp: address): bool {
+        registration::is_registered_oapp(oapp)
+    }
+
+    #[view]
+    public fun is_registered_composer(composer: address): bool {
+        registration::is_registered_composer(composer)
     }
 
     // ================================================== Error Codes =================================================

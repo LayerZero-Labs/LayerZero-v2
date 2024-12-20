@@ -5,11 +5,11 @@ module endpoint_v2::test_helpers {
     use std::timestamp;
 
     use endpoint_v2::admin;
-    use endpoint_v2_common::config_eid_tagged::tag_with_eid;
     use endpoint_v2_common::contract_identity::make_call_ref_for_test;
     use endpoint_v2_common::native_token_test_helpers::initialize_native_token_for_test;
     use msglib_types::worker_options::EXECUTOR_WORKER_ID;
     use price_feed_module_0::price;
+    use price_feed_module_0::price::tag_price_with_eid;
     use treasury::treasury;
     use worker_common::worker_config;
 
@@ -129,11 +129,11 @@ module endpoint_v2::test_helpers {
             feed_updater,
             feed_address,
             price::serialize_eid_tagged_price_list(&vector[
-                tag_with_eid(
+                tag_price_with_eid(
                     remote_eid,
                     price::new_price(1, 1, 1),
                 ),
-                tag_with_eid(
+                tag_price_with_eid(
                     local_eid,
                     price::new_price(1, 1, 1),
                 ),

@@ -88,17 +88,18 @@ module router_node_0::router_node {
         msglib: address,
         call_ref: &DynamicCallRef,
         oapp: address,
+        eid: u32,
         config_type: u32,
         config: vector<u8>,
     ) {
         if (msglib == @uln_302) {
-            uln_302::set_config(call_ref, oapp, config_type, config)
+            uln_302::set_config(call_ref, oapp, eid, config_type, config)
         } else if (msglib == @simple_msglib) {
-            simple_msglib::set_config(call_ref, oapp, config_type, config)
+            simple_msglib::set_config(call_ref, oapp, eid, config_type, config)
         } else if (msglib == @blocked_msglib) {
-            blocked_msglib::set_config(call_ref, oapp, config_type, config)
+            blocked_msglib::set_config(call_ref, oapp, eid, config_type, config)
         } else {
-            router_node_next::set_config(msglib, call_ref, oapp, config_type, config)
+            router_node_next::set_config(msglib, call_ref, oapp, eid, config_type, config)
         }
     }
 

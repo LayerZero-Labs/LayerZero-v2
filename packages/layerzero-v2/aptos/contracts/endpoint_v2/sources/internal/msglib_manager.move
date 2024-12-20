@@ -14,6 +14,7 @@ module endpoint_v2::msglib_manager {
 
     use endpoint_v2::store;
     use endpoint_v2::timeout;
+    use endpoint_v2::timeout::{new_timeout_from_expiry, Timeout};
     use router_node_0::router_node;
 
     friend endpoint_v2::admin;
@@ -74,12 +75,13 @@ module endpoint_v2::msglib_manager {
     public(friend) fun set_config(
         oapp: address,
         lib: address,
+        eid: u32,
         config_type: u32,
         config: vector<u8>,
     ) {
         assert_library_registered(lib);
         let to_msglib_call_ref = &store::make_dynamic_call_ref(lib, b"set_config");
-        router_node::set_config(lib, to_msglib_call_ref, oapp, config_type, config);
+        router_node::set_config(lib, to_msglib_call_ref, oapp, eid, config_type, config);
     }
 
     public(friend) fun get_config(
@@ -224,6 +226,14 @@ module endpoint_v2::msglib_manager {
         store::get_default_receive_library(src_eid)
     }
 
+    /// Get the default receive library timeout or return an empty Timeout if one is not set
+    public(friend) fun get_default_receive_library_timeout(src_eid: u32): Timeout {
+        if (store::has_default_receive_library_timeout(src_eid)) {
+            store::get_default_receive_library_timeout(src_eid)
+        } else {
+            new_timeout_from_expiry(0, @0x0)
+        }
+    }
 
     // ================================================= Receive Oapp =================================================
 
@@ -246,7 +256,7 @@ module endpoint_v2::msglib_manager {
             store::unset_receive_library(receiver, src_eid);
             emit(ReceiveLibrarySet { receiver, eid: src_eid, new_lib: @0x0 });
             if (store::has_receive_library_timeout(receiver, src_eid)) {
-                store::unset_grace_period_receive_library_config(receiver, src_eid);
+                store::unset_receive_library_timeout(receiver, src_eid);
             };
             emit(ReceiveLibraryTimeoutSet { receiver, eid: src_eid, old_lib, timeout: 0 });
             return
@@ -264,13 +274,13 @@ module endpoint_v2::msglib_manager {
 
         let (old_lib, is_default) = get_effective_receive_library(receiver, src_eid);
 
-        store::set_oapp_receive_library(receiver, src_eid, msglib);
+        store::set_receive_library(receiver, src_eid, msglib);
         emit(ReceiveLibrarySet { receiver, eid: src_eid, new_lib: msglib });
 
         if (grace_period == 0) {
             // If there is a timeout and grace_period is 0, remove the current timeout
             if (store::has_receive_library_timeout(receiver, src_eid)) {
-                store::unset_grace_period_receive_library_config(receiver, src_eid);
+                store::unset_receive_library_timeout(receiver, src_eid);
             };
             let non_default_old_lib = if (is_default) { @0x0 } else { old_lib };
             emit(ReceiveLibraryTimeoutSet { receiver, eid: src_eid, old_lib: non_default_old_lib, timeout: 0 });
@@ -299,7 +309,7 @@ module endpoint_v2::msglib_manager {
             assert!(store::has_receive_library_timeout(receiver, src_eid), ENO_TIMEOUT_TO_DELETE);
             let timeout = store::get_receive_library_timeout(receiver, src_eid);
             assert!(timeout::is_active(&timeout), ENO_TIMEOUT_TO_DELETE);
-            store::unset_grace_period_receive_library_config(receiver, src_eid);
+            store::unset_receive_library_timeout(receiver, src_eid);
             emit(ReceiveLibraryTimeoutSet { receiver, eid: src_eid, old_lib: lib, timeout: 0 });
         } else {
             assert!(store::has_receive_library(receiver, src_eid), ERECEIVE_LIB_NOT_SET);
@@ -310,6 +320,15 @@ module endpoint_v2::msglib_manager {
             store::set_receive_library_timeout(receiver, src_eid, timeout);
             emit(ReceiveLibraryTimeoutSet { receiver, eid: src_eid, old_lib: lib, timeout: expiry });
         };
+    }
+
+    /// Get the receive library timeout or return an empty timeout if it is not set
+    public(friend) fun get_receive_library_timeout(receiver: address, src_eid: u32): Timeout {
+        if (store::has_receive_library_timeout(receiver, src_eid)) {
+            store::get_receive_library_timeout(receiver, src_eid)
+        } else {
+            new_timeout_from_expiry(0, @0x0)
+        }
     }
 
     /// Gets the effective receive library for the given source EID, returns both the library and a flag indicating if

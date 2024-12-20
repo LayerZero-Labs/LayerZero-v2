@@ -15,6 +15,9 @@ module executor::executor_tests {
     use executor::native_drop_params::new_native_drop_params;
     use worker_common::worker_config;
 
+    const EXECUTOR_FEE_LIB: address = @100000009;
+    const PRICE_FEED_MODULE: address = @100000010;
+
     #[test]
     fun test_native_drop() {
         // initialize worker
@@ -25,7 +28,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let params = vector[
@@ -65,7 +68,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let params = vector[
@@ -101,7 +104,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let params = vector[
@@ -137,11 +140,11 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@8888);
-        executor::set_price_feed(admin, @price_feed_module_0, @1111);
+        executor::set_price_feed(admin, PRICE_FEED_MODULE, @1111);
     }
 
     #[test]
@@ -155,11 +158,11 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@8888);
-        executor::set_price_feed_delegate(admin, @price_feed_module_0);
+        executor::set_price_feed_delegate(admin, PRICE_FEED_MODULE);
     }
 
     #[test]
@@ -173,7 +176,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@8888);
@@ -191,7 +194,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@8888);
@@ -209,7 +212,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@8888);
@@ -227,7 +230,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@9999);
@@ -245,7 +248,7 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
 
         let admin = &create_signer_for_test(@9999);
@@ -262,12 +265,12 @@ module executor::executor_tests {
             @111111111,
             vector[@9999],
             vector[],
-            @executor_fee_lib_0,
+            EXECUTOR_FEE_LIB,
         );
         let fee_lib_from_worker_config = worker_config::get_worker_fee_lib(@executor);
-        assert!(fee_lib_from_worker_config == @executor_fee_lib_0, 0);
+        assert!(fee_lib_from_worker_config == EXECUTOR_FEE_LIB, 0);
         let fee_lib_from_executor = get_fee_lib();
-        assert!(fee_lib_from_executor == @executor_fee_lib_0, 0);
+        assert!(fee_lib_from_executor == EXECUTOR_FEE_LIB, 0);
 
         let admin = &create_signer_for_test(@9999);
         executor::set_fee_lib(admin, @1111);

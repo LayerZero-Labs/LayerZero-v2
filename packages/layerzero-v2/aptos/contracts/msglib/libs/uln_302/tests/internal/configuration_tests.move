@@ -447,6 +447,44 @@ module uln_302::configuration_tests {
     }
 
     #[test]
+    fun get_app_config_should_get_the_send_uln_config_if_that_is_requested() {
+        setup();
+        let send_config = new_uln_config(1, 1, vector[@0x10], vector[@0x30, @0x50], false, false, false);
+        set_default_send_uln_config(1, send_config);
+        let receive_config = new_uln_config(2, 1, vector[@0x20], vector[@0x40, @0x60], false, false, false);
+        set_default_receive_uln_config(1, receive_config);
+        let executor_config = new_executor_config(1000, @9001);
+        set_default_executor_config(1, executor_config);
+
+        set_send_uln_config(@9999, 1, send_config);
+
+        let retrieved_config = configuration::get_app_config(@9999, 1, 2);
+        let expected_config = bytes_of(|buf| configs_uln::append_uln_config(buf, send_config));
+        assert!(expected_config == retrieved_config, 0);
+    }
+
+    #[test]
+    fun get_app_config_should_return_empty_bytes_is_only_default_is_set() {
+        setup();
+        let send_config = new_uln_config(1, 1, vector[@0x10], vector[@0x30, @0x50], false, false, false);
+        set_default_send_uln_config(1, send_config);
+        let receive_config = new_uln_config(2, 1, vector[@0x20], vector[@0x40, @0x60], false, false, false);
+        set_default_receive_uln_config(1, receive_config);
+        let executor_config = new_executor_config(1000, @9001);
+        set_default_executor_config(1, executor_config);
+
+        let retrieved_config = configuration::get_app_config(@9999, 1, 2);
+        assert!(retrieved_config == b"", 0);
+    }
+
+    #[test]
+    fun get_app_config_should_return_empty_bytes_if_not_set() {
+        setup();
+        let retrieved_config = configuration::get_app_config(@9999, 1, 2);
+        assert!(retrieved_config == b"", 0);
+    }
+
+    #[test]
     fun get_config_should_get_the_receive_uln_config_if_that_is_requested() {
         setup();
         let send_config = new_uln_config(1, 1, vector[@0x10], vector[@0x30, @0x50], false, false, false);

@@ -75,9 +75,9 @@ module uln_302::router_calls {
     // ================================================= Configuration ================================================
 
     /// Sets the ULN and Executor configurations for an OApp
-    public fun set_config(call_ref: &DynamicCallRef, oapp: address, config_type: u32, config: vector<u8>) {
+    public fun set_config(call_ref: &DynamicCallRef, oapp: address, eid: u32, config_type: u32, config: vector<u8>) {
         assert_caller_is_endpoint_v2(call_ref, b"set_config");
-        configuration::set_config(oapp, config_type, config)
+        configuration::set_config(oapp, eid, config_type, config)
     }
 
     #[view]

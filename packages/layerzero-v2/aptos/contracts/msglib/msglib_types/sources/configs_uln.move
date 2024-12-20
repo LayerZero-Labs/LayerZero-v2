@@ -2,9 +2,8 @@
 module msglib_types::configs_uln {
     use std::vector;
 
-    use endpoint_v2_common::config_eid_tagged::{EidTagged, get_eid_and_config, tag_with_eid};
-    use endpoint_v2_common::serde::{append_address, append_u32, append_u64, append_u8, extract_address, extract_u32,
-        extract_u64, extract_u8, map_count,
+    use endpoint_v2_common::serde::{
+        append_address, append_u64, append_u8, extract_address, extract_u64, extract_u8, map_count,
     };
 
     struct UlnConfig has drop, copy, store {
@@ -80,12 +79,6 @@ module msglib_types::configs_uln {
 
     // ======================================== Serialization / Deserialization =======================================
 
-    public fun append_uln_config_with_eid(target: &mut vector<u8>, tagged_config: EidTagged<UlnConfig>) {
-        let (eid, config) = get_eid_and_config(tagged_config);
-        append_u32(target, eid);
-        append_uln_config(target, config);
-    }
-
     public fun append_uln_config(target: &mut vector<u8>, config: UlnConfig) {
         append_u64(target, config.confirmations);
         append_u8(target, config.optional_dvn_threshold);
@@ -96,12 +89,6 @@ module msglib_types::configs_uln {
         append_u8(target, from_bool(config.use_default_for_confirmations));
         append_u8(target, from_bool(config.use_default_for_required_dvns));
         append_u8(target, from_bool(config.use_default_for_optional_dvns));
-    }
-
-    public fun extract_uln_config_with_eid(input: &vector<u8>, position: &mut u64): EidTagged<UlnConfig> {
-        let eid = extract_u32(input, position);
-        let config = extract_uln_config(input, position);
-        tag_with_eid(eid, config)
     }
 
     public fun extract_uln_config(input: &vector<u8>, position: &mut u64): UlnConfig {

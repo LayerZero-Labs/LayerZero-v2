@@ -10,14 +10,6 @@ module router_node_1::router_node {
 
     const ENOT_IMPLEMENTED: u64 = 1;
 
-    public fun endpoint_request(
-        _msglib: address,
-        _call_ref: &DynamicCallRef,
-        _request: Any,
-    ): Any {
-        abort ENOT_IMPLEMENTED
-    }
-
     public fun quote(
         _msglib: address,
         _packet: SendPacket,
@@ -59,12 +51,14 @@ module router_node_1::router_node {
         _msglib: address,
         _call_ref: &DynamicCallRef,
         _oapp: address,
+        _eid: u32,
         _config_type: u32,
         _config: vector<u8>,
     ) {
         abort ENOT_IMPLEMENTED
     }
 
+    #[view]
     public fun get_config(_msglib: address, _oapp: address, _eid: u32, _config_type: u32): vector<u8> {
         abort ENOT_IMPLEMENTED
     }

@@ -75,7 +75,13 @@ module simple_msglib::router_calls {
         abort ENOT_IMPLEMENTED
     }
 
-    public fun set_config(_call_ref: &DynamicCallRef, __oapp: address, _config_type: u32, _config: vector<u8>) {
+    public fun set_config(
+        _call_ref: &DynamicCallRef,
+        __oapp: address,
+        _eid: u32,
+        _config_type: u32,
+        _config: vector<u8>
+    ) {
         abort ENOT_IMPLEMENTED
     }
 
