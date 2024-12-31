@@ -60,15 +60,16 @@ module router_node_0::router_node {
         call_ref: &DynamicCallRef,
         packet_header: RawPacket,
         payload_hash: Bytes32,
+        extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         if (msglib == @uln_302) {
-            uln_302::commit_verification(call_ref, packet_header, payload_hash)
+            uln_302::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else if (msglib == @simple_msglib) {
-            simple_msglib::commit_verification(call_ref, packet_header, payload_hash)
+            simple_msglib::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else if (msglib == @blocked_msglib) {
-            blocked_msglib::commit_verification(call_ref, packet_header, payload_hash)
+            blocked_msglib::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else {
-            router_node_next::commit_verification(msglib, call_ref, packet_header, payload_hash)
+            router_node_next::commit_verification(msglib, call_ref, packet_header, payload_hash, extra_data)
         }
     }
 

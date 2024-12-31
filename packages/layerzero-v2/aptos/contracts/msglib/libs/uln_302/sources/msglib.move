@@ -1,8 +1,8 @@
 /// View functions for the ULN-302 module
 module uln_302::msglib {
+    use std::event::emit;
     use std::option::Option;
     use std::signer::address_of;
-    use std::event::emit;
 
     use endpoint_v2_common::bytes32;
     use endpoint_v2_common::packet_raw::bytes_to_raw_packet;
@@ -72,10 +72,27 @@ module uln_302::msglib {
     }
 
     #[view]
-    /// Gets the ULN or Executor configuration for an eid on an OApp
-    /// Returns an empty string if it is not set for the OApp, which indicates a fallback to default
-    public fun get_app_config(oapp: address, eid: u32, config_type: u32): vector<u8> {
-        configuration::get_app_config(oapp, eid, config_type)
+    /// Gets the send ULN config for an OApp and EID
+    ///
+    /// This will return option::none() if it is not set.
+    public fun get_app_send_config(oapp: address, eid: u32): Option<UlnConfig> {
+        uln_302_store::get_send_uln_config(oapp, eid)
+    }
+
+    #[view]
+    /// Gets the receive ULN config for an OApp and EID
+    ///
+    /// This will return option::none() if it is not set.
+    public fun get_app_receive_config(oapp: address, eid: u32): Option<UlnConfig> {
+        uln_302_store::get_receive_uln_config(oapp, eid)
+    }
+
+    #[view]
+    /// Gets the executor config for an OApp and EID
+    ///
+    /// This will return option::none() if it is not set.
+    public fun get_app_executor_config(oapp: address, eid: u32): Option<ExecutorConfig> {
+        uln_302_store::get_executor_config(oapp, eid)
     }
 
     #[view]

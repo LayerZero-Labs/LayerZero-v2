@@ -55,6 +55,7 @@ module uln_302::router_calls {
         call_ref: &DynamicCallRef,
         packet_header: RawPacket,
         payload_hash: Bytes32,
+        _extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         assert_caller_is_endpoint_v2(call_ref, b"commit_verification");
         verification::commit_verification(packet_header, payload_hash)

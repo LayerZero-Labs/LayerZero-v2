@@ -52,6 +52,7 @@ module simple_msglib::router_calls {
         call_ref: &DynamicCallRef,
         packet_header: RawPacket,
         _payload_hash: Bytes32,
+        _extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         assert!(
             get_dynamic_call_ref_caller(call_ref, @simple_msglib, b"commit_verification") == @endpoint_v2,

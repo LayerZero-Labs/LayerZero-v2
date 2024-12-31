@@ -406,9 +406,10 @@ module endpoint_v2::endpoint {
         receive_lib: address,
         packet_header: vector<u8>,
         payload_hash: vector<u8>,
+        extra_data: vector<u8>,
     ) {
         let packet_header = packet_raw::bytes_to_raw_packet(packet_header);
-        channels::verify(receive_lib, packet_header, bytes32::to_bytes32(payload_hash));
+        channels::verify(receive_lib, packet_header, bytes32::to_bytes32(payload_hash), extra_data);
     }
 
     /// Confirms that a message has been verified by the message library, and is ready to be verified (confirmed) on the

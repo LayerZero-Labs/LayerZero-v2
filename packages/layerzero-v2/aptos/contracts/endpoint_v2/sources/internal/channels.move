@@ -318,6 +318,7 @@ module endpoint_v2::channels {
         receive_lib: address,
         packet_header: RawPacket,
         payload_hash: Bytes32,
+        extra_data: vector<u8>,
     ) {
         let call_ref = &store::make_dynamic_call_ref(receive_lib, b"commit_verification");
         let (receiver, src_eid, sender, nonce) = msglib_router::commit_verification(
@@ -325,6 +326,7 @@ module endpoint_v2::channels {
             call_ref,
             packet_header,
             payload_hash,
+            extra_data,
         );
 
         verify_internal(

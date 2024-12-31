@@ -743,6 +743,7 @@ module endpoint_v2::channels_tests {
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
 
         assert!(was_event_emitted(&packet_verified_event(
@@ -852,12 +853,14 @@ module endpoint_v2::channels_tests {
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
         assert!(vector::length(&emitted_events<PacketVerified>()) == 1, 0);
         verify(
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
         assert!(vector::length(&emitted_events<PacketVerified>()) == 2, 0);
     }
@@ -897,6 +900,7 @@ module endpoint_v2::channels_tests {
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
     }
 
@@ -940,6 +944,7 @@ module endpoint_v2::channels_tests {
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
     }
 
@@ -981,6 +986,7 @@ module endpoint_v2::channels_tests {
             @simple_msglib,
             packet_header,
             payload_hash,
+            b"",
         );
     }
 }

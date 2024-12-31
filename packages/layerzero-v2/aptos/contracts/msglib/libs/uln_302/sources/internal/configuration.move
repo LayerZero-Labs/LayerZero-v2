@@ -25,6 +25,9 @@ module uln_302::configuration {
     friend uln_302::verification_tests;
 
     #[test_only]
+    friend uln_302::msglib_tests;
+
+    #[test_only]
     friend uln_302::configuration_tests;
 
     // This is needed for tests of inline functions in the sending module, which call friend functions in this module
@@ -55,29 +58,6 @@ module uln_302::configuration {
         } else if (config_type == CONFIG_TYPE_EXECUTOR()) {
             let config = get_executor_config(oapp, eid);
             serde::bytes_of(|buf| configs_executor::append_executor_config(buf, config))
-        } else {
-            abort EUNKNOWN_CONFIG_TYPE
-        }
-    }
-
-    /// Get the configuration for an OApp eid and config type, returning an empty result if the OApp configuration is
-    /// not set (default configuration)
-    public(friend) fun get_app_config(oapp: address, eid: u32, config_type: u32): vector<u8> {
-        if (config_type == CONFIG_TYPE_SEND_ULN()) {
-            let config = uln_302_store::get_send_uln_config(oapp, eid);
-            option::fold(config, b"", |bytes, config| {
-                serde::bytes_of(|buf| configs_uln::append_uln_config(buf, config))
-            })
-        } else if (config_type == CONFIG_TYPE_RECV_ULN()) {
-            let config = uln_302_store::get_receive_uln_config(oapp, eid);
-            option::fold(config, b"", |bytes, config| {
-                serde::bytes_of(|buf| configs_uln::append_uln_config(buf, config))
-            })
-        } else if (config_type == CONFIG_TYPE_EXECUTOR()) {
-            let config = uln_302_store::get_executor_config(oapp, eid);
-            option::fold(config, b"", |bytes, config| {
-                serde::bytes_of(|buf| configs_executor::append_executor_config(buf, config))
-            })
         } else {
             abort EUNKNOWN_CONFIG_TYPE
         }

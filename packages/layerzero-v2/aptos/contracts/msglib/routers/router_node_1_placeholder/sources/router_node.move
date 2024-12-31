@@ -35,6 +35,7 @@ module router_node_1::router_node {
         _call_ref: &DynamicCallRef,
         _packet_header: RawPacket,
         _payload_hash: Bytes32,
+        _extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         abort ENOT_IMPLEMENTED
     }

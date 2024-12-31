@@ -92,7 +92,8 @@ module counter::counter_tests {
         endpoint_v2::endpoint::verify(
             @simple_msglib,
             get_packet_bytes(packet_header),
-            bytes32::from_bytes32(payload_hash)
+            bytes32::from_bytes32(payload_hash),
+            b"",
         );
 
         assert!(was_event_emitted(
@@ -161,7 +162,8 @@ module counter::counter_tests {
         endpoint_v2::endpoint::verify(
             @simple_msglib,
             get_packet_bytes(packet_header),
-            bytes32::from_bytes32(payload_hash)
+            bytes32::from_bytes32(payload_hash),
+            b"",
         );
 
         assert!(was_event_emitted(
