@@ -1,0 +1,65 @@
+[package]
+name = "router_node_0"
+version = "1.0.0"
+authors = []
+
+[addresses]
+router_node_0 = "_"
+endpoint_v2_common = "_"
+endpoint_v2 = "_"
+layerzero_admin = "_"
+layerzero_treasury_admin = "_"
+simple_msglib = "_"
+blocked_msglib = "_"
+uln_302 = "_"
+router_node_1 = "_"
+msglib_types = "_"
+treasury = "_"
+price_feed_router_0 = "_"
+price_feed_router_1 = "_"
+price_feed_module_0 = "_"
+worker_common = "_"
+executor_fee_lib_0 = "_"
+dvn_fee_lib_0 = "_"
+executor_fee_lib_router_0 = "_"
+executor_fee_lib_router_1 = "_"
+dvn_fee_lib_router_0 = "_"
+dvn_fee_lib_router_1 = "_"
+dvn = "_"
+native_token_metadata_address = "0x8e4733bdabcf7d4afc3d14f0dd46c9bf52fb0fce9e4b996c939e195b8bc891d9"
+
+[dev-addresses]
+router_node_0 = "0x9001"
+endpoint_v2_common = "0x9098"
+endpoint_v2 = "0x12345678"
+layerzero_admin = "0x18943124"
+layerzero_treasury_admin = "0x1894312499"
+simple_msglib = "0x9002"
+blocked_msglib = "0x9003"
+uln_302 = "0x9005"
+router_node_1 = "0x9007"
+msglib_types = "0x52112234"
+treasury = "0x123432432"
+price_feed_router_0 = "0x65DD71A"
+price_feed_router_1 = "0x65DD71AB"
+price_feed_module_0 = "0x65DD71"
+worker_common = "0x3999"
+executor_fee_lib_0 = "0x3000"
+dvn_fee_lib_0 = "0x3000a"
+executor_fee_lib_router_0 = "0x30001"
+executor_fee_lib_router_1 = "0x30002"
+dvn_fee_lib_router_0 = "0x30001a"
+dvn_fee_lib_router_1 = "0x30002a"
+dvn = "0x234234"
+
+[dependencies]
+simple_msglib = { local = "../../libs/simple_msglib" }
+blocked_msglib = { local = "../../libs/blocked_msglib" }
+uln_302 = { local = "../../libs/uln_302" }
+
+router_node_1 = { local = "../router_node_1_placeholder" }
+msglib_types = { local = "../../msglib_types" }
+endpoint_v2_common = { local = "../../../endpoint_v2_common" }
+price_feed_module_0 = { local = "../../../worker_peripherals/price_feed_modules/price_feed_module_0" }
+
+[dev-dependencies]

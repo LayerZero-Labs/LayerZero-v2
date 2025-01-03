@@ -1,0 +1,53 @@
+[package]
+name = "uln_302"
+version = "1.0.0"
+authors = []
+
+[addresses]
+uln_302 = "_"
+endpoint_v2_common = "_"
+endpoint_v2 = "_"
+layerzero_admin = "_"
+layerzero_treasury_admin = "_"
+
+msglib_types = "_"
+treasury = "_"
+worker_common = "_"
+price_feed_router_0 = "_"
+price_feed_router_1 = "_"
+executor_fee_lib_0 = "_"
+dvn_fee_lib_0 = "_"
+executor_fee_lib_router_0 = "_"
+executor_fee_lib_router_1 = "_"
+dvn_fee_lib_router_0 = "_"
+dvn_fee_lib_router_1 = "_"
+dvn = "_"
+
+[dev-addresses]
+uln_302 = "0x9005"
+endpoint_v2_common = "0x9098"
+endpoint_v2 = "0x12345678"
+layerzero_admin = "0x18943124"
+layerzero_treasury_admin = "0x1894312499"
+msglib_types = "0x97329841"
+treasury = "0x123432432"
+worker_common = "0x3999"
+price_feed_router_0 = "0x65DD71A"
+price_feed_router_1 = "0x65DD71AB"
+price_feed_module_0 = "0x65DD71"
+executor_fee_lib_0 = "0x13245135"
+dvn_fee_lib_0 = "0x13245135a"
+executor_fee_lib_router_0 = "0x30001"
+executor_fee_lib_router_1 = "0x30002"
+dvn_fee_lib_router_0 = "0x30001a"
+dvn_fee_lib_router_1 = "0x30002a"
+dvn = "0x324241"
+
+[dependencies]
+msglib_types = { local = "../../msglib_types" }
+endpoint_v2_common = { local = "../../../endpoint_v2_common" }
+treasury = { local = "../../../treasury" }
+executor_fee_lib_router_0 = { local = "../../../worker_peripherals/fee_lib_routers/executor_fee_lib_router_0" }
+dvn_fee_lib_router_0 = { local = "../../../worker_peripherals/fee_lib_routers/dvn_fee_lib_router_0" }
+
+[dev-dependencies]
