@@ -60,15 +60,16 @@ module router_node_0::router_node {
         call_ref: &DynamicCallRef,
         packet_header: RawPacket,
         payload_hash: Bytes32,
+        extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         if (msglib == @uln_302) {
-            uln_302::commit_verification(call_ref, packet_header, payload_hash)
+            uln_302::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else if (msglib == @simple_msglib) {
-            simple_msglib::commit_verification(call_ref, packet_header, payload_hash)
+            simple_msglib::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else if (msglib == @blocked_msglib) {
-            blocked_msglib::commit_verification(call_ref, packet_header, payload_hash)
+            blocked_msglib::commit_verification(call_ref, packet_header, payload_hash, extra_data)
         } else {
-            router_node_next::commit_verification(msglib, call_ref, packet_header, payload_hash)
+            router_node_next::commit_verification(msglib, call_ref, packet_header, payload_hash, extra_data)
         }
     }
 
@@ -88,17 +89,18 @@ module router_node_0::router_node {
         msglib: address,
         call_ref: &DynamicCallRef,
         oapp: address,
+        eid: u32,
         config_type: u32,
         config: vector<u8>,
     ) {
         if (msglib == @uln_302) {
-            uln_302::set_config(call_ref, oapp, config_type, config)
+            uln_302::set_config(call_ref, oapp, eid, config_type, config)
         } else if (msglib == @simple_msglib) {
-            simple_msglib::set_config(call_ref, oapp, config_type, config)
+            simple_msglib::set_config(call_ref, oapp, eid, config_type, config)
         } else if (msglib == @blocked_msglib) {
-            blocked_msglib::set_config(call_ref, oapp, config_type, config)
+            blocked_msglib::set_config(call_ref, oapp, eid, config_type, config)
         } else {
-            router_node_next::set_config(msglib, call_ref, oapp, config_type, config)
+            router_node_next::set_config(msglib, call_ref, oapp, eid, config_type, config)
         }
     }
 

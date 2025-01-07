@@ -77,8 +77,9 @@ module endpoint_v2_common::universal_config {
     /// Lock the ZRO address so it can no longer be set or unset
     public entry fun lock_zro_address(account: &signer) acquires UniversalStore {
         assert_admin(address_of(move account));
-
+        assert!(!universal_store().zro_locked, ENO_CHANGE);
         assert!(option::is_some(&universal_store().zro_data), EZRO_ADDRESS_NOT_SET);
+
         let locked_store = &mut universal_store_mut().zro_locked;
         *locked_store = true;
 

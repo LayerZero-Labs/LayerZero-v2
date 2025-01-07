@@ -6,8 +6,10 @@ module endpoint_v2::endpoint_tests {
     use std::signer::address_of;
     use std::string;
 
+    use endpoint_v2::admin;
     use endpoint_v2::channels;
     use endpoint_v2::endpoint::{
+        Self,
         EndpointOAppConfigTarget,
         quote,
         register_composer,
@@ -105,5 +107,31 @@ module endpoint_v2::endpoint_tests {
         let call_ref = &make_call_ref_for_test<EndpointOAppConfigTarget>(address_of(composer));
         // Must provide type since get_oapp_caller is generic
         endpoint_v2::endpoint::get_compose_caller(call_ref);
+    }
+
+    #[test]
+    fun get_default_receive_library_timeout_should_return_none_if_not_set() {
+        test_helpers::setup_layerzero_for_test(@simple_msglib, 100, 100);
+        let (timeout, library) = endpoint::get_default_receive_library_timeout(1);
+        assert!(library == @0x0, 0);
+        assert!(timeout == 0, 1);
+    }
+
+    #[test]
+    fun get_default_receive_library_timeout_should_return_the_timeout_if_set() {
+        let std = &std::account::create_account_for_test(@std);
+        std::block::initialize_for_test(std, 1_000_000);
+        std::reconfiguration::initialize_for_test(std);
+
+        test_helpers::setup_layerzero_for_test(@simple_msglib, 100, 100);
+        admin::set_default_receive_library_timeout(
+            &create_signer_for_test(@layerzero_admin),
+            12,
+            @simple_msglib,
+            10000
+        );
+        let (timeout, library) = endpoint::get_default_receive_library_timeout(12);
+        assert!(library == @simple_msglib, 0);
+        assert!(timeout == 10000, 1);
     }
 }

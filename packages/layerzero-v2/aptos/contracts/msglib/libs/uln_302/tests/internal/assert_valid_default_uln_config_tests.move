@@ -100,4 +100,11 @@ module uln_302::assert_valid_default_uln_config_tests {
         let config = new_uln_config(1, 1, vector[@0x20], vector[@0x20], true, false, false);
         assert_valid_default_uln_config(&config);
     }
+
+    #[test]
+    #[expected_failure(abort_code = uln_302::assert_valid_default_uln_config::EINVALID_DVN_THRESHOLD)]
+    fun test_assert_valid_default_uln_config_fails_if_no_threshold_with_optional_dvns_defined() {
+        let config = new_uln_config(1, 0, vector[@0x20], vector[@0x20], false, false, false);
+        assert_valid_default_uln_config(&config);
+    }
 }

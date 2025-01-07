@@ -6,6 +6,8 @@ module endpoint_v2::timeout {
 
     friend endpoint_v2::msglib_manager;
 
+    friend endpoint_v2::endpoint;
+
     #[test_only]
     friend endpoint_v2::msglib_manager_tests;
 
@@ -25,6 +27,10 @@ module endpoint_v2::timeout {
     /// Create a new timeout configuration using an expiry block number
     public(friend) fun new_timeout_from_expiry(expiry: u64, lib: address): Timeout {
         Timeout { expiry, lib }
+    }
+
+    public(friend) fun unpack_timeout(timeout: Timeout): (u64, address) {
+        (timeout.expiry, timeout.lib)
     }
 
     /// Check if the timeout is active

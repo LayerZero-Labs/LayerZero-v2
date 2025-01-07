@@ -1,7 +1,6 @@
 module price_feed_module_0::price {
     use std::vector;
 
-    use endpoint_v2_common::config_eid_tagged::{borrow_config, EidTagged, get_eid, tag_with_eid};
     use endpoint_v2_common::serde;
 
     /// This struct carries the EID specific price and gas information required to calculate gas for a given chain and
@@ -13,6 +12,11 @@ module price_feed_module_0::price {
         gas_per_byte: u32,
     }
 
+    struct EidTaggedPrice has copy, drop, store {
+        eid: u32,
+        price: Price,
+    }
+
     // Creates a new price struct
     public fun new_price(price_ratio: u128, gas_price_in_unit: u64, gas_per_byte: u32): Price {
         Price {
@@ -20,6 +24,14 @@ module price_feed_module_0::price {
             gas_price_in_unit,
             gas_per_byte,
         }
+    }
+
+    public fun tag_price_with_eid(eid: u32, price: Price): EidTaggedPrice {
+        EidTaggedPrice { eid, price }
+    }
+
+    public fun split_eid_tagged_price(eid_price: &EidTaggedPrice): (u32, Price) {
+        (eid_price.eid, eid_price.price)
     }
 
     // Gets the price ratio
@@ -45,17 +57,17 @@ module price_feed_module_0::price {
     }
 
     /// Append an Eid-tagged Price to the end of a byte buffer
-    public fun append_eid_tagged_price(buf: &mut vector<u8>, price: &EidTagged<Price>) {
-        serde::append_u32(buf, get_eid(price));
-        append_price(buf, borrow_config(price));
+    public fun append_eid_tagged_price(buf: &mut vector<u8>, eid_price: &EidTaggedPrice) {
+        serde::append_u32(buf, eid_price.eid);
+        append_price(buf, &eid_price.price);
     }
 
     /// Serialize a list of Eid-tagged Prices into a byte vector
     /// This will be a series of Eid-tagged Prices serialized one after the other
-    public fun serialize_eid_tagged_price_list(prices: &vector<EidTagged<Price>>): vector<u8> {
+    public fun serialize_eid_tagged_price_list(eid_prices: &vector<EidTaggedPrice>): vector<u8> {
         let buf = vector<u8>[];
-        for (i in 0..vector::length(prices)) {
-            append_eid_tagged_price(&mut buf, vector::borrow(prices, i));
+        for (i in 0..vector::length(eid_prices)) {
+            append_eid_tagged_price(&mut buf, vector::borrow(eid_prices, i));
         };
         buf
     }
@@ -75,15 +87,18 @@ module price_feed_module_0::price {
 
     /// Extract an Eid-tagged Price from a byte buffer at a given position
     /// The position to be updated to the next position after the deserialized Eid-tagged Price
-    public fun extract_eid_tagged_price(buf: &vector<u8>, position: &mut u64): EidTagged<Price> {
+    public fun extract_eid_tagged_price(buf: &vector<u8>, position: &mut u64): EidTaggedPrice {
         let eid = serde::extract_u32(buf, position);
-        tag_with_eid(eid, extract_price(buf, position))
+        EidTaggedPrice {
+            eid,
+            price: extract_price(buf, position),
+        }
     }
 
     /// Deserialize a list of Eid-tagged Prices from a byte buffer
     /// This will extract a series of one-after-another Eid-tagged Prices from the buffer
-    public fun deserialize_eid_tagged_price_list(buf: &vector<u8>): vector<EidTagged<Price>> {
-        let result = vector<EidTagged<Price>>[];
+    public fun deserialize_eid_tagged_price_list(buf: &vector<u8>): vector<EidTaggedPrice> {
+        let result = vector<EidTaggedPrice>[];
         let position = 0;
         while (position < vector::length(buf)) {
             vector::push_back(&mut result, extract_eid_tagged_price(buf, &mut position));

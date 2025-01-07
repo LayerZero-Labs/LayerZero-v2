@@ -4,9 +4,8 @@ module price_feed_module_0::feeds {
     use std::table::{Self, Table};
     use std::vector;
 
-    use endpoint_v2_common::config_eid_tagged::{borrow_config, get_eid};
     use price_feed_module_0::eid_model_pair::{Self, ARBITRUM_MODEL_TYPE, DEFAULT_MODEL_TYPE, OPTIMISM_MODEL_TYPE};
-    use price_feed_module_0::price::{Self, Price};
+    use price_feed_module_0::price::{Self, Price, split_eid_tagged_price};
 
     #[test_only]
     friend price_feed_module_0::feeds_tests;
@@ -75,7 +74,7 @@ module price_feed_module_0::feeds {
     }
 
     /// Sets the model type for multiple given destination EIDs
-    /// The params are a serialized list of EidTagged<ModelType>
+    /// The params are a serialized list of EidModelPair
     public entry fun set_eid_models(account: &signer, params: vector<u8>) acquires Feed {
         let feed_address = address_of(move account);
 
@@ -114,8 +113,7 @@ module price_feed_module_0::feeds {
         let prices_mut = &mut feed_data_mut(feed).prices;
         for (i in 0..vector::length(&price_list)) {
             let eid_tagged_price = vector::borrow(&price_list, i);
-            let eid = get_eid(eid_tagged_price);
-            let price = *borrow_config(eid_tagged_price);
+            let (eid, price) = split_eid_tagged_price(eid_tagged_price);
             table::upsert(prices_mut, eid, price);
         }
     }

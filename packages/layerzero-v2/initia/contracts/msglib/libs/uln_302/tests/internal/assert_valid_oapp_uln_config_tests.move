@@ -13,7 +13,7 @@ module uln_302::assert_valid_oapp_uln_config_tests {
     #[expected_failure(abort_code = uln_302::assert_valid_uln_config::ENO_EFFECTIVE_DVN_THRESHOLD)]
     fun invalid_if_less_than_one_effective_dvn_theshold() {
         let default_config = new_uln_config(2, 1, vector[@0x10], vector[@0x20], false, false, false);
-        let oapp_config = new_uln_config(2, 0, vector[], vector[@0x20], false, false, false);
+        let oapp_config = new_uln_config(2, 0, vector[], vector[], false, false, false);
         assert_valid_uln_config(&oapp_config, &default_config);
     }
 
@@ -29,7 +29,7 @@ module uln_302::assert_valid_oapp_uln_config_tests {
     #[expected_failure(abort_code = uln_302::assert_valid_uln_config::ENO_EFFECTIVE_DVN_THRESHOLD)]
     fun invalid_if_no_effective_dvn_threshold_because_of_use_default_required_dvns() {
         let default_config = new_uln_config(2, 1, vector[], vector[@0x20], false, false, false);
-        let oapp_config = new_uln_config(2, 0, vector[], vector[@0x10], false, true, false);
+        let oapp_config = new_uln_config(2, 0, vector[], vector[], false, true, false);
         assert_valid_uln_config(&oapp_config, &default_config);
     }
 
@@ -43,7 +43,7 @@ module uln_302::assert_valid_oapp_uln_config_tests {
     #[test]
     fun valid_if_one_effective_dvn_threshold_because_use_default_required_dvns() {
         let default_config = new_uln_config(2, 0, vector[@0x10], vector[@0x20], false, false, false);
-        let oapp_config = new_uln_config(2, 0, vector[], vector[@0x10], false, true, false);
+        let oapp_config = new_uln_config(2, 0, vector[], vector[], false, true, false);
         assert_valid_uln_config(&oapp_config, &default_config);
     }
 
@@ -113,5 +113,13 @@ module uln_302::assert_valid_oapp_uln_config_tests {
         let default_config = new_uln_config(1, 1, vector[@0x20], vector[@0x30], false, false, false);
         let oapp_config = new_uln_config(2, 1, vector[@0x10], vector[@0x20], true, false, false);
         assert_valid_uln_config(&oapp_config, &default_config);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = uln_302::assert_valid_uln_config::EINVALID_DVN_THRESHOLD)]
+    fun test_assert_valid_default_uln_config_fails_if_no_threshold_with_optional_dvns_defined() {
+        let default_config = new_uln_config(1, 1, vector[@0x20], vector[@0x30], false, false, false);
+        let config = new_uln_config(1, 0, vector[@0x20], vector[@0x20], false, false, false);
+        assert_valid_uln_config(&config, &default_config);
     }
 }

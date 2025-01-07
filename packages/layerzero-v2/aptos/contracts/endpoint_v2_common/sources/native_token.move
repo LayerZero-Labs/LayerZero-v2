@@ -10,6 +10,10 @@ module endpoint_v2_common::native_token {
     use std::coin;
     use std::fungible_asset::FungibleAsset;
 
+    public fun balance(account: address): u64 {
+        coin::balance<AptosCoin>(account)
+    }
+
     public fun withdraw(account: &signer, amount: u64): FungibleAsset {
         let coin = coin::withdraw<AptosCoin>(move account, amount);
         coin::coin_to_fungible_asset(coin)

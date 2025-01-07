@@ -8,7 +8,7 @@ module endpoint_v2::channels {
     use endpoint_v2::messaging_receipt::{Self, MessagingReceipt};
     use endpoint_v2::msglib_manager;
     use endpoint_v2::store;
-    use endpoint_v2_common::bytes32::{Self, Bytes32, from_bytes32};
+    use endpoint_v2_common::bytes32::{Self, Bytes32, from_bytes32, to_bytes32};
     use endpoint_v2_common::guid::compute_guid;
     use endpoint_v2_common::packet_raw::{get_packet_bytes, RawPacket};
     use endpoint_v2_common::send_packet;
@@ -22,6 +22,7 @@ module endpoint_v2::channels {
     friend endpoint_v2::channels_tests;
 
     const NIL_PAYLOAD_HASH: vector<u8> = x"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    const EMPTY_PAYLOAD_HASH: vector<u8> = x"0000000000000000000000000000000000000000000000000000000000000000";
 
     // ==================================================== Helpers ===================================================
 
@@ -222,15 +223,18 @@ module endpoint_v2::channels {
     }
 
     /// Marks a packet as verified but disables execution until it is re-verified
+    /// A non-verified nonce can be nilified by passing EMPTY_PAYLOAD_HASH for payload_hash
     public(friend) fun nilify(receiver: address, src_eid: u32, sender: Bytes32, nonce: u64, payload_hash: Bytes32) {
-        assert!(
-            nonce > store::lazy_inbound_nonce(receiver, src_eid, sender) ||
-                store::has_payload_hash(receiver, src_eid, sender, nonce),
-            EINVALID_NONCE,
-        );
+        let has_payload_hash = store::has_payload_hash(receiver, src_eid, sender, nonce);
+        assert!(nonce > store::lazy_inbound_nonce(receiver, src_eid, sender) || has_payload_hash, EINVALID_NONCE);
 
-        let inbound_payload_hash = store::get_payload_hash(receiver, src_eid, sender, nonce);
-        assert!(inbound_payload_hash == payload_hash, EPAYLOAD_HASH_DOES_NOT_MATCH);
+        let stored_payload_hash = if (has_payload_hash) {
+            store::get_payload_hash(receiver, src_eid, sender, nonce)
+        } else {
+            to_bytes32(EMPTY_PAYLOAD_HASH)
+        };
+
+        assert!(payload_hash == stored_payload_hash, EPAYLOAD_HASH_DOES_NOT_MATCH);
 
         // Set the hash to 0xff*32 to indicate that the packet is nilified
         store::set_payload_hash(receiver, src_eid, sender, nonce, bytes32::to_bytes32(NIL_PAYLOAD_HASH));
@@ -314,6 +318,7 @@ module endpoint_v2::channels {
         receive_lib: address,
         packet_header: RawPacket,
         payload_hash: Bytes32,
+        extra_data: vector<u8>,
     ) {
         let call_ref = &store::make_dynamic_call_ref(receive_lib, b"commit_verification");
         let (receiver, src_eid, sender, nonce) = msglib_router::commit_verification(
@@ -321,6 +326,7 @@ module endpoint_v2::channels {
             call_ref,
             packet_header,
             payload_hash,
+            extra_data,
         );
 
         verify_internal(

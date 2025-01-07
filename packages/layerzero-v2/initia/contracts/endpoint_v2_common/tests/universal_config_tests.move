@@ -5,8 +5,8 @@ module endpoint_v2_common::universal_config_tests {
 
     use endpoint_v2_common::native_token_test_helpers::burn_token_for_test;
     use endpoint_v2_common::universal_config::{
-        assert_zro_metadata_set, eid, get_zro_address, get_zro_metadata, has_zro_metadata, initialize, is_zro,
-        is_zro_metadata, lock_zro_address, set_zro_address, init_module_for_test,
+        assert_zro_metadata_set, eid, get_zro_address, get_zro_metadata, has_zro_metadata, init_module_for_test,
+        initialize, is_zro, is_zro_metadata, lock_zro_address, set_zro_address,
     };
     use endpoint_v2_common::zro_test_helpers::create_fa;
 
@@ -87,6 +87,18 @@ module endpoint_v2_common::universal_config_tests {
         set_zro_address(lz_admin, zro_addr);
         lock_zro_address(lz_admin);
         set_zro_address(lz_admin, zro_addr);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = endpoint_v2_common::universal_config::ENO_CHANGE)]
+    fun test_lock_zro_address_fails_if_no_change() {
+        let (zro_addr, _, _) = create_fa(b"ZRO");
+        init_module_for_test(55);
+
+        let lz_admin = &create_signer_for_test(@layerzero_admin);
+        set_zro_address(lz_admin, zro_addr);
+        lock_zro_address(lz_admin);
+        lock_zro_address(lz_admin);
     }
 
     #[test]

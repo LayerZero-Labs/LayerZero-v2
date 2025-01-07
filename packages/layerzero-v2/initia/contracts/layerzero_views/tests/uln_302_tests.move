@@ -156,7 +156,8 @@ module uln_302::uln_302_tests {
         endpoint_v2::endpoint::verify(
             @uln_302,
             get_packet_bytes(packet_header),
-            bytes32::from_bytes32(payload_hash)
+            bytes32::from_bytes32(payload_hash),
+            b"",
         );
 
         assert!(was_event_emitted(
@@ -333,7 +334,8 @@ module uln_302::uln_302_tests {
         endpoint_v2::endpoint::verify(
             @uln_302,
             get_packet_bytes(packet_header),
-            bytes32::from_bytes32(payload_hash)
+            bytes32::from_bytes32(payload_hash),
+            b"",
         );
 
         assert!(was_event_emitted(

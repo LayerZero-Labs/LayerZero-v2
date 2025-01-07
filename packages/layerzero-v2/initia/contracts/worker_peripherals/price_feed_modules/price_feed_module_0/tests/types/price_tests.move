@@ -2,15 +2,15 @@
 module price_feed_module_0::price_tests {
     use std::vector;
 
-    use endpoint_v2_common::config_eid_tagged::{EidTagged, tag_with_eid};
     use price_feed_module_0::price::{
         append_eid_tagged_price,
-        deserialize_eid_tagged_price_list, extract_eid_tagged_price, new_price, Price, serialize_eid_tagged_price_list,
+        deserialize_eid_tagged_price_list, EidTaggedPrice, extract_eid_tagged_price, new_price,
+        serialize_eid_tagged_price_list, tag_price_with_eid,
     };
 
     #[test]
     fun test_append_extract_eid_tagged_price() {
-        let obj = tag_with_eid(
+        let obj = tag_price_with_eid(
             123,
             new_price(456, 789, 101112),
         );
@@ -23,12 +23,12 @@ module price_feed_module_0::price_tests {
 
     #[test]
     fun test_append_extract_eid_tagged_price_list() {
-        let objs = vector<EidTagged<Price>>[];
-        vector::push_back(&mut objs, tag_with_eid(
+        let objs = vector<EidTaggedPrice>[];
+        vector::push_back(&mut objs, tag_price_with_eid(
             123,
             new_price(456, 789, 101112),
         ));
-        vector::push_back(&mut objs, tag_with_eid(
+        vector::push_back(&mut objs, tag_price_with_eid(
             321,
             new_price(654, 987, 111210),
         ));

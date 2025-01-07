@@ -8,7 +8,6 @@ module endpoint_v2::store {
     use endpoint_v2_common::bytes32::Bytes32;
     use endpoint_v2_common::contract_identity::{Self, ContractSigner, DynamicCallRef};
 
-    friend endpoint_v2::endpoint;
     friend endpoint_v2::channels;
     friend endpoint_v2::messaging_composer;
     friend endpoint_v2::msglib_manager;
@@ -197,7 +196,8 @@ module endpoint_v2::store {
         *outbound_nonce
     }
 
-    // OApp - Inbound
+    // ================================================= OApp Inbound =================================================
+
     public(friend) fun receive_pathway_registered(
         receiver: address,
         src_eid: u32,
@@ -281,8 +281,7 @@ module endpoint_v2::store {
         nonce: u64,
         hash: Bytes32,
     ) acquires EndpointStore {
-        let payload_hashes = &mut channel_mut(receiver, src_eid, sender).inbound_hashes;
-        table::upsert(payload_hashes, nonce, hash);
+        table::upsert(&mut channel_mut(receiver, src_eid, sender).inbound_hashes, nonce, hash);
     }
 
     public(friend) fun remove_payload_hash(
@@ -373,8 +372,7 @@ module endpoint_v2::store {
     }
 
     public(friend) fun has_default_send_library(dst_eid: u32): bool acquires EndpointStore {
-        let default_send_libs = &store().msglibs_default_send_libs;
-        table::contains(default_send_libs, dst_eid)
+        table::contains(&store().msglibs_default_send_libs, dst_eid)
     }
 
     public(friend) fun get_default_send_library(dst_eid: u32): address acquires EndpointStore {
@@ -384,13 +382,11 @@ module endpoint_v2::store {
     }
 
     public(friend) fun set_default_send_library(dst_eid: u32, lib: address) acquires EndpointStore {
-        let default_send_libs = &mut store_mut().msglibs_default_send_libs;
-        table::upsert(default_send_libs, dst_eid, lib);
+        table::upsert(&mut store_mut().msglibs_default_send_libs, dst_eid, lib);
     }
 
     public(friend) fun has_default_receive_library(src_eid: u32): bool acquires EndpointStore {
-        let default_receive_libs = &store().msglibs_default_receive_libs;
-        table::contains(default_receive_libs, src_eid)
+        table::contains(&store().msglibs_default_receive_libs, src_eid)
     }
 
     public(friend) fun get_default_receive_library(src_eid: u32): address acquires EndpointStore {
@@ -400,89 +396,74 @@ module endpoint_v2::store {
     }
 
     public(friend) fun set_default_receive_library(src_eid: u32, lib: address) acquires EndpointStore {
-        let default_receive_libs = &mut store_mut().msglibs_default_receive_libs;
-        table::upsert(default_receive_libs, src_eid, lib);
+        table::upsert(&mut store_mut().msglibs_default_receive_libs, src_eid, lib);
     }
 
     public(friend) fun has_default_receive_library_timeout(src_eid: u32): bool acquires EndpointStore {
-        let default_timeout_configs = &store().msglibs_default_receive_lib_timeout_configs;
-        table::contains(default_timeout_configs, src_eid)
+        table::contains(&store().msglibs_default_receive_lib_timeout_configs, src_eid)
     }
 
     public(friend) fun get_default_receive_library_timeout(
         src_eid: u32,
     ): Timeout acquires EndpointStore {
-        let default_timeout_configs = &store().msglibs_default_receive_lib_timeout_configs;
-        *table::borrow(default_timeout_configs, src_eid)
+        *table::borrow(&store().msglibs_default_receive_lib_timeout_configs, src_eid)
     }
 
     public(friend) fun set_default_receive_library_timeout(
         src_eid: u32,
         config: Timeout,
     ) acquires EndpointStore {
-        let default_timeout_configs = &mut store_mut().msglibs_default_receive_lib_timeout_configs;
-        table::upsert(default_timeout_configs, src_eid, config);
+        table::upsert(&mut store_mut().msglibs_default_receive_lib_timeout_configs, src_eid, config);
     }
 
     public(friend) fun unset_default_receive_library_timeout(
         src_eid: u32,
     ): Timeout acquires EndpointStore {
-        let default_timeout_configs = &mut store_mut().msglibs_default_receive_lib_timeout_configs;
-        table::remove(default_timeout_configs, src_eid)
+        table::remove(&mut store_mut().msglibs_default_receive_lib_timeout_configs, src_eid)
     }
 
     public(friend) fun has_send_library(sender: address, dst_eid: u32): bool acquires EndpointStore {
-        let send_libs = &oapp_store(sender).msglibs_send_libs;
-        table::contains(send_libs, dst_eid)
+        table::contains(&oapp_store(sender).msglibs_send_libs, dst_eid)
     }
 
     public(friend) fun get_send_library(sender: address, dst_eid: u32): address acquires EndpointStore {
-        let send_libs = &oapp_store(sender).msglibs_send_libs;
-        *table::borrow(send_libs, dst_eid)
+        *table::borrow(&oapp_store(sender).msglibs_send_libs, dst_eid)
     }
 
     public(friend) fun set_send_library(sender: address, dst_eid: u32, lib: address) acquires EndpointStore {
-        let send_libs = &mut oapp_store_mut(sender).msglibs_send_libs;
-        table::upsert(send_libs, dst_eid, lib);
+        table::upsert(&mut oapp_store_mut(sender).msglibs_send_libs, dst_eid, lib);
     }
 
     public(friend) fun unset_send_library(sender: address, dst_eid: u32): address acquires EndpointStore {
-        let send_libs = &mut oapp_store_mut(sender).msglibs_send_libs;
-        table::remove(send_libs, dst_eid)
+        table::remove(&mut oapp_store_mut(sender).msglibs_send_libs, dst_eid)
     }
 
     public(friend) fun has_receive_library(receiver: address, src_eid: u32): bool acquires EndpointStore {
-        let receive_libs = &oapp_store(receiver).msglibs_receive_libs;
-        table::contains(receive_libs, src_eid)
+        table::contains(&oapp_store(receiver).msglibs_receive_libs, src_eid)
     }
 
     public(friend) fun get_receive_library(receiver: address, src_eid: u32): address acquires EndpointStore {
-        let receive_libs = &oapp_store(receiver).msglibs_receive_libs;
-        *table::borrow(receive_libs, src_eid)
+        *table::borrow(&oapp_store(receiver).msglibs_receive_libs, src_eid)
     }
 
-    public(friend) fun set_oapp_receive_library(
+    public(friend) fun set_receive_library(
         receiver: address,
         src_eid: u32,
         lib: address,
     ) acquires EndpointStore {
-        let receive_libs = &mut oapp_store_mut(receiver).msglibs_receive_libs;
-        table::upsert(receive_libs, src_eid, lib);
+        table::upsert(&mut oapp_store_mut(receiver).msglibs_receive_libs, src_eid, lib);
     }
 
     public(friend) fun unset_receive_library(receiver: address, src_eid: u32): address acquires EndpointStore {
-        let receive_libs = &mut oapp_store_mut(receiver).msglibs_receive_libs;
-        table::remove(receive_libs, src_eid)
+        table::remove(&mut oapp_store_mut(receiver).msglibs_receive_libs, src_eid)
     }
 
     public(friend) fun has_receive_library_timeout(receiver: address, src_eid: u32): bool acquires EndpointStore {
-        let receive_lib_timeout_configs = &oapp_store(receiver).msglibs_receive_lib_timeout_configs;
-        table::contains(receive_lib_timeout_configs, src_eid)
+        table::contains(&oapp_store(receiver).msglibs_receive_lib_timeout_configs, src_eid)
     }
 
     public(friend) fun get_receive_library_timeout(receiver: address, src_eid: u32): Timeout acquires EndpointStore {
-        let receive_lib_grace_period_config = &oapp_store(receiver).msglibs_receive_lib_timeout_configs;
-        *table::borrow(receive_lib_grace_period_config, src_eid)
+        *table::borrow(&oapp_store(receiver).msglibs_receive_lib_timeout_configs, src_eid)
     }
 
     public(friend) fun set_receive_library_timeout(
@@ -490,16 +471,14 @@ module endpoint_v2::store {
         src_eid: u32,
         config: Timeout,
     ) acquires EndpointStore {
-        let receive_lib_timeout_configs = &mut oapp_store_mut(receiver).msglibs_receive_lib_timeout_configs;
-        table::upsert(receive_lib_timeout_configs, src_eid, config);
+        table::upsert(&mut oapp_store_mut(receiver).msglibs_receive_lib_timeout_configs, src_eid, config);
     }
 
-    public(friend) fun unset_grace_period_receive_library_config(
+    public(friend) fun unset_receive_library_timeout(
         receiver: address,
         src_eid: u32,
     ): Timeout acquires EndpointStore {
-        let receive_lib_timeout_configs = &mut oapp_store_mut(receiver).msglibs_receive_lib_timeout_configs;
-        table::remove(receive_lib_timeout_configs, src_eid)
+        table::remove(&mut oapp_store_mut(receiver).msglibs_receive_lib_timeout_configs, src_eid)
     }
 
     // ================================================== Error Codes =================================================

@@ -223,7 +223,8 @@ module layerzero_views::layerzero_views_tests {
         endpoint_v2::endpoint::verify(
             @uln_302,
             get_packet_bytes(packet_header),
-            bytes32::from_bytes32(payload_hash)
+            bytes32::from_bytes32(payload_hash),
+            b"",
         );
 
         assert!(

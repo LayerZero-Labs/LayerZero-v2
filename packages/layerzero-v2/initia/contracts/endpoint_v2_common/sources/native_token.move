@@ -10,6 +10,11 @@ module endpoint_v2_common::native_token {
     use std::object;
     use std::primary_fungible_store;
 
+    public fun balance(account: address): u64 {
+        let metadata = object::address_to_object<Metadata>(@native_token_metadata_address);
+        primary_fungible_store::balance(account, metadata)
+    }
+
     public fun withdraw(account: &signer, amount: u64): FungibleAsset {
         let metadata = object::address_to_object<Metadata>(@native_token_metadata_address);
         primary_fungible_store::withdraw(move account, metadata, amount)

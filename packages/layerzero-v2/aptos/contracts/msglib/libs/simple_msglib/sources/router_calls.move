@@ -52,6 +52,7 @@ module simple_msglib::router_calls {
         call_ref: &DynamicCallRef,
         packet_header: RawPacket,
         _payload_hash: Bytes32,
+        _extra_data: vector<u8>,
     ): (address, u32, Bytes32, u64) {
         assert!(
             get_dynamic_call_ref_caller(call_ref, @simple_msglib, b"commit_verification") == @endpoint_v2,
@@ -75,7 +76,13 @@ module simple_msglib::router_calls {
         abort ENOT_IMPLEMENTED
     }
 
-    public fun set_config(_call_ref: &DynamicCallRef, __oapp: address, _config_type: u32, _config: vector<u8>) {
+    public fun set_config(
+        _call_ref: &DynamicCallRef,
+        __oapp: address,
+        _eid: u32,
+        _config_type: u32,
+        _config: vector<u8>
+    ) {
         abort ENOT_IMPLEMENTED
     }
 
