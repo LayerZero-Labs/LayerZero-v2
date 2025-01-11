@@ -1,0 +1,66 @@
+[package]
+name = "endpoint_v2"
+version = "1.0.0"
+authors = []
+
+[addresses]
+router_node_0 = "_"
+simple_msglib = "_"
+blocked_msglib = "_"
+uln_302 = "_"
+router_node_1 = "_"
+endpoint_v2_common = "_"
+endpoint_v2 = "_"
+layerzero_admin = "_"
+layerzero_treasury_admin = "_"
+msglib_types = "_"
+treasury = "_"
+executor_fee_lib_router_0 = "_"
+executor_fee_lib_router_1 = "_"
+dvn_fee_lib_router_0 = "_"
+dvn_fee_lib_router_1 = "_"
+price_feed_router_0 = "_"
+price_feed_router_1 = "_"
+price_feed_module_0 = "_"
+worker_common = "_"
+executor_fee_lib_0 = "_"
+dvn_fee_lib_0 = "_"
+dvn = "_"
+native_token_metadata_address = "0x8e4733bdabcf7d4afc3d14f0dd46c9bf52fb0fce9e4b996c939e195b8bc891d9"
+
+[dev-addresses]
+router_node_0 = "0x9001"
+simple_msglib = "0x9002"
+blocked_msglib = "0x9003"
+uln_302 = "0x9005"
+router_node_1 = "0x9007"
+endpoint_v2_common = "0x9098"
+endpoint_v2 = "0x12345678"
+layerzero_admin = "0x18943124"
+layerzero_treasury_admin = "0x1894312499"
+msglib_types = "0x5211234"
+treasury = "0x123432432"
+executor_fee_lib_router_0 = "0x30001"
+executor_fee_lib_router_1 = "0x3465342143"
+dvn_fee_lib_router_0 = "0x30001a"
+dvn_fee_lib_router_1 = "0x3465342143a"
+price_feed_router_0 = "0x65DD71A"
+price_feed_router_1 = "0x65DD71AB"
+price_feed_module_0 = "0x65DD71"
+worker_common = "0x3999"
+executor_fee_lib_0 = "0x3000"
+dvn_fee_lib_0 = "0x3000a"
+dvn = "0x22314321"
+
+[dev-dependencies]
+simple_msglib = { local = "../msglib/libs/simple_msglib" }
+uln_302 = { local = "../msglib/libs/uln_302" }
+worker_common = { local = "../worker_peripherals/worker_common" }
+executor_fee_lib_0 = { local = "../worker_peripherals/fee_libs/executor_fee_lib_0" }
+dvn_fee_lib_0 = { local = "../worker_peripherals/fee_libs/dvn_fee_lib_0" }
+
+[dependencies]
+msglib_types = { local = "../msglib/msglib_types" }
+router_node_0 = { local = "../msglib/routers/router_node_0" }
+endpoint_v2_common = { local = "../endpoint_v2_common" }
+price_feed_module_0 = { local = "../worker_peripherals/price_feed_modules/price_feed_module_0" }

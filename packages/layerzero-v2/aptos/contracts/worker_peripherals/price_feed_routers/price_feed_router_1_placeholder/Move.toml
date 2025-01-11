@@ -1,0 +1,14 @@
+[package]
+name = "price_feed_router_1"
+version = "1.0.0"
+
+[addresses]
+price_feed_router_1 = "_"
+
+[dev-addresses]
+price_feed_router_1 = "0x2142134"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
