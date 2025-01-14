@@ -63,7 +63,7 @@ sudo sysadminctl -addUser carmencheng -fullName "" -password admin
 sudo dscl . -append /Groups/admin GroupMembership carmencheng
 ```
 
-Note:  You *must* use `charmencheng` as the username due to tooling limitations.
+Note:  You *must* use `carmencheng` as the username due to tooling limitations.
 
 After creating the account, switch to it by running:
 
