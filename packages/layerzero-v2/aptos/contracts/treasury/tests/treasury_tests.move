@@ -1,17 +1,40 @@
 #[test_only]
 module treasury::treasury_tests {
+    use std::account::create_account_for_test;
     use std::account::{Self, create_signer_for_test};
     use std::event::was_event_emitted;
     use std::fungible_asset;
     use std::primary_fungible_store;
+    use std::signer::address_of;
 
     use endpoint_v2_common::native_token_test_helpers::{burn_token_for_test, mint_native_token_for_test};
     use endpoint_v2_common::universal_config;
     use endpoint_v2_common::zro_test_helpers::create_fa;
     use treasury::treasury::{
         deposit_address_updated_event, get_native_bp, get_zro_fee, init_module_for_test, native_bp_set_event, pay_fee,
-        set_native_bp, set_zro_enabled, set_zro_fee, update_deposit_address, zro_enabled_set_event, zro_fee_set_event,
+        set_native_bp, set_zro_enabled, set_zro_fee, transfer_treasury_admin, treasury_admin_transferred_event,
+        update_deposit_address, zro_enabled_set_event, zro_fee_set_event,
     };
+
+    #[test]
+    fun test_transfer_treasury_admin() {
+        let lz = &create_account_for_test(@layerzero_treasury_admin);
+        init_module_for_test();
+        let new_admin = &create_account_for_test(@0x1234);
+        transfer_treasury_admin(lz, address_of(new_admin));
+        assert!(was_event_emitted(&treasury_admin_transferred_event(address_of(new_admin))), 0);
+        transfer_treasury_admin(new_admin, @layerzero_treasury_admin);
+        assert!(was_event_emitted(&treasury_admin_transferred_event(@layerzero_treasury_admin)), 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = treasury::treasury::EUNAUTHORIZED)]
+    fun test_transfer_treasury_admin_should_fail_if_not_treasury_admin() {
+        let non_admin = &create_account_for_test(@0x1234);
+        let new_admin = &create_account_for_test(@0x5678);
+        init_module_for_test();
+        transfer_treasury_admin(non_admin, address_of(new_admin));
+    }
 
     #[test]
     fun test_fee_payment_using_native() {

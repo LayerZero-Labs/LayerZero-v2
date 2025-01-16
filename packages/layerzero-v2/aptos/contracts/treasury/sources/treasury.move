@@ -11,12 +11,11 @@ module treasury::treasury {
     #[test_only]
     friend treasury::treasury_tests;
 
-    const TREASURY_ADMIN: address = @layerzero_treasury_admin;
-
     // Treasury Fee cannot be set above 100%
     const MAX_BPS: u64 = 10000;
 
     struct TreasuryConfig has key {
+        admin: address,
         // The native treasury fee (in basis points of worker fee subtotal)
         native_fee_bps: u64,
         // The ZRO treasury fee (a fixed amount per message)
@@ -29,10 +28,12 @@ module treasury::treasury {
 
     fun init_module(account: &signer) {
         move_to(account, TreasuryConfig {
+            // The initial admin address is @layerzero_treasury_admin, which can be transferred
+            admin: @layerzero_treasury_admin,
             native_fee_bps: 0,
             zro_fee: 0,
             zro_enabled: false,
-            deposit_address: TREASURY_ADMIN,
+            deposit_address: @layerzero_treasury_admin,
         });
     }
 
@@ -45,7 +46,18 @@ module treasury::treasury {
     // ================================================== Admin Only ==================================================
 
     inline fun assert_admin(admin: address) {
-        assert!(admin == TREASURY_ADMIN, EUNAUTHORIZED);
+        assert!(admin == config().admin, EUNAUTHORIZED);
+    }
+
+    /// Transfers the treasury admin to a new address
+    /// Important: Transferring the admin to a new address will not automatically update the deposit address. The
+    /// deposit address must be updated separately using `update_deposit_address()`
+    public entry fun transfer_treasury_admin(account: &signer, new_admin: address) acquires TreasuryConfig {
+        assert_admin(address_of(move account));
+        assert!(account::exists_at(new_admin), EINVALID_ACCOUNT_ADDRESS);
+        assert!(new_admin != config().admin, ENO_CHANGE);
+        config_mut().admin = new_admin;
+        emit(TreasuryAdminTransferred { new_admin });
     }
 
     /// Updates the address to which the treasury fee is sent (must be a valid account)
@@ -79,6 +91,9 @@ module treasury::treasury {
     }
 
     // =============================================== Public Functions ===============================================
+
+    #[view]
+    public fun layerzero_treasury_admin(): address acquires TreasuryConfig { config().admin }
 
     #[view]
     /// Calculates the treasury fee based on the worker fee (excluding treasury) and whether the fee should be paid in
@@ -143,6 +158,11 @@ module treasury::treasury {
     // ==================================================== Events ====================================================
 
     #[event]
+    struct TreasuryAdminTransferred has drop, store {
+        new_admin: address,
+    }
+
+    #[event]
     struct ZroEnabledSet has drop, store {
         enabled: bool,
     }
@@ -160,6 +180,11 @@ module treasury::treasury {
     #[event]
     struct DepositAddressUpdated has drop, store {
         new_deposit_address: address,
+    }
+
+    #[test_only]
+    public fun treasury_admin_transferred_event(new_admin: address): TreasuryAdminTransferred {
+        TreasuryAdminTransferred { new_admin }
     }
 
     #[test_only]
@@ -187,6 +212,7 @@ module treasury::treasury {
     const EUNEXPECTED_TOKEN_TYPE: u64 = 1;
     const EINVALID_ACCOUNT_ADDRESS: u64 = 2;
     const EINVALID_FEE: u64 = 3;
-    const EPAY_IN_ZRO_NOT_ENABLED: u64 = 4;
-    const EUNAUTHORIZED: u64 = 5;
+    const ENO_CHANGE: u64 = 4;
+    const EPAY_IN_ZRO_NOT_ENABLED: u64 = 5;
+    const EUNAUTHORIZED: u64 = 6;
 }

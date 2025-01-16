@@ -1,14 +1,36 @@
 #[test_only]
 module endpoint_v2_common::universal_config_tests {
+    use std::account::create_account_for_test;
     use std::account::create_signer_for_test;
+    use std::event::was_event_emitted;
     use std::fungible_asset;
 
     use endpoint_v2_common::native_token_test_helpers::burn_token_for_test;
     use endpoint_v2_common::universal_config::{
         assert_zro_metadata_set, eid, get_zro_address, get_zro_metadata, has_zro_metadata, init_module_for_test,
-        initialize, is_zro, is_zro_metadata, lock_zro_address, set_zro_address,
+        initialize, is_zro, is_zro_metadata, layerzero_admin_transferred_event, lock_zro_address, set_zro_address,
+        transfer_layerzero_admin,
     };
     use endpoint_v2_common::zro_test_helpers::create_fa;
+
+    #[test]
+    fun test_transfer_layerzero_admin() {
+        init_module_for_test(0);  // Initializing to 0 = not initialized state
+        let lz_admin = &create_account_for_test(@layerzero_admin);
+        let account_1234 = &create_account_for_test(@0x1234);
+        transfer_layerzero_admin(lz_admin, @0x1234);
+        assert!(was_event_emitted(&layerzero_admin_transferred_event(@0x1234)), 0);
+        transfer_layerzero_admin(account_1234, @layerzero_admin);
+        assert!(was_event_emitted(&layerzero_admin_transferred_event(@layerzero_admin)), 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = endpoint_v2_common::universal_config::EUNAUTHORIZED)]
+    fun test_transfer_layerzero_admin_should_fail_if_not_layerzero_admin() {
+        init_module_for_test(0);  // Initializing to 0 = not initialized state
+        let lz_admin = &create_account_for_test(@0x1234);
+        transfer_layerzero_admin(lz_admin, @0x1234);
+    }
 
     #[test]
     fun test_eid() {

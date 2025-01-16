@@ -3,6 +3,7 @@
 module uln_302::admin {
     use std::signer::address_of;
 
+    use endpoint_v2_common::universal_config::assert_layerzero_admin;
     use msglib_types::configs_executor::new_executor_config;
     use msglib_types::configs_uln::new_uln_config;
     use uln_302::configuration;
@@ -16,7 +17,7 @@ module uln_302::admin {
         required_dvns: vector<address>,
         optional_dvns: vector<address>,
     ) {
-        assert_admin(address_of(move account));
+        assert_layerzero_admin(address_of(move account));
         configuration::set_default_send_uln_config(
             dst_eid,
             new_uln_config(
@@ -40,7 +41,7 @@ module uln_302::admin {
         required_dvns: vector<address>,
         optional_dvns: vector<address>,
     ) {
-        assert_admin(address_of(move account));
+        assert_layerzero_admin(address_of(move account));
         configuration::set_default_receive_uln_config(
             src_eid,
             new_uln_config(
@@ -62,14 +63,9 @@ module uln_302::admin {
         max_message_size: u32,
         executor_address: address,
     ) {
-        assert_admin(address_of(move account));
+        assert_layerzero_admin(address_of(move account));
         let config = new_executor_config(max_message_size, executor_address);
         configuration::set_default_executor_config(eid, config)
-    }
-
-    /// Internal function to assert that the caller is the admin
-    fun assert_admin(admin: address) {
-        assert!(admin == @layerzero_admin, ENOT_AUTHORIZED);
     }
 
     // ================================================== Error Codes =================================================

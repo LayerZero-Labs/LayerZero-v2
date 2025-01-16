@@ -1,5 +1,5 @@
 module simple_msglib::msglib {
-    const ADMIN: address = @layerzero_admin;
+    use endpoint_v2_common::universal_config::assert_layerzero_admin;
 
     // Simple message lib has globally fixed fees
     struct SimpleMessageLibConfig has key {
@@ -21,7 +21,7 @@ module simple_msglib::msglib {
         native_fee: u64,
         zro_fee: u64,
     ) acquires SimpleMessageLibConfig {
-        assert!(std::signer::address_of(move account) == ADMIN, EUNAUTHORIZED);
+        assert_layerzero_admin(std::signer::address_of(move account));
         let msglib_config = borrow_global_mut<SimpleMessageLibConfig>(@simple_msglib);
         msglib_config.native_fee = native_fee;
         msglib_config.zro_fee = zro_fee;
