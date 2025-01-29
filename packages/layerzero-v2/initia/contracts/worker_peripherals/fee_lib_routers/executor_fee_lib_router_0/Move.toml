@@ -1,0 +1,38 @@
+[package]
+name = "executor_fee_lib_router_0"
+version = "1.0.0"
+
+[addresses]
+executor_fee_lib_router_0 = "_"
+executor_fee_lib_router_1 = "_"
+price_feed_router_0 = "_"
+price_feed_router_1 = "_"
+price_feed_module_0 = "_"
+endpoint_v2_common = "_"
+endpoint_v2 = "_"
+layerzero_admin = "_"
+layerzero_treasury_admin = "_"
+worker_common = "_"
+executor_fee_lib_0 = "_"
+msglib_types = "_"
+
+[dev-addresses]
+executor_fee_lib_router_0 = "0x30001"
+executor_fee_lib_router_1 = "0x30001a"
+price_feed_router_0 = "0x65DD71A"
+price_feed_router_1 = "0x65DD71AB"
+price_feed_module_0 = "0x65DD71"
+endpoint_v2_common = "0x9098"
+endpoint_v2 = "0x12345678"
+layerzero_admin = "0x18943124"
+layerzero_treasury_admin = "0x1894312499"
+worker_common = "0x3999"
+executor_fee_lib_0 = "0x32123523"
+msglib_types = "0x13242342"
+
+[dependencies]
+endpoint_v2_common = { local = "../../../endpoint_v2_common" }
+worker_common = { local = "../../worker_common" }
+executor_fee_lib_router_1 = { local = "../../fee_lib_routers/executor_fee_lib_router_1_placeholder" }
+executor_fee_lib_0 = { local = "../../fee_libs/executor_fee_lib_0" }
+price_feed_module_0 = { local = "../../price_feed_modules/price_feed_module_0" }

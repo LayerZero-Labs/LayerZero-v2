@@ -1,0 +1,16 @@
+[package]
+name = "dvn_fee_lib_router_1"
+version = "1.0.0"
+
+[addresses]
+dvn_fee_lib_router_1 = "_"
+
+[dev-addresses]
+dvn_fee_lib_router_1 = "0x3294873"
+
+[dependencies.InitiaStdlib]
+git = "https://github.com/initia-labs/move-natives.git"
+rev = "77d5f3e140143bdaa41f850115b3035c134193e3"
+subdir = "initia_stdlib"
+
+[dev-dependencies]
