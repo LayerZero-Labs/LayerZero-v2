@@ -139,6 +139,33 @@ module dvn::dvn {
         worker_config::set_price_feed(call_ref(), price_feed, feed_address);
     }
 
+    /// Set the price feed delegate for the DVN
+    public entry fun set_price_feed_delegate(
+        account: &signer,
+        price_feed_delegate: address,
+    ) acquires DvnStore {
+        assert_admin(address_of(move account));
+        worker_config::set_price_feed_delegate(call_ref(), price_feed_delegate);
+    }
+
+    /// Set the default multiplier bps for the premium calculation
+    public entry fun set_default_multiplier_bps(
+        account: &signer,
+        default_multiplier_bps: u16,
+    ) acquires DvnStore {
+        assert_admin(address_of(move account));
+        worker_config::set_default_multiplier_bps(call_ref(), default_multiplier_bps);
+    }
+
+    /// Set the supported option types for the DVN
+    public entry fun set_supported_option_types(
+        account: &signer,
+        option_types: vector<u8>,
+    ) acquires DvnStore {
+        assert_admin(address_of(move account));
+        worker_config::set_supported_option_types(call_ref(), option_types);
+    }
+
     // =========================================== Admin /w Signatures Only ===========================================
 
     /// Add or remove a dvn signer (public key)
@@ -231,7 +258,7 @@ module dvn::dvn {
         worker_config::set_worker_fee_lib(call_ref(), fee_lib);
     }
 
-    // Pause or unpause the DVN
+    /// Pause or unpause the DVN
     public entry fun set_pause(
         account: &signer,
         pause: bool,
@@ -278,6 +305,19 @@ module dvn::dvn {
     /// Returns the deposit address for the DVN. The message library will send fees to this address
     public fun get_deposit_address(): address {
         worker_config::get_deposit_address(@dvn)
+    }
+
+    #[view]
+    /// Returns the price feed address for the DVN
+    /// @returns (price_feed, feed_address)
+    public fun get_effective_price_feed(): (address, address) {
+        worker_config::get_effective_price_feed(@dvn)
+    }
+
+    #[view]
+    /// Returns the price feed delegate for the DVN
+    public fun get_price_feed_delegate(): address {
+        worker_config::get_price_feed_delegate(@dvn)
     }
 
     #[view]

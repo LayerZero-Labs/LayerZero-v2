@@ -9,6 +9,7 @@ layerzero_admin = "_"
 layerzero_treasury_admin = "_"
 worker_common = "_"
 native_token_metadata_address = "0x8e4733bdabcf7d4afc3d14f0dd46c9bf52fb0fce9e4b996c939e195b8bc891d9"
+# For Initia: "0x8e4733bdabcf7d4afc3d14f0dd46c9bf52fb0fce9e4b996c939e195b8bc891d9"
 
 [dev-addresses]
 endpoint_v2 = "0x13241234"
