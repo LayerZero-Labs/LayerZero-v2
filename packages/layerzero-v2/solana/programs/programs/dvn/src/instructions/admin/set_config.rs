@@ -15,7 +15,13 @@ pub struct SetConfig<'info> {
 
 impl SetConfig<'_> {
     pub fn apply(ctx: &mut Context<SetConfig>, params: &SetConfigParams) -> Result<()> {
-        params.config.apply(&mut ctx.accounts.config)?;
+        let account_size = ctx.accounts.config.to_account_info().data_len();
+        let dst_configs_max_len = if account_size > (DvnConfig::INIT_SPACE + 8) {
+            DST_CONFIG_MAX_LEN
+        } else {
+            DST_CONFIG_DEFAULT_LEN
+        };
+        params.config.apply(dst_configs_max_len, &mut ctx.accounts.config)?;
         emit_cpi!(AdminConfigSetEvent { config: params.config.clone() });
         Ok(())
     }
@@ -36,7 +42,7 @@ pub enum AdminConfig {
 }
 
 impl AdminConfig {
-    pub fn apply(&self, config: &mut DvnConfig) -> Result<()> {
+    pub fn apply(&self, dst_configs_max_len: usize, config: &mut DvnConfig) -> Result<()> {
         match self {
             AdminConfig::Admins(admins) => {
                 config.set_admins(admins.clone())?;
@@ -45,7 +51,7 @@ impl AdminConfig {
                 config.default_multiplier_bps = *default_multiplier_bps;
             },
             AdminConfig::DstConfigs(dst_configs) => {
-                config.set_dst_configs(dst_configs.clone())?;
+                config.set_dst_configs(dst_configs_max_len, dst_configs.clone())?;
             },
             AdminConfig::PriceFeed(price_feed) => {
                 config.price_feed = *price_feed;
