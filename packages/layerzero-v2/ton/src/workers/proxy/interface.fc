@@ -1,0 +1,12 @@
+;;; ==========================OPCODES=====================================
+const int Proxy::OP::CALL_CONTRACT = "Proxy::OP::CALL_CONTRACT"c;
+const int Proxy::OP::EMIT_EVENT = "Proxy::OP::EMIT_EVENT"c;
+
+;; this is the opcode that we will "send out" of proxy to specify the callback
+;; note that every other opcode that's namespaced by some contract is handled by the contract itself
+;; but in this case, this opcode is handled by the target contract
+const int Proxy::OP::HANDLE_CALLBACK = "Proxy::OP::HANDLE_CALLBACK"c;
+
+const int Proxy::OP::TOGGLE_CALLBACK = "Proxy::OP::TOGGLE_CALLBACK"c;
+
+const int Proxy::ERROR::NOT_LATEST_ADMIN = 1919;

@@ -1,0 +1,46 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required storage name
+const int DvnFeesPaidEvent::NAME = "DvnFeePaid"u;
+
+const int DvnFeesPaidEvent::CONSTS::NULL_WORKER_ID = 0;
+
+;; field names
+const int DvnFeesPaidEvent::requiredDVNs = 0;
+const int DvnFeesPaidEvent::optionalDVNs = 1;
+const int DvnFeesPaidEvent::serializedPayees = 2;
+
+cell DvnFeesPaidEvent::New(
+    cell requiredDVNs,
+    cell optionalDVNs,
+    cell serializedPayees
+) impure inline method_id {
+    return cl::declare(
+        DvnFeesPaidEvent::NAME,
+        unsafeTuple([
+            [cl::t::addressList, requiredDVNs],       ;; DvnFeesPaidEvent::requiredDVNs
+            [cl::t::addressList, optionalDVNs],       ;; DvnFeesPaidEvent::optionalDVNs
+            [cl::t::objRef, serializedPayees]         ;; DvnFeesPaidEvent::serializedPayees
+        ])
+    );
+}
+
+;; ========================= Object Builders =========================
+
+const int DvnFeesPaidEvent::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 3);
+const int DvnFeesPaidEvent::_headerFillerBits = _HEADER_WIDTH - DvnFeesPaidEvent::_headerInfoBits;
+const int DvnFeesPaidEvent::_headerInfo = 5824155608645736562295029517863768977404;
+
+cell DvnFeesPaidEvent::build(cell requiredDVNs, cell optionalDVNs, cell serializedPayees) impure inline {
+    return begin_cell()
+        .store_uint(DvnFeesPaidEvent::_headerInfo, DvnFeesPaidEvent::_headerInfoBits) ;; header info
+        .store_ones(DvnFeesPaidEvent::_headerFillerBits)                              ;; header filler
+        .store_ref(requiredDVNs)                                                      ;; refs[0]
+        .store_ref(optionalDVNs)                                                      ;; refs[1]
+        .store_ref(
+            begin_cell()
+                .store_ref(serializedPayees)                                          ;; refs[2]
+            .end_cell()
+        )
+        .end_cell();
+}

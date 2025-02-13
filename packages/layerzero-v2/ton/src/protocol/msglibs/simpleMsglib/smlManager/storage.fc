@@ -1,0 +1,38 @@
+#include "../../../core/baseStorage.fc";
+
+const int SmlManager::NAME = "smlMgr"u;
+
+const int SmlManager::baseStorage = 0;
+
+const int SmlManager::eid = 1;
+const int SmlManager::verison = 2;
+
+;; configurations, only owner?
+const int SmlManager::nativeFee = 3;
+const int SmlManager::zroFee = 4;
+
+;; Dict256 hash(header) => hash(message)
+const int SmlManager::packets = 5;
+const int SmlManager::controllerAddress = 6;
+const int SmlManager::endpointCode = 7;
+const int SmlManager::channelCode = 8;
+const int SmlManager::smlConnectionCode = 9;
+
+;; @owner LayerZero admin EOA
+cell SmlManager::New(int owner, int eid, int version, int controllerAddress, cell endpointCode, cell channelCode, cell smlConnectionCode) method_id {
+    return cl::declare(
+        SmlManager::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)], ;; SmlManager::baseStorage
+            [cl::t::uint32, eid], ;; SmlManager::eid
+            [cl::t::uint8, version], ;; SmlManager::version
+            [cl::t::coins, 0], ;; SmlManager::nativeFee
+            [cl::t::coins, 0], ;; SmlManager::zroFee
+            [cl::t::dict256, cl::dict256::New()], ;; SmlManager::packets
+            [cl::t::address, controllerAddress], ;; SmlManager::controllerAddress
+            [cl::t::cellRef, endpointCode], ;; SmlManager::endpointCode
+            [cl::t::cellRef, channelCode], ;; SmlManager::channelCode
+            [cl::t::cellRef, smlConnectionCode] ;; SmlManager::smlConnectionCode
+        ])
+    );
+}

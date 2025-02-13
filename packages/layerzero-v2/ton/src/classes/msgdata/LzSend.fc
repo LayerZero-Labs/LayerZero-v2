@@ -1,0 +1,186 @@
+#include "../../funC++/classlib.fc";
+#include "../lz/Packet.fc";
+
+;; required storage name
+const int md::LzSend::NAME = "lzSend"u;
+
+;; field names
+const int md::LzSend::sendRequestId = 0;
+const int md::LzSend::sendMsglibManager = 1;
+const int md::LzSend::sendMsglib = 2;
+const int md::LzSend::sendMsglibConnection = 3;
+const int md::LzSend::packet = 4;
+const int md::LzSend::nativeFee = 5;
+const int md::LzSend::zroFee = 6;
+const int md::LzSend::extraOptions = 7;
+const int md::LzSend::enforcedOptions = 8;
+const int md::LzSend::callbackData = 9;
+
+cell md::LzSend::New(
+    int nativeFee,
+    int zroFee,
+    cell $extraOptions,
+    cell $enforcedOptions,
+    cell $packet,
+    cell callbackData
+) impure inline method_id {
+    return cl::declare(
+        md::LzSend::NAME,
+        unsafeTuple([
+            [cl::t::uint64, 0],                 ;; md::LzSend::sendRequestId
+            [cl::t::address, NULLADDRESS],      ;; md::LzSend::sendMsglibManager
+            [cl::t::address, NULLADDRESS],      ;; md::lzSend::sendMsglib
+            [cl::t::address, NULLADDRESS],      ;; md::lzSend::sendMsglibConnection
+            [cl::t::objRef, $packet],           ;; md::LzSend::packet
+            [cl::t::coins, nativeFee],          ;; md::LzSend::nativeFee
+            [cl::t::coins, zroFee],             ;; md::LzSend::zroFee
+            [cl::t::objRef, $extraOptions],     ;; md::LzSend::extraOptions
+            [cl::t::objRef, $enforcedOptions],  ;; md::LzSend::enforcedOptions
+            [cl::t::objRef, callbackData]       ;; md::LzSend::callbackData
+        ])
+    );
+}
+
+const int md::LzSend::_headerPostNameBits = 180;
+const int md::LzSend::_headerFillerBits = _HEADER_WIDTH - (md::LzSend::_headerPostNameBits + _NAME_WIDTH);
+const int md::LzSend::_headerInfo = 582890735024998957421269964955452773563747974476099581;
+
+;; ========================== Object Builders ==========================
+
+;; this function is unused by the protocol but will be used by OApps
+cell md::LzSend::build(
+    int nativeFee,
+    int zroFee,
+    cell $extraOptions,
+    cell $enforcedOptions,
+    cell $packet,
+    cell callbackData
+) impure inline {
+    return begin_cell()
+        .store_uint(md::LzSend::NAME, _NAME_WIDTH)
+        .store_uint(md::LzSend::_headerInfo, md::LzSend::_headerPostNameBits)
+        .store_ones(md::LzSend::_headerFillerBits)
+        .store_uint64(0)                       ;; sendRequestId
+        .store_uint256(NULLADDRESS)            ;; sendMsglibManager
+        .store_uint256(NULLADDRESS)            ;; sendMsglib
+        .store_ref($packet)
+        .store_ref($extraOptions)
+        .store_ref(
+            begin_cell()
+                .store_uint256(NULLADDRESS)    ;; sendMsglibConnection
+                .store_uint128(nativeFee)      ;; nativeFee
+                .store_uint128(zroFee)         ;; zroFee
+                .store_ref($enforcedOptions)   ;; enforcedOptions
+                .store_ref(callbackData)       ;; callbackData
+                .end_cell()
+        )
+        .end_cell();
+}
+
+;; ====================== Object Accessors =====================
+
+;; in root cell
+const int md::LzSend::_sendRequestIdffset = _HEADER_WIDTH;
+const int md::LzSend::_sendMsglibManagerOffset = md::LzSend::_sendRequestIdffset + 64;
+const int md::LzSend::_sendMsglibOffset = md::LzSend::_sendMsglibManagerOffset + 256;
+
+;; in ref[2]
+const int md::LzSend::_sendMsglibConnectionOffset = 0;
+const int md::LzSend::_nativeFeeOffset = md::LzSend::_sendMsglibConnectionOffset + 256;
+const int md::LzSend::_zroFeeOffset = md::LzSend::_nativeFeeOffset + 128;
+
+int md::LzSend::getSendRequestId(cell $self) impure inline {
+    return $self.cellPreloadUint64At(md::LzSend::_sendRequestIdffset);
+}
+
+int md::LzSend::getSendMsglib(cell $self) impure inline {
+    return $self.cellPreloadAddressAt(md::LzSend::_sendMsglibOffset);
+}
+
+cell md::LzSend::getPacket(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0);
+}
+
+;; gets the path from the packet inside the LzSend
+cell md::LzSend::getPath(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0).cellPreloadRefAt(0);
+}
+
+;; (requestId, nativeFee, zroFee, extraOptions, enforcedOptions, sendMsglibManager)
+(int, int, int, cell, cell, int) md::LzSend::deserializeSendCallback(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2Slice = selfSlice.preloadRefSliceAt(2);
+    return (
+        selfSlice.preloadUint64At(md::LzSend::_sendRequestIdffset),
+        ref2Slice.preloadCoinsAt(md::LzSend::_nativeFeeOffset),
+        ref2Slice.preloadCoinsAt(md::LzSend::_zroFeeOffset),
+        selfSlice.preloadRefAt(1),
+        ref2Slice.preloadRefAt(0),
+        selfSlice.preloadAddressAt(md::LzSend::_sendMsglibManagerOffset)
+    );
+}
+
+;; (packet, extraOptions, enforcedOptions)
+(cell, cell, cell) md::LzSend::getQuoteInformation(cell $self) impure inline {
+    return (
+        $self.cellPreloadRefAt(0),
+        $self.cellPreloadRefAt(1),
+        $self.cellPreloadRefAt(2).cellPreloadRefAt(0)
+    );
+}
+
+(cell, cell) md::LzSend::getPacketAndCallbackData(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadRefAt(0),
+        selfSlice.preloadRefSliceAt(2).preloadRefAt(1)
+    );
+}
+
+;; ====================== Object Composite Modifiers =====================
+
+const int md::lzSend::requestInfoWidth = _HEADER_WIDTH + 64 + 256 + 256;
+;; Can't easily store a slice constant because the header isn't byte-aligned
+const int md::lzSend::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 10);
+const int md::lzSend::_headerPrefix = 11424049401754228397633815938683071207390004427712457772775726065407;
+const int md::lzSend::_headerSuffix = 17331160549995323848587739135;
+const int md::lzSend::_headerTrailingBits = _HEADER_WIDTH - 256;
+
+cell md::LzSend::fillRequestInfo(
+    cell $self,
+    int requestId,
+    int sendMsglibManager,
+    int sendMsglib,
+    int sendMsglibConnection
+) impure inline method_id {
+    slice selfslice = $self.begin_parse();
+    slice ref2Slice = selfslice.preloadRefSliceAt(2);
+
+    ;; Fill in the fields AND overwrite the entire header to match the expected format
+    return begin_cell()
+        .store_uint256(md::lzSend::_headerPrefix)
+        .store_uint(md::lzSend::_headerSuffix, md::lzSend::_headerTrailingBits)
+        .store_slice(selfslice.scutfirst(0, 2))
+        .store_uint64(requestId)
+        .store_uint256(sendMsglibManager)
+        .store_uint256(sendMsglib)
+        .store_ref(
+            begin_cell()
+                .store_uint256(sendMsglibConnection)
+                .store_slice(ref2Slice.sskipfirst(md::LzSend::_nativeFeeOffset, 0))
+                .end_cell()
+        )
+        .end_cell();
+}
+
+cell md::LzSend::setPacketNonceAndGuid(cell $self, int packetNonce, int packetGuid) impure inline {
+    slice selfSlice = $self.begin_parse();
+
+    cell $newPacket = selfSlice~load_ref()
+        .lz::Packet::setNonceAndGuid(packetNonce, packetGuid);
+
+    return begin_cell()
+        .store_ref($newPacket)
+        .store_slice(selfSlice)
+        .end_cell();
+}

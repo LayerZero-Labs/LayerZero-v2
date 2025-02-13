@@ -1,0 +1,24 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required md name
+const int md::SetAdminWorkerAddresses::NAME = "adminwork"u;
+
+;; field names
+
+;; AddressList
+const int md::SetAdminWorkerAddresses::adminWorkers = 0;
+
+cell md::SetAdminWorkerAddresses::New(cell adminWorkers) impure inline method_id {
+    return cl::declare(
+        md::SetAdminWorkerAddresses::NAME,
+        unsafeTuple([
+            [cl::t::addressList, adminWorkers] ;; md::SetAdminWorkerAddresses::adminWorkers
+        ])
+    );
+}
+
+cell md::SetAdminWorkerAddresses::sanitize(cell $setAdminWorkerAddresses) impure inline_ref {
+    cell adminWorkers = $setAdminWorkerAddresses.cl::get<cellRef>(md::SetAdminWorkerAddresses::adminWorkers);
+
+    return md::SetAdminWorkerAddresses::New(adminWorkers);
+}

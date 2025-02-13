@@ -1,0 +1,37 @@
+#include "../workerCoreStorage.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/utils.fc";
+
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "WorkerCore::Serde"; }
+
+;; WorkerCore: Has 2 getters,
+(int, slice) Serde::WorkerCoreStorage::getAdmins(cell $unused) impure {
+    cell $storage = WorkerCoreStorage::New(MOCK_ADMIN_WORKER_LIST(), PROXY_ADDRESS, 1);
+    return test::getRef::equal(
+        $storage,
+        WorkerCoreStorage::getAdmins,
+        WorkerCoreStorage::admins
+    );
+}
+
+(int, slice) Serde::WorkerCoreStorage::getProxy(cell $unused) impure {
+    cell $storage = WorkerCoreStorage::New(MOCK_ADMIN_WORKER_LIST(), PROXY_ADDRESS, 1);
+    return test::getData::equal(
+        $storage,
+        WorkerCoreStorage::getProxy,
+        WorkerCoreStorage::proxy
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::WorkerCoreStorage::getAdmins, "Serde::WorkerCoreStorage::getAdmins"])
+        .tpush([Serde::WorkerCoreStorage::getProxy, "Serde::WorkerCoreStorage::getProxy"])
+    ;
+}

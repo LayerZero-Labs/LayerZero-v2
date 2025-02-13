@@ -1,0 +1,40 @@
+#include "handler.fc";
+#include "interface.fc";
+
+#include "../../interface.fc"; ;; msglib interface
+
+#include "../../../core/abstract/protocolMain.fc";
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == UlnManager::OP::DEPLOY_ULN) {
+        return deployUln($md);
+    } elseif (op == MsglibManager::OP::DEPLOY_CONNECTION) {
+        return deployUlnConnection($md);
+    } elseif (op == MsglibManager::OP::GET_MSGLIB_INFO) {
+        return getMsglibInfo($md);
+    } elseif (op == UlnManager::OP::SET_DEFAULT_ULN_SEND_CONFIG) {
+        return setDefaultUlnSendConfig($md);
+    } elseif (op == UlnManager::OP::SET_DEFAULT_ULN_RECEIVE_CONFIG) {
+        return setDefaultUlnReceiveConfig($md);
+    } elseif (op == MsglibManager::OP::SET_OAPP_MSGLIB_RECEIVE_CONFIG) {
+        return setOAppUlnReceiveConfig($md);
+    } elseif (op == MsglibManager::OP::SET_OAPP_MSGLIB_SEND_CONFIG) {
+        return setOAppUlnSendConfig($md);
+    } elseif (op == UlnManager::OP::CLAIM_TREASURY_FEES) {
+        return claimTreasuryFees($md);
+    } elseif (op == UlnManager::OP::ADD_ULN_WORKER) {
+        return addWorkerFeelibToUln($md);
+    } elseif (op == UlnManager::OP::REGISTER_WORKER_FEELIB_BYTECODE) {
+        return registerWorkerFeelibBytecode($md);
+    } elseif (op == UlnManager::OP::SET_ADMIN_WORKERS) {
+        return setAdminWorkers($md);
+    } elseif (op == UlnManager::OP::SET_ULN_TREASURY_FEE_BPS) {
+        return setUlnTreasuryFeeBps($md);
+    } elseif (op == UlnManager::OP::TRANSFER_OWNERSHIP) {
+        return transferOwnership($md);
+    } elseif (op == UlnManager::OP::CLAIM_OWNERSHIP) {
+        return claimOwnership($md);
+    }
+    throw(BaseInterface::ERROR::invalidOpcode);
+    return null();
+}

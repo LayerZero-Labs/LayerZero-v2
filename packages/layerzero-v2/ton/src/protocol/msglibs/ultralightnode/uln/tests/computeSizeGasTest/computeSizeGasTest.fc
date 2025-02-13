@@ -1,0 +1,62 @@
+#include "../../../../../core/abstract/protocolHandler.fc";
+#include "../../../../../core/abstract/protocolMain.fc";
+#include "../../../../../../classes/msgdata/MdAddress.fc";
+#include "storage.fc";
+
+;;; ==========================OPCODES=====================================
+
+const int ComputeSizeGasTest::OP::ADD_TO_MOCK_DICT = 111;
+
+;;; ==========================HELPER FUNCTIONS=====================================
+
+(cell, tuple) _initialize(cell $md) impure inline {
+    return preamble();
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _checkPermissions(int op, cell $md) impure inline {
+    return ();
+}
+
+;;; ================HANDLER FUNCTIONS=====================
+
+tuple addToMockDict(cell $mdAddress) impure inline {
+    cell $storage = getContractStorage();
+    int index = $mdAddress.cl::get<address>(md::MdAddress::address);
+    cell $md = $mdAddress.cl::get<objRef>(md::MdAddress::md);
+    
+    cell mockDict = $storage
+        .cl::get<dict256>(ComputeSizeGasTest::mockDict)
+        .cl::dict256::setRef(index, $md);
+
+    setContractStorage(
+        $storage.cl::set(ComputeSizeGasTest::mockDict, mockDict)
+    );
+
+    int initGas = get_gas_consumed();
+    (int n_cell, int n_bits, int n_refs, int success) = compute_data_size?(mockDict, MAX_U64);
+    int totalGas = get_gas_consumed() - initGas;
+    ~dump(totalGas);
+    ~strdump("number of cells: ");
+    ~dump(n_cell);
+
+    ~strdump("just to make sure the indexes are different: ");
+    ~dump(index);
+    (cell x, int s) = mockDict.cl::dict256::get<cellRef>(index);
+    return emptyActions();
+}
+
+;;; ================MAIN FUNCTION=====================
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == ComputeSizeGasTest::OP::ADD_TO_MOCK_DICT) {
+        return addToMockDict($md);
+    }
+    throw(BaseInterface::ERROR::invalidOpcode);
+    return empty_tuple();
+}
+
+int _getEventSink() inline {
+    return getContractAddress();
+}

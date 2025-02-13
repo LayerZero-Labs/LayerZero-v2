@@ -1,0 +1,52 @@
+#include "../storage.fc";
+#include "../../../../../../../tests/baseSerdeTest.fc";
+#include "../../../../../../../tests/mocks.fc";
+#include "../../../../../../funC++/classlib.fc";
+#include "../../../../../../funC++/utils.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "DVN Feelib Serde"; }
+
+;;; ===============================TESTS=========================================
+
+;; DvnFeeLib has: 1 getter
+;;                1 multi-getter   
+
+(int, slice) Serde::DvnFeeLib::getQuorum(cell $unused) impure {
+    cell $dvnFeeLib = DvnFeelib::New(1, 2, 3, 4);
+
+    return test::getData::equal(
+        $dvnFeeLib,
+        DvnFeelib::getQuorum,
+        DvnFeelib::quorum
+    );
+}
+
+(int, slice) Serde::DvnFeeLib::getRemoteGasMultiplierBpsAndFloorMarginUSD(cell $unused) impure {
+    cell $dvnFeeLib = DvnFeelib::New(1, 2, 3, 4);
+
+    (
+        int gas, 
+        int multiplierBps, 
+        int floorMarginUSD
+    ) = DvnFeelib::getRemoteGasMultiplierBpsAndFloorMarginUSD($dvnFeeLib);
+
+    return test::multiget::equal(
+        $dvnFeeLib,
+        unsafeTuple([
+            DvnFeelib::remoteGas,
+            DvnFeelib::multiplierBps,
+            DvnFeelib::floorMarginUSD
+        ]),
+        unsafeTuple([gas, multiplierBps, floorMarginUSD])
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::DvnFeeLib::getQuorum, "Serde::DvnFeeLib::getQuorum"])
+        .tpush([Serde::DvnFeeLib::getRemoteGasMultiplierBpsAndFloorMarginUSD, "Serde::DvnFeeLib::getRemoteGasMultiplierBpsAndFloorMarginUSD"])
+    ;
+}
+

@@ -1,0 +1,45 @@
+;;; ======================================
+;; This "handler" is a mock to allow testing of an abstract contract
+;;; ======================================
+#include "../../../funC++/actions/utils.fc";
+
+#include "../../executor/storage.fc";
+#include "../interface.fc";
+
+#include "../../../classes/msgdata/SetAddress.fc";
+
+#include "../abstract/workerHandler.fc";
+
+(cell, tuple) _initialize(cell $initEndpoint) impure inline {
+    return (getContractStorage(), emptyActions());
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+tuple claimTon(cell $claimTon) {
+    return _claimTon(emptyActions(), $claimTon);
+}
+
+tuple callContract(cell $executeParams) {
+    return _callContract(emptyActions(), $executeParams);
+}
+
+tuple setAdmins(cell $addressList) {
+    return _setAdmins(emptyActions(), $addressList);
+}
+
+tuple setProxyAddress(cell $setAddress) {
+    return _setProxyAddress(
+        emptyActions(),
+        $setAddress.cl::get<address>(md::SetAddress::address)
+    );
+}
+
+tuple callViaProxy(cell $executeParams) {
+    return _callViaProxy(emptyActions(), $executeParams);
+}
+
+tuple claimTonFromProxy(cell $claimTon) {
+    return _claimTonFromProxy(emptyActions(), $claimTon);
+}
+
+() _checkPermissions(int op, cell $md) impure inline { }

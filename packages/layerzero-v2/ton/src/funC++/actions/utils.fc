@@ -1,0 +1,47 @@
+#include "../txnContext.fc";
+
+;; Small file for now, but a placeholder for generic actions utility functions
+
+const int ACTIONS_OUTFLOW = 0;
+
+tuple emptyActions() inline {
+    return unsafeTuple([0]);
+}
+
+;;; ======================================================================================
+;; @info terminal actions are always sent using all non-reserved balance on the contract
+() sendTerminalAction(int toAddress, cell messageBody, cell stateInit, int extraFlags) impure inline {
+    builder b = begin_cell()
+        .store_uint(SEND_MSG_BOUNCEABLE, 6)
+        .store_slice(hashpartToBasechainAddressStd(toAddress))
+        .store_coins(0);
+    b = stateInit.is_null()
+        ? b.store_uint(1, 107)
+        : b.store_uint(7, 108).store_ref(stateInit);
+    send_raw_message(b.store_ref(messageBody).end_cell(), CARRY_ALL_BALANCE | extraFlags);
+}
+
+;; @info non-terminal actions must specify the amount of funds to send
+() sendNonTerminalAction(int bounceable, int amount, int toAddress, cell messageBody, int extraFlags) impure inline {
+    cell msg = begin_cell()
+        .store_uint(bounceable, 6)
+        .store_slice(hashpartToBasechainAddressStd(toAddress))
+        .store_coins(amount)
+        .store_uint(1, 107)
+        .store_ref(messageBody)
+        .end_cell();
+    send_raw_message(msg, extraFlags);
+}
+;; @param donationNanos: the amount of TON that the sender intended to be
+;; withheld within our contract
+;; @info baseHandler::refund_addr is the last known "origin" of a message
+;; flow, and is used to refund the sender if the handler does not
+;; use all remaining value from the in_message
+cell buildLayerzeroMessageBody(int donationNanos, int opcode, cell $md) impure inline {
+    cell ret = beginTonMessage(opcode)
+        .store_coins(donationNanos)
+        .store_slice(getOriginStd())
+        .store_ref($md)
+        .end_cell();
+    return ret;
+}

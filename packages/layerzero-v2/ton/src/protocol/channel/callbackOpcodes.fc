@@ -1,0 +1,10 @@
+;; Send flow
+const int Layerzero::OP::CHANNEL_SEND_CALLBACK = "Layerzero::OP::CHANNEL_SEND_CALLBACK"c;
+
+;; Receive flow
+const int Layerzero::OP::LZ_RECEIVE_PREPARE = "Layerzero::OP::LZ_RECEIVE_PREPARE"c;
+const int Layerzero::OP::LZ_RECEIVE_EXECUTE = "Layerzero::OP::LZ_RECEIVE_EXECUTE"c;
+
+;; Receive flow management
+const int Layerzero::OP::BURN_CALLBACK = "Layerzero::OP::BURN_CALLBACK"c;
+const int Layerzero::OP::NILIFY_CALLBACK = "Layerzero::OP::NILIFY_CALLBACK"c;

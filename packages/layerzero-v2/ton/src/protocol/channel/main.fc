@@ -1,0 +1,39 @@
+#include "../core/abstract/protocolMain.fc";
+
+#include "handler.fc";
+#include "interface.fc";
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == Channel::OP::SET_EP_CONFIG_OAPP) {
+        return setEpConfigOApp($md);
+    } elseif (op == Channel::OP::CHANNEL_SEND) {
+        return channelSend($md);
+    } elseif (op == Channel::OP::MSGLIB_SEND_CALLBACK) {
+        return msglibSendCallback($md);
+    } elseif (op == Channel::OP::CHANNEL_COMMIT_PACKET) {
+        return channelCommitPacket($md);
+    } elseif (op == Channel::OP::LZ_RECEIVE_PREPARE) {
+        return lzReceivePrepare($md);
+    } elseif (op == Channel::OP::LZ_RECEIVE_LOCK) {
+        return lzReceiveLock($md);
+    } elseif (op == Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK) {
+        return lzReceiveExecuteCallback($md);
+    } elseif (op == Channel::OP::DEPOSIT_ZRO) {
+        return depositZro($md);
+    } elseif (op == Channel::OP::NILIFY) {
+        return nilify($md);
+    } elseif (op == Channel::OP::BURN) {
+        return burn($md);
+    } elseif (op == Channel::OP::FORCE_ABORT) {
+        return forceAbort($md);
+    } elseif (op == Channel::OP::SYNC_MSGLIB_CONNECTION) {
+        return syncMsglibConnection($md);
+    } elseif (op == Channel::OP::NOTIFY_PACKET_EXECUTED) {
+        return notifyPacketExecuted($md);
+    } elseif (op == Channel::OP::EMIT_LZ_RECEIVE_ALERT) {
+        return emitLzReceiveAlert($md);
+    } else {
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+    return empty_tuple();
+}

@@ -1,0 +1,179 @@
+#include "testutil.fc";
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../../msgdata/UlnWorkerFeelibInfo.fc";
+
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../tests/testMain.fc";
+#include "../../../../interfaces.fc";
+#include "../../workerFeeLibs/priceFeedFeeLib/storage.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/constants.fc";
+#include "../../../../../funC++/txnContext.fc";
+#include "../../../../../funC++/utils.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../msgdata/Attestation.fc";
+#include "../../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../../classes/msgdata/MdObj.fc";
+#include "../../../../../funC++/actions/call.fc";
+#include "../../../../../funC++/actions/event.fc";
+#include "../../../../../funC++/actions/utils.fc";
+
+slice _testName() { return "ulnMgmt"; }
+
+() _createInitializedStorage() impure {
+    initialize(
+        md::InitUln::New(
+            MOCK_ULN_CONNECTION_CODE(),
+            TREASURY_FEE_BPS
+        )
+    );
+}
+
+cell createContractStorage() impure {
+    cell $obj = Uln::New(getCaller(), SRC_EID, DST_EID);
+    setContractStorage($obj);
+    return $obj;
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) setWorkerFeelibStorage::success::basic(cell $storage) impure {
+    updateWorkerFeelib(
+        MOCK_ULN_WORKER_FEELIB_INFO(WORKER_ADDRESS, Uln::CONST::INITIAL_RENT_NANOS)
+    );
+    $storage = getContractStorage();
+
+    cell $newStorage = PriceFeedFeelib::New(
+        DEFAULT_PRICE_RATIO,
+        DEFAULT_GAS_PRICE_IN_UNIT,
+        DEFAULT_GAS_PER_BYTE,
+        DEFAULT_NATIVE_PRICE_USD,
+        cl::nullObject(),
+        cl::nullObject()
+    );
+
+    cell $expectedWorkerInfo = MOCK_ULN_WORKER_FEELIB_INFO(WORKER_ADDRESS, Uln::CONST::INITIAL_RENT_NANOS)
+        .cl::set(UlnWorkerFeelibInfo::lastRentTimestamp, now())
+        .cl::set(UlnWorkerFeelibInfo::workerFeelibStorage, $newStorage);
+
+
+    spoofCaller(WORKER_ADDRESS);
+    return test::handler::shouldPass(
+        setWorkerFeelibStorage,
+        $newStorage,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Uln::event::ULN_WORKER_STORAGE_SET,
+                $expectedWorkerInfo
+            ),
+            _newAction<call>(
+                WORKER_ADDRESS,
+                Uln::OP::SET_WORKER_FEELIB_STORAGE_CALLBACK,
+                $newStorage
+            )
+        ]),
+        $storage.cl::nestedDict256::setRef(
+            Uln::workerFeelibInfos,
+            WORKER_ADDRESS,
+            $expectedWorkerInfo
+        ),
+        txnContext
+    );
+}
+
+(int, slice) setWorkerFeelibStorage::fail::storageTooBig(cell $storage) impure {
+    updateWorkerFeelib(
+        MOCK_ULN_WORKER_FEELIB_INFO(WORKER_ADDRESS, Uln::CONST::INITIAL_RENT_NANOS)
+    );
+    $storage = getContractStorage();
+
+    ;; 3 inner nodes + 10 cell refs = 13 cells > Uln::WorkerFeelibInfo::MaxCells (= 12)
+    cell $badStorage = cl::declare(
+        "badStore"u,
+        unsafeTuple([
+            [cl::t::cellRef, begin_cell().store_uint32(1).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(2).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(3).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(4).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(5).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(6).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(7).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(8).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(9).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(10).end_cell()]
+        ])
+    );
+
+    spoofCaller(WORKER_ADDRESS);
+    return test::handler::shouldFail(
+        setWorkerFeelibStorage,
+        $badStorage,
+        Uln::ERROR::invalidWorkerStorage
+    );
+}
+
+(int, slice) setWorkerFeelibStorage::success::maxSizeStorage(cell $storage) impure {
+    updateWorkerFeelib(
+        MOCK_ULN_WORKER_FEELIB_INFO(WORKER_ADDRESS, Uln::CONST::INITIAL_RENT_NANOS)
+    );
+    $storage = getContractStorage();
+
+    ;; 3 inner nodes + 8 cell refs = 11 cells == Uln::WorkerFeelibInfo::MaxCells (= 12)
+    cell $newStorage = cl::declare(
+        "bigStore"u,
+        unsafeTuple([
+            [cl::t::cellRef, begin_cell().store_uint32(1).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(2).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(3).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(4).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(5).end_cell()],
+            [cl::t::cellRef, begin_cell().store_uint32(6).end_cell()]
+        ])
+    );
+
+    cell $expectedWorkerInfo = MOCK_ULN_WORKER_FEELIB_INFO(WORKER_ADDRESS, Uln::CONST::INITIAL_RENT_NANOS)
+        .cl::set(UlnWorkerFeelibInfo::lastRentTimestamp, now())
+        .cl::set(UlnWorkerFeelibInfo::workerFeelibStorage, $newStorage);
+
+    spoofCaller(WORKER_ADDRESS);
+
+    return test::handler::shouldPass(
+        setWorkerFeelibStorage,
+        $newStorage,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Uln::event::ULN_WORKER_STORAGE_SET,
+                $expectedWorkerInfo
+            ),
+            _newAction<call>(
+                WORKER_ADDRESS,
+                Uln::OP::SET_WORKER_FEELIB_STORAGE_CALLBACK,
+                $newStorage
+            )
+        ]),
+        $storage.cl::nestedDict256::setRef(
+            Uln::workerFeelibInfos,
+            WORKER_ADDRESS,
+            $expectedWorkerInfo
+        ),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([setWorkerFeelibStorage::success::basic, "setWorkerFeelibStorage::success::basic"])
+        .tpush([setWorkerFeelibStorage::success::maxSizeStorage, "setWorkerFeelibStorage::success::maxSizeStorage"])
+        .tpush([setWorkerFeelibStorage::fail::storageTooBig, "setWorkerFeelibStorage::fail::storageTooBig"])
+    ;
+}

@@ -1,0 +1,36 @@
+#include "storage.fc";
+
+;; authenticated against the config
+const int UlnConnection::OP::ULN_CONNECTION_VERIFY = "UlnConnection::OP::ULN_CONNECTION_VERIFY"c;
+
+;; permissionless
+const int UlnConnection::OP::ULN_CONNECTION_COMMIT_PACKET = "UlnConnection::OP::ULN_CONNECTION_COMMIT_PACKET"c;
+
+const int UlnConnection::OP::SET_OAPP_ULN_RECEIVE_CONFIG = "UlnConnection::OP::SET_OAPP_ULN_RECEIVE_CONFIG"c;
+const int UlnConnection::OP::SET_OAPP_ULN_SEND_CONFIG = "UlnConnection::OP::SET_OAPP_ULN_SEND_CONFIG"c;
+
+const int UlnConnection::OP::GARBAGE_COLLECT_INVALID_ATTESTATIONS = "UlnConnection::OP::GARBAGE_COLLECT_INVALID_ATTESTATIONS"c;
+
+const int UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES = "UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES"c;
+
+;; ERRORS
+const int UlnConnection::ERROR::onlyUln = 193;
+const int UlnConnection::ERROR::onlyChannel = 194;
+const int UlnConnection::ERROR::invalidUlnSendConfig = 195;
+const int UlnConnection::ERROR::onlyConfiguredDvn = 196;
+
+const int UlnConnection::event::ULN_SEND_CONFIG_SET = "UlnConn::event::ULN_SEND_CFG_SET"u;
+const int UlnConnection::event::ULN_RECEIVE_CONFIG_SET = "UlnConn::event::ULN_REC_CFG_SET"u;
+const int UlnConnection::event::ATTESTATIONS_EVICTED = "UlnConn::event::ATTESTS_EVCTD"u;
+const int UlnConnection::event::PACKET_VERIFIED = "UlnConn::event::PACKET_VERIFIED"u;
+const int UlnConnection::event::PACKET_VERIFIED = "UlnConn::event::PACKET_VERIFIED"u;
+
+const int UlnConnection::ULN_CONNECTION_VERIFY_FAILED::DVN_NOT_CONFIGURED = "UlnConnection::ULN_CONNECTION_VERIFY_FAILED::DVN_NOT_CONFIGURED"c;
+const int UlnConnection::ULN_CONNECTION_VERIFY_FAILED::NONCE_OUT_OF_RANGE = "UlnConnection::ULN_CONNECTION_VERIFY_FAILED::NONCE_OUT_OF_RANGE"c;
+const int UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED = "UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED"c;
+
+const int UlnConnection::verificationStatus::VERIFYING = 0;
+const int UlnConnection::verificationStatus::COMMITTABLE = 1;
+const int UlnConnection::verificationStatus::COMMITTED = 2;
+const int UlnConnection::verificationStatus::EXECUTED = 3;
+const int UlnConnection::verificationStatus::CONFIGURATION_ERROR = 4;

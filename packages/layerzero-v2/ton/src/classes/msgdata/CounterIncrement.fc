@@ -1,0 +1,24 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::CounterIncrement::NAME = "countIncr"u;
+
+;; field names
+const int md::CounterIncrement::dstEid = 0;
+const int md::CounterIncrement::incrementType = 1;
+const int md::CounterIncrement::extraOptions = 2; ;; This is a reference to an 'options' md
+const int md::CounterIncrement::nativeFee = 3;
+const int md::CounterIncrement::zroFee = 4;
+
+cell md::CounterIncrement::New(int dstEid, int incrementType, cell $extraOptions, int nativeFee, int zroFee) impure inline method_id {
+    return cl::declare(
+        md::CounterIncrement::NAME,
+        unsafeTuple([
+            [cl::t::uint32, dstEid],        ;; md::CounterIncrement::dstEid
+            [cl::t::uint8, incrementType],  ;; md::CounterIncrement::incrementType
+            [cl::t::objRef, $extraOptions], ;; md::CounterIncrement::extraOptions
+            [cl::t::coins, nativeFee],      ;; md::CounterIncrement::nativeFee
+            [cl::t::coins, zroFee]          ;; md::CounterIncrement::zroFee
+        ])
+    );
+}

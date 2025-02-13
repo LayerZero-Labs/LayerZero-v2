@@ -1,0 +1,202 @@
+#include "../interface.fc";
+#include "../../../funC++/handlerCore.fc";
+
+#include "../../../funC++/actions/call.fc";
+#include "../../../funC++/actions/event.fc";
+#include "../../../funC++/actions/payment.fc";
+#include "../../../funC++/actions/dispatch.fc";
+
+#include "../../../classes/msgdata/CoinsAmount.fc";
+#include "../../../classes/msgdata/SetAddress.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+
+#include "../../msgdata/ExecuteParams.fc";
+#include "../../msgdata/ClaimTon.fc";
+
+#include "../../../protocol/msglibs/ultralightnode/uln/interface.fc";
+#include "../../../protocol/msglibs/ultralightnode/ulnManager/interface.fc";
+#include "../../proxy/interface.fc";
+#include "../workerCoreStorage.fc";
+#include "../../../funC++/utils.fc";
+
+cell getInitialStorage() impure inline {
+    return empty_cell();
+}
+
+;; declared inside of the actions/event.fc
+;; We declare it here because it saves the need for declaring initialStorage everytime we call event
+tuple _newAction<event>(int topic, cell $body) impure inline {
+    return action::event::create(topic, $body, cl::nullObject());
+}
+
+;;; ==========================================
+;; Modifiers
+() assertAuthenticated() impure inline { }
+
+() assertInitialized() impure inline { }
+
+() assertAdmin() impure inline {
+    throw_unless(
+        Worker::ERROR::onlyAdmin, 
+        AddressList::includes(
+            getCaller(), 
+            getAdmins().begin_parse()
+        )
+    );
+}
+
+;; Step 1: authenticate
+() authenticate() impure { }
+
+() authenticateIfNecessary() impure inline { }
+
+;; Step 2: initialize
+;; mdAddress: (md=null, address=proxy), they're both 256.
+tuple initialize(cell $mdAddress) impure inline {
+    return emptyActions();
+}
+
+() assertOwner() impure inline { }
+
+;;; =================================== EVENT FUNCTIONS =================================
+
+int _getEventSink() impure inline method_id {
+    int eventSink = getProxyAddress();
+    if (eventSink == NULLADDRESS) {
+        return getContractAddress();
+    }
+    return eventSink;
+}
+
+int verifyEventOrigin(int address) method_id {
+    return AddressList::includes(
+        address, getAdmins().begin_parse()
+    );
+}
+
+;;; =================================== (HANDLER) HELPER FUNCTIONS =================================
+
+const int ONE_TON = 1000000000; ;; 1 ton is equivalent to 10^9 nanotons
+
+tuple _claimTon(tuple actions, cell $claimTon) impure {
+
+    int contractBalance = getInitialContractBalance();
+    int claimAmount = $claimTon.cl::get<coins>(md::ClaimTon::amount);
+
+    throw_unless(
+        Worker::ERROR::insufficientBalance,
+        (contractBalance >= (claimAmount + ONE_TON))
+    );
+
+    ;; this amount will be paid from the contract balance
+    actions~pushAction<payment>(
+        $claimTon.cl::get<address>(md::ClaimTon::target),
+        claimAmount,
+        claimAmount
+    );
+
+    actions~pushAction<event>(
+        Worker::event::CLAIMED_TON,
+        $claimTon
+    );
+
+    return actions;
+}
+
+tuple _claimTonFromProxy(tuple actions, cell $claimTon) impure {
+    ;; event needs to be emitted before the call because call is a terminal action
+    actions~pushAction<event>(
+        Worker::event::CLAIMED_TON_FROM_PROXY,
+        $claimTon
+    );
+
+    actions~pushAction<call>(
+        getProxyAddress(),
+        Worker::OP::CLAIM_TON,
+        $claimTon
+    );
+
+    return actions;
+}
+
+tuple _callContract(tuple actions, cell $executeParams) impure inline {
+    (int target, int opcode, cell callData) = $executeParams.md::ExecuteParams::getActionArgs();
+
+    actions~pushAction<call>(
+        target,
+        opcode,
+        callData
+    );
+
+    return actions;
+}
+
+tuple _setAdmins(tuple actions, cell $addressList) impure {
+    actions~pushAction<event>(
+        Worker::event::ADMINS_SET,
+        $addressList
+    );
+
+    setContractStorage(
+        getContractStorage().setCoreStorage(
+            getCoreStorage().cl::set(
+                WorkerCoreStorage::admins,
+                $addressList
+            )
+        )
+    );
+
+    return actions;
+}
+
+tuple _setProxyAddress(tuple actions, int newProxyAddress) impure {
+    setContractStorage(
+        getContractStorage().setCoreStorage(
+            getCoreStorage().cl::set(WorkerCoreStorage::proxy, newProxyAddress)
+        )
+    );
+    return actions;
+}
+
+tuple _callViaProxy(tuple actions, cell $executeParams) impure {
+    ;; only these opcodes are allowed to be called from the worker to the proxy
+    int opcode = $executeParams.md::ExecuteParams::getOpcode();
+
+    throw_unless(
+        Worker::ERROR::invalidSignedOpcode, 
+        (opcode == UlnManager::OP::ADD_ULN_WORKER)       ;; ask the UlnManager to add this worker to ULN
+        | (opcode == Uln::OP::DEREGISTER_WORKER_FEELIB)  ;; ask the ULN to remove this worker
+        | (opcode == Uln::OP::SET_WORKER_FEELIB_STORAGE) ;; ask the ULN to update this worker's storage
+    );
+
+    actions~pushAction<call>(
+        getProxyAddress(),
+        Proxy::OP::CALL_CONTRACT,
+        $executeParams
+    );
+
+    return actions;
+}
+
+tuple _emitViaProxy(tuple actions, int topic, cell $body) impure {
+    actions~pushAction<dispatch>(
+        getProxyAddress(),
+        Proxy::OP::EMIT_EVENT,
+        action::event::build(topic, $body, cl::nullObject()),
+        _gasToNanoton(PROXY_CALL_DEFAULT_GAS)
+    );
+
+    return actions;
+}
+
+;;; =================================== VIEW FUNCTIONS =================================
+
+int getLatestAdmin() impure method_id {
+    slice adminSlice = getAdmins().begin_parse();
+    return adminSlice~AddressList::next();
+}
+
+int getClaimableTonView(int futureSeconds) impure inline {
+    int ret = getContractBalanceView(futureSeconds) - ONE_TON;
+    return max(0, ret);
+}

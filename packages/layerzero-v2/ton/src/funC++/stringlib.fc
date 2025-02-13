@@ -1,0 +1,73 @@
+#include "utils.fc";
+
+;;; ===============================STRING MANIPULATION FUNCTIONS===========================
+;; note that these functions are NOT optimized and should NOT be used in production code
+
+const int ASCII_ZERO = 48;
+const int ASCII_MASK = 0x1313131313131313131313131313131313131313131313131313131313131313;
+const int ASCII_A = 65;
+
+slice str::asciiUint256ToStr(int asciiUint256) impure {
+    int leading_zeroes = _SDCNTLEAD0(begin_cell().store_uint256(asciiUint256).end_cell().begin_parse());
+    int trailing_bits = 256 - leading_zeroes;
+    int mask = POW2(trailing_bits) - 1;
+    return begin_cell().store_uint256(asciiUint256 | (ASCII_MASK & (~ mask))).end_cell().begin_parse();
+}
+
+(slice, ()) ~str::concat(slice self, slice other) impure {
+    if(self.slice_bits() + other.slice_bits() > 127 * MAX_U8) {
+        throwError("Cannot concatenate: string too long");
+    }
+    return (begin_cell().store_slice(self).store_slice(other).end_cell().begin_parse(), ());
+}
+
+slice str::concat(slice self, slice other) impure {
+    self~str::concat(other);
+    return self;
+}
+
+(slice, ()) ~str::concatInt(slice self, int val) impure {
+    slice intSlice = empty_slice();
+    if (val < 0) {
+        self~str::concat("-");
+        val = -1 * val;
+    }
+    if (val == 0) {
+        intSlice~str::concat(begin_cell().store_uint8(ASCII_ZERO).end_cell().begin_parse());
+    }
+    while (val > 0) {
+        intSlice = begin_cell().store_uint8(ASCII_ZERO + val % 10).end_cell().begin_parse().str::concat(intSlice);
+        val /= 10;
+    }
+    return (self.str::concat(intSlice), ());
+}
+
+slice str::concatInt(slice self, int val) impure {
+    self~str::concatInt(val);
+    return self;
+}
+
+(slice, ()) ~str::concatHex(slice self, int val) impure {
+    slice hexSlice = empty_slice();
+    if (val == 0) {
+        hexSlice~str::concat(begin_cell().store_uint8(ASCII_ZERO).end_cell().begin_parse());
+    }
+    while (val > 0) {
+        if (val % 16 <= 9) {
+            hexSlice = begin_cell().store_uint8(ASCII_ZERO + val % 16).end_cell().begin_parse().str::concat(hexSlice);
+        } else {
+            hexSlice = begin_cell().store_uint8(ASCII_A + val % 16 - 10).end_cell().begin_parse().str::concat(hexSlice);
+        }
+        val = (val >> 4); ;; val /= 16
+    }
+    return (self.str::concat(hexSlice), ());
+}
+
+slice str::concatHex(slice self, int val) impure {
+    self~str::concatHex(val);
+    return self;
+}
+
+() str::console::log<int>(slice string, int val) impure {
+    ~strdump(string.str::concat(": ").str::concatInt(val));
+}

@@ -1,0 +1,22 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required storage name
+const int md::UlnWorkerFeelibBytecode::NAME = "Ulnbytecod"u;
+
+;; field names
+const int md::UlnWorkerFeelibBytecode::bytecode = 0; ;; cellRef
+
+cell md::UlnWorkerFeelibBytecode::New(cell bytecode) impure inline method_id {
+    return cl::declare(
+        md::UlnWorkerFeelibBytecode::NAME,
+        unsafeTuple([
+            [cl::t::cellRef, bytecode] ;; md::UlnWorkerFeelibBytecode::nonce
+        ])
+    );
+}
+
+cell md::UlnWorkerFeelibBytecode::sanitize(cell $ulnWorkerFeelibBytecode) impure inline_ref {
+    cell bytecode = $ulnWorkerFeelibBytecode.cl::get<cellRef>(md::UlnWorkerFeelibBytecode::bytecode);
+
+    return md::UlnWorkerFeelibBytecode::New(bytecode);
+}

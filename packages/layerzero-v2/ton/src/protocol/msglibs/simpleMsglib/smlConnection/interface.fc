@@ -1,0 +1,3 @@
+#include "storage.fc";
+
+const int SmlConnection::OP::SML_CONNECTION_COMMIT_PACKET = "SmlConnection::OP::SML_CONNECTION_COMMIT_PACKET"c;

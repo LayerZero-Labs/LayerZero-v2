@@ -1,0 +1,36 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int lz::Config::NAME = "Config"u;
+
+;; field names
+const int lz::Config::path = 0;
+const int lz::Config::forwardingAddress = 1;
+const int lz::Config::opCode = 2;
+;; provide an arbitrary config md that can be forwarded anywhere in the lz protocol that a config is accepted
+const int lz::Config::config = 3;
+
+cell lz::Config::New(cell $path, int forwardingAddress, int opCode, cell $config) impure inline method_id {
+    return cl::declare(
+        lz::Config::NAME,
+        unsafeTuple([
+            [cl::t::objRef, $path],              ;; lz::Config::path
+            [cl::t::address, forwardingAddress], ;; lz::Config::forwardingAddress
+            [cl::t::uint32, opCode],             ;; lz::Config::opCode
+            [cl::t::objRef, $config]             ;; lz::Config::config
+        ])
+    );
+}
+
+const int lz::Config::_forwardingAddressOffset = _HEADER_WIDTH;
+const int lz::Config::_opCodeOffset = lz::Config::_forwardingAddressOffset + 256;
+
+(cell, int, int, cell) lz::Config::deserialize(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadRefAt(0),
+        selfSlice.preloadAddressAt(lz::Config::_forwardingAddressOffset),
+        selfSlice.preloadUint32At(lz::Config::_opCodeOffset),
+        selfSlice.preloadRefAt(1)
+    );
+}

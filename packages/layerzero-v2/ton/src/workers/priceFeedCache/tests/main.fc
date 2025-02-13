@@ -1,0 +1,308 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../core/interface.fc";
+
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../workers/core/tests/workerStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../funC++/handlerCore.fc";
+
+#include "../../../../tests/consts.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "priceFeedCache"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        PriceFeedCache::New(
+            AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS])),
+            0,
+            MOCK_DEFAULT_PRICE_FEED_STORAGE(),
+            DST_EID
+        )
+    );
+
+    setContractStorage(
+        getContractStorage().setCoreStorage(
+            getCoreStorage().cl::set(
+                WorkerCoreStorage::proxy,
+                PROXY_ADDRESS
+            )
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure { }
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) updatePrice::success::basic(cell $storage) impure {
+    cell $newPfStorage = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::set(PriceFeedFeelib::priceRatio, CUSTOM_PRICE_RATIO)
+            .cl::set(PriceFeedFeelib::gasPriceInRemoteUnit, CUSTOM_GAS_PRICE_IN_UNIT)
+            .cl::set(PriceFeedFeelib::gasPerByte, CUSTOM_GAS_PER_BYTE);
+
+    cell $expectedStorage = $storage.cl::set(
+        PriceFeedCache::priceFeedFeeLibStorage,
+        $newPfStorage
+    );
+
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $newPfStorage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        updatePrice,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) updateNativePrice::success::basic(cell $storage) impure {
+    cell $newPfStorage = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::set(PriceFeedFeelib::nativePriceUsd, CUSTOM_NATIVE_PRICE_USD);
+
+    cell $expectedStorage = $storage.cl::set(
+        PriceFeedCache::priceFeedFeeLibStorage,
+        $newPfStorage
+    );
+
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $newPfStorage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        updateNativePrice,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) updateOpPrices::success::basic(cell $storage) impure {
+    setContractStorage(
+        $storage.cl::set(
+            PriceFeedCache::priceFeedFeeLibStorage,
+            MOCK_DEFAULT_PRICE_FEED_STORAGE_OP()
+        )
+    );
+    $storage = getContractStorage();
+
+    cell $newOpExtension = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::get<objRef>(PriceFeedFeelib::optimismExtension)
+                .cl::set(PriceFeedFeelib::priceRatio, CUSTOM_OP_PRICE_RATIO)
+                .cl::set(PriceFeedFeelib::gasPriceInRemoteUnit, CUSTOM_OP_GAS_PRICE_IN_UNIT)
+                .cl::set(PriceFeedFeelib::gasPerByte, CUSTOM_OP_GAS_PER_BYTE);
+
+    cell $newPfStorage = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::set(PriceFeedFeelib::priceRatio, CUSTOM_PRICE_RATIO)
+            .cl::set(PriceFeedFeelib::gasPriceInRemoteUnit, CUSTOM_GAS_PRICE_IN_UNIT)
+            .cl::set(PriceFeedFeelib::gasPerByte, CUSTOM_GAS_PER_BYTE)
+            .cl::set(PriceFeedFeelib::optimismExtension, $newOpExtension);
+
+    cell $expectedStorage = $storage.cl::set(
+        PriceFeedCache::priceFeedFeeLibStorage,
+        $newPfStorage
+    );
+
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $newPfStorage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        updateOpPrices,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_OP(), ARBITRARY_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) updateOpNativePrices::success::basic(cell $storage) impure {
+    setContractStorage(
+        $storage.cl::set(
+            PriceFeedCache::priceFeedFeeLibStorage,
+            MOCK_DEFAULT_PRICE_FEED_STORAGE_OP()
+        )
+    );
+    $storage = getContractStorage();
+
+    cell $newOpExtension = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::get<objRef>(PriceFeedFeelib::optimismExtension)
+                .cl::set(PriceFeedFeelib::nativePriceUsd, CUSTOM_OP_NATIVE_PRICE_USD);
+
+    cell $newPfStorage = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::set(PriceFeedFeelib::nativePriceUsd, CUSTOM_NATIVE_PRICE_USD)
+            .cl::set(PriceFeedFeelib::optimismExtension, $newOpExtension);
+
+    cell $expectedStorage = $storage.cl::set(
+        PriceFeedCache::priceFeedFeeLibStorage,
+        $newPfStorage
+    );
+
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $newPfStorage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        updateOpNativePrices,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_OP(), ARBITRARY_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) updateArbExtension::success::basic(cell $storage) impure {
+    setContractStorage(
+        $storage.cl::set(
+            PriceFeedCache::priceFeedFeeLibStorage,
+            MOCK_DEFAULT_PRICE_FEED_STORAGE_ARB()
+        )
+    );
+    $storage = getContractStorage();
+
+    cell $newArbExtension = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::get<objRef>(PriceFeedFeelib::arbitrumExtension)
+                .cl::set(ArbitrumPriceFeedExtension::gasPerL2Tx, CUSTOM_ARB_GAS_PER_L2_TX)
+                .cl::set(ArbitrumPriceFeedExtension::gasPerL1CallDataByte, CUSTOM_ARB_GAS_PER_L1_CALL_DATA_BYTE);
+
+    cell $newPfStorage = $storage
+        .cl::get<objRef>(PriceFeedCache::priceFeedFeeLibStorage)
+            .cl::set(PriceFeedFeelib::arbitrumExtension, $newArbExtension);
+
+    cell $expectedStorage = $storage.cl::set(
+        PriceFeedCache::priceFeedFeeLibStorage,
+        $newPfStorage
+    );
+
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $newPfStorage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        updateArbExtension,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_ARB(), ARBITRARY_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) callViaProxy::success::updateWorkerFeeLib(cell $storage) impure {
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        $storage,
+        0,
+        Uln::OP::SET_WORKER_FEELIB_STORAGE,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        callViaProxy,
+        $executeParams,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                PROXY_ADDRESS,
+                Proxy::OP::CALL_CONTRACT,
+                $executeParams
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            ;; update price
+            .tpush([updatePrice::success::basic, "updatePrice::success::basic"])
+            ;; update native price
+            .tpush([updateNativePrice::success::basic, "updateNativePrice::success::basic"])
+            ;; update op prices
+            .tpush([updateOpPrices::success::basic, "updateOpPrices::success::basic"])
+            ;; update op native prices
+            .tpush([updateOpNativePrices::success::basic, "updateOpNativePrices::success::basic"])
+            ;; update arb extension
+            .tpush([updateArbExtension::success::basic, "updateArbExtension::success::basic"])
+            ;; call via proxy
+            .tpush([callViaProxy::success::updateWorkerFeeLib, "callViaProxy::success::updateWorkerFeeLib"])    
+    );
+}

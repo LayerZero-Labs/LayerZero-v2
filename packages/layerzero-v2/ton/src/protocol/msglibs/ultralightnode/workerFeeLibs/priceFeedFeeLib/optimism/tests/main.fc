@@ -1,0 +1,16 @@
+#include "../../../../../../../../tests/testMain.fc";
+#include "../../../../../../../../tests/mocks.fc";
+#include "../../../../../../../funC++/classlib.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Pricefeed Optimism Feelib"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+;;; ===============================TESTS=========================================
+
+tuple baseTest::getTests() impure {
+    return empty_tuple();
+}

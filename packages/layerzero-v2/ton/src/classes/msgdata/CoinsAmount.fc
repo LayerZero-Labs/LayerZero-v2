@@ -1,0 +1,24 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::CoinsAmount::NAME = "coinsAmt"u;
+
+;; field names
+const int md::CoinsAmount::amount = 0;
+
+cell md::CoinsAmount::New(int amount) impure inline method_id {
+    return cl::declare(
+        md::CoinsAmount::NAME,
+        unsafeTuple([
+            [cl::t::coins, amount] ;; md::CoinsAmount::amount
+        ])
+    );
+}
+
+;; ========================== Sanitize ==========================
+
+cell md::CoinsAmount::sanitize(cell $self) impure {
+    int amount = $self.cl::get<coins>(md::CoinsAmount::amount);
+
+    return md::CoinsAmount::New(amount);
+}

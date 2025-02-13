@@ -1,0 +1,20 @@
+;; OPCODES
+const int Endpoint::OP::ENDPOINT_SEND = "Endpoint::OP::ENDPOINT_SEND"c;
+const int Endpoint::OP::ENDPOINT_COMMIT_PACKET = "Endpoint::OP::ENDPOINT_COMMIT_PACKET"c;
+const int Endpoint::OP::SET_EP_CONFIG_DEFAULTS = "Endpoint::OP::SET_EP_CONFIG_DEFAULTS"c;
+const int Endpoint::OP::SET_EP_CONFIG_OAPP = "Endpoint::OP::SET_EP_CONFIG_OAPP"c;
+const int Endpoint::OP::ADD_MSGLIB = "Endpoint::OP::ADD_MSGLIB"c;
+const int Endpoint::OP::GET_MSGLIB_INFO_CALLBACK = "Endpoint::OP::GET_MSGLIB_INFO_CALLBACK"c;
+
+;; EVENTS
+const int Endpoint::event::EP_CONFIG_DEFAULTS_SET = "EP_CONFIG_DEFAULTS_SET"u;
+
+;; ERRORS
+const int Endpoint::ERROR::notOApp = 300;
+const int Endpoint::ERROR::wrongPath = 301;
+const int Endpoint::ERROR::unauthorizedMsglib = 302;
+const int Endpoint::ERROR::invalidExpiry = 303;
+const int Endpoint::ERROR::unresolvedMsglib = 304;
+const int Endpoint::ERROR::msglibInfoExists = 305;
+const int Endpoint::ERROR::numMsglibsExceeded = 306;
+const int Endpoint::ERROR::sameTimeoutAndReceive = 307;

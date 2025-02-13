@@ -1,0 +1,202 @@
+#include "../handler.fc";
+#include "../interface.fc";
+
+#include "../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../../classes/msgdata/SetSmlManagerConfig.fc";
+#include "../../../../interfaces.fc";
+#include "../../../../channel/interface.fc";
+#include "../../../../../funC++/handlerCore.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../classes/msgdata/LzSend.fc";
+#include "../../../../../classes/msgdata/MsglibSendCallback.fc";
+
+#include "../../../../../classes/lz/SmlJobAssigned.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "SmlManager"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        SmlManager::New(
+            getCaller(),
+            SRC_EID,
+            SML_MANAGER_VERSION,
+            CONTROLLER_ADDRESS,
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE(),
+            MOCK_MSGLIB_CONNECTION_CODE()
+        )
+    );
+    return getContractStorage();
+}
+
+;; do not need to implement
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================HELPER FUNCTIONS===============================
+
+(int, slice) setMsglibConfig::success::basic(cell $storage) impure {
+    ;; setting of zroFee
+    cell $SmlManagerConfig = md::SetSmlManagerConfig::New(NATIVE_FEE, ZRO_FEE);
+    ;; These other values arent used, but it makes the config call adhere to the expected interface
+    cell $mdExtended = md::ExtendedMd::New($SmlManagerConfig, cl::nullObject(), NULLADDRESS);
+
+    cell $expectedStorage = $storage
+        .cl::set(SmlManager::nativeFee, NATIVE_FEE)
+        .cl::set(SmlManager::zroFee, ZRO_FEE);
+
+    return test::handler::shouldPass(
+        setMsglibConfig,
+        $mdExtended,
+        unsafeTuple([
+            0,
+            _newAction<event>(SmlManager::event::SET_MSGLIB_CONFIG, $SmlManagerConfig)
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) msglibCommitPacket::success::basic(cell $storage) impure {
+    cell $packet = MOCK_SEND_PACKET();
+    setContractStorage(
+        $storage
+            .cl::nestedDict256::setRef(
+                SmlManager::packets,
+                $packet.cl::hash(),
+                cl::nullObject()
+            )
+    );
+    int connectionAddress = _deriveConnectionAddress(
+        lz::Path::reverse($packet.cl::get<objRef>(lz::Packet::path))
+    );
+
+    cell $mdAddress = md::MdAddress::New(
+        MOCK_SEND_PACKET(),
+        ENDPOINT_ADDRESS
+    );
+
+    return test::handler::shouldPass(
+        smlManagerCommitPacket,
+        $mdAddress,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                connectionAddress,
+                SmlConnection::OP::SML_CONNECTION_COMMIT_PACKET,
+                $mdAddress
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) msglibSend::success::basic(cell $storage) impure {
+    cell $lzSend = MOCK_LZ_SEND();
+
+    ;; exctract the expected values
+    int nativeFee = $storage.cl::get<coins>(SmlManager::nativeFee);
+    int zroFee = $storage.cl::get<coins>(SmlManager::zroFee);
+    cell payees = serializePayees(
+        unsafeTuple([[getContractAddress(), nativeFee]])
+    );
+
+    cell $packet = $lzSend.cl::get<objRef>(md::LzSend::packet);
+    cell packetEncoded = BytesEncoder::build<PacketV1>($packet)
+        .BytesEncoder::serialize();
+
+    int channelAddress = _deriveChannelAddress(
+        $packet.cl::get<objRef>(lz::Packet::path)
+    );
+
+    cell $extendedMd = md::ExtendedMd::New(
+        $lzSend,
+        cl::nullObject(),
+        channelAddress
+    );
+
+    return test::handler::shouldPass(
+        smlManagerSend,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                channelAddress,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                md::MdAddress::New(
+                    md::MsglibSendCallback::New(
+                        nativeFee,
+                        zroFee,
+                        $lzSend,
+                        packetEncoded,
+                        payees,
+                        PacketV1::nonceOffsetBytes,
+                        PacketV1::nonceBytes,
+                        PacketV1::guidOffsetBytes,
+                        PacketV1::guidBytes,
+                        lz::SmlJobAssigned::New(nativeFee),
+                        Channel::NO_ERROR
+                    ),
+                    getContractAddress()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) getMsgLibInfo::success::basic(cell $storage) impure {
+    cell $addMsglibMd = md::AddMsglib::New(SEND_MSGLIB_MANAGER_ADDRESS, DST_EID);
+
+    cell $msglibInfo = lz::MsglibInfo::New(
+        getContractAddress(), ;; for SML, the manager IS the msglib
+        $storage.cl::get<cellRef>(SmlManager::smlConnectionCode),
+        SmlConnection::New(
+            getContractAddress(), ;; connection is owned by the manager
+            lz::Path::endpointPath(
+                $storage.cl::get<uint32>(SmlManager::eid),
+                $addMsglibMd.cl::get<uint32>(md::AddMsglib::dstEid)
+            )
+        )
+    );
+
+    return test::handler::shouldPass(
+        getMsgLibInfo,
+        $addMsglibMd,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                getCaller(),
+                Endpoint::OP::GET_MSGLIB_INFO_CALLBACK,
+                $msglibInfo
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([setMsglibConfig::success::basic, "setMsglibConfig::success::basic"])
+            .tpush([msglibCommitPacket::success::basic, "msglibCommitPacket::success::basic"])
+            .tpush([msglibSend::success::basic, "msglibSend::success::basic"])
+            .tpush([getMsgLibInfo::success::basic, "getMsgLibInfo::success::basic"])
+    );
+}

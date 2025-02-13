@@ -1,0 +1,508 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/BytesEncoder.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+#include "../../../classes/msgdata/LzSend.fc";
+#include "../../../classes/msgdata/MsglibSendCallback.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::send"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+(int, slice) channelSend::success::basic(cell $storage) impure {
+    int nextSendRequestId = $storage.cl::get<uint64>(Channel::lastSendRequestId) + 1;
+
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New($lzSend, MOCK_SML_SEND_EP_CONFIG());
+
+    cell $expectedLzSendMd = MOCK_LZ_SEND_WITH_ID(nextSendRequestId)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+
+    cell sendRequests = DeterministicInsertionCircularQueue::set(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        nextSendRequestId,
+        _buildSendRequestQueueEntry($expectedLzSendMd),
+        SendRequestQueue::sending
+    );
+
+    cell $expectedStorage = $storage
+        .cl::set(Channel::sendRequestQueue, sendRequests)
+        .cl::set(Channel::lastSendRequestId, nextSendRequestId);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SEND_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SEND,
+                $expectedLzSendMd
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) channelSend::success::sendQueueMax(cell $storage) impure {
+    ;; this request `hashes` to the same slot as 1
+
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+
+    channelSend($mdObj);
+
+    int nextSendRequestId = MAX_CELL_BITS;
+    setContractStorage(
+        getContractStorage()
+            .cl::set(Channel::lastSendRequestId, nextSendRequestId - 1)
+    );
+    $storage = getContractStorage();
+
+    $lzSend = MOCK_LZ_SEND();
+    $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+
+    cell $expectedLzSendMd = MOCK_LZ_SEND_WITH_ID(nextSendRequestId);
+
+    cell sendRequests = DeterministicInsertionCircularQueue::set(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        nextSendRequestId,
+        _buildSendRequestQueueEntry($expectedLzSendMd),
+        SendRequestQueue::sending
+    );
+
+    cell $expectedStorage = $storage
+        .cl::set(Channel::sendRequestQueue, sendRequests)
+        .cl::set(Channel::lastSendRequestId, nextSendRequestId);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SEND_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SEND,
+                $expectedLzSendMd
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) channelSend::success::sendQueueCongested(cell $storage) impure {
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+
+    ;; to move the last send request id one step forward
+    channelSend($mdObj);
+
+    setContractStorage(
+        getContractStorage()
+            .cl::set(Channel::lastSendRequestId, MAX_CELL_BITS)
+    );
+
+    $lzSend = MOCK_LZ_SEND_WITH_ID(MAX_CELL_BITS + 1)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::ERROR::sendQueueCongested,
+                $lzSend
+            ),
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        $lzSend,
+                        0,
+                        0,
+                        Channel::ERROR::sendQueueCongested
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) channelSend::success::maxSizeMessage(cell $storage) impure {
+    int nextSendRequestId = $storage.cl::get<uint64>(Channel::lastSendRequestId) + 1;
+
+    cell tail = begin_cell().store_ones(MAX_CELL_WHOLE_BYTE_BITS).end_cell();
+    repeat(lz::Packet::MAX_SEND_MESSAGE_CELLS - 1) {
+        tail = begin_cell()
+            .store_ones(MAX_CELL_WHOLE_BYTE_BITS)
+            .store_ref(tail)
+            .end_cell();
+    }
+    cell $lzSend = MOCK_LZ_SEND()
+        .cl::set(md::LzSend::packet, MOCK_PACKET_WITH_MESSAGE(tail));
+    cell $mdObj = md::MdObj::New($lzSend, MOCK_SML_SEND_EP_CONFIG());
+
+    cell $expectedLzSendMd = $lzSend
+        .cl::set(md::LzSend::sendRequestId, nextSendRequestId)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+
+    cell sendRequests = DeterministicInsertionCircularQueue::set(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        nextSendRequestId,
+        _buildSendRequestQueueEntry($expectedLzSendMd),
+        SendRequestQueue::sending
+    );
+
+    cell $expectedStorage = $storage
+        .cl::set(Channel::sendRequestQueue, sendRequests)
+        .cl::set(Channel::lastSendRequestId, nextSendRequestId);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SEND_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SEND,
+                $expectedLzSendMd
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) channelSend::revert::messageTooBig(cell $storage) impure {
+    cell tail = begin_cell().store_ones(MAX_CELL_WHOLE_BYTE_BITS).end_cell();
+    repeat(lz::Packet::MAX_SEND_MESSAGE_CELLS) {
+        tail = begin_cell()
+            .store_ones(MAX_CELL_WHOLE_BYTE_BITS)
+            .store_ref(tail)
+            .end_cell();
+    }
+    cell $lzSend = MOCK_LZ_SEND()
+        .cl::set(md::LzSend::packet, MOCK_PACKET_WITH_MESSAGE(tail));
+
+    return test::handler::shouldFail(
+        channelSend,
+        md::MdObj::New(
+            $lzSend,
+            MOCK_SML_SEND_EP_CONFIG()
+        ),
+        lz::Packet::ERROR::INVALID_MESSAGE
+    );
+}
+
+(int, slice) channelSend::revert::messageNotByteAligned(cell $storage) impure {
+    cell $lzSend = MOCK_LZ_SEND()
+        .cl::set(
+            md::LzSend::packet,
+            MOCK_PACKET_WITH_MESSAGE(
+                begin_cell()
+                    .store_bool(true)
+                    .end_cell()
+            )
+        );
+
+    return test::handler::shouldFail(
+        channelSend,
+        md::MdObj::New($lzSend, MOCK_SML_SEND_EP_CONFIG()),
+        lz::Packet::ERROR::INVALID_MESSAGE
+    );
+}
+
+(int, slice) channelSend::revert::messageNotLinkedList(cell $storage) impure {
+    cell innerMessageCell = begin_cell().store_ones(MAX_CELL_WHOLE_BYTE_BITS).end_cell();
+    cell $lzSend = MOCK_LZ_SEND()
+        .cl::set(
+            md::LzSend::packet,
+            MOCK_PACKET_WITH_MESSAGE(
+                begin_cell()
+                    .store_ones(MAX_CELL_WHOLE_BYTE_BITS)
+                    .store_ref(innerMessageCell)
+                    .store_ref(innerMessageCell)
+                    .end_cell()
+            )
+        );
+
+    return test::handler::shouldFail(
+        channelSend,
+        md::MdObj::New($lzSend, MOCK_SML_SEND_EP_CONFIG()),
+        lz::Packet::ERROR::INVALID_MESSAGE
+    );
+}
+
+(int, slice) channelSend::revert::messageInnerNodeNotFilled(cell $storage) impure {
+    cell tail = begin_cell().store_ones(MAX_CELL_WHOLE_BYTE_BITS).end_cell();
+    cell $lzSend = MOCK_LZ_SEND()
+        .cl::set(
+            md::LzSend::packet,
+            MOCK_PACKET_WITH_MESSAGE(
+                begin_cell()
+                    .store_ones(MAX_CELL_WHOLE_BYTE_BITS - 8)
+                    .store_ref(tail)
+                    .end_cell()
+            )
+        );
+
+    return test::handler::shouldFail(
+        channelSend,
+        md::MdObj::New($lzSend, MOCK_SML_SEND_EP_CONFIG()),
+        lz::Packet::ERROR::INVALID_MESSAGE
+    );
+}
+
+(int, slice) channelSend::success::sendMsglibNotSet(cell $storage) impure {
+    cell $epConfigOApp = MOCK_SML_SEND_EP_CONFIG()
+        .cl::set(lz::SendEpConfig::sendMsglib, NULLADDRESS);
+
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New($lzSend, $epConfigOApp);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        $lzSend,
+                        0,
+                        0,
+                        Channel::ERROR::MsglibBlocked
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) channelSend::success::sendMsglibConnectionNotSet(cell $storage) impure {
+    cell $epConfigOApp = MOCK_SML_SEND_EP_CONFIG()
+        .cl::set(lz::SendEpConfig::sendMsglibConnection, NULLADDRESS);
+
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New($lzSend, $epConfigOApp);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        $lzSend,
+                        0,
+                        0,
+                        Channel::ERROR::MsglibBlocked
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) channelSend::success::sendMsglibAndConnectionNotSet(cell $storage) impure {
+    cell $epConfigOApp = MOCK_SML_SEND_EP_CONFIG()
+        .cl::set(lz::SendEpConfig::sendMsglib, NULLADDRESS)
+        .cl::set(lz::SendEpConfig::sendMsglibConnection, NULLADDRESS);
+
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New($lzSend, $epConfigOApp);
+
+    return test::handler::shouldPass(
+        channelSend,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        $lzSend,
+                        0,
+                        0,
+                        Channel::ERROR::MsglibBlocked
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) forceAbort::success::basic(cell $storage) impure {
+    int sendRequestId = $storage.cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND_WITH_ID(sendRequestId);
+
+    cell $mdObj = md::MdObj::New(MOCK_LZ_SEND(), MOCK_SML_SEND_EP_CONFIG());
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell expectedSendQueue = DeterministicInsertionCircularQueue::delete(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        sendRequestId
+    );
+
+    return test::handler::shouldPass(
+        forceAbort,
+        $lzSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New($lzSend, 0, 0, Channel::ERROR::sendAborted),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage.cl::set(Channel::sendRequestQueue, expectedSendQueue),
+        txnContext
+    );
+}
+
+(int, slice) forceAbort::revert::noHash(cell $storage) impure {
+    return test::handler::shouldFail(
+        forceAbort,
+        MOCK_LZ_SEND(),
+        Channel::ERROR::cannotAbortSend
+    );
+}
+
+(int, slice) forceAbort::revert::wrongHash(cell $storage) impure {
+    int sendRequestId = $storage.cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND_WITH_ID(sendRequestId);
+
+    cell $mdObj = md::MdObj::New(MOCK_LZ_SEND(), MOCK_SML_SEND_EP_CONFIG());
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell $wrongLzSend = $lzSend.cl::set(md::LzSend::nativeFee, NATIVE_FEE + 1);
+
+    return test::handler::shouldFail(
+        forceAbort,
+        $wrongLzSend,
+        Channel::ERROR::cannotAbortSend
+    );
+}
+
+(int, slice) CoinsAmount::success::basic(cell $storage) impure {
+    cell $depositZro = md::CoinsAmount::New(ZRO_FEE);
+
+    cell $expectedStorage = $storage.cl::set(
+        Channel::zroBalance,
+        $storage.cl::get<coins>(Channel::zroBalance) + ZRO_FEE
+    );
+
+    return test::handler::shouldPass(
+        depositZro,
+        $depositZro,
+        unsafeTuple([
+            0,
+            _newAction<event>(Channel::event::ZRO_DEPOSITED, $depositZro)
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- channel send
+            .tpush([channelSend::success::basic, "channelSend::success::basic"])
+            .tpush([channelSend::success::sendQueueMax, "channelSend::success::sendQueueMax"])
+            .tpush([channelSend::success::sendQueueCongested, "channelSend::success::sendQueueCongested"])
+            .tpush([channelSend::success::maxSizeMessage, "channelSend::success::maxSizeMessage"])
+            .tpush([channelSend::revert::messageTooBig, "channelSend::revert::messageTooBig"])
+            .tpush([channelSend::revert::messageNotByteAligned, "channelSend::revert::messageNotByteAligned"])
+            .tpush([channelSend::revert::messageNotLinkedList, "channelSend::revert::messageNotLinkedList"])
+            .tpush([channelSend::revert::messageInnerNodeNotFilled, "channelSend::revert::messageInnerNodeNotFilled"])
+            .tpush([channelSend::success::sendMsglibNotSet, "channelSend::success::sendMsglibNotSet"])
+            .tpush([channelSend::success::sendMsglibConnectionNotSet, "channelSend::success::sendMsglibConnectionNotSet"])
+            .tpush([channelSend::success::sendMsglibAndConnectionNotSet, "channelSend::success::sendMsglibAndConnectionNotSet"])
+            ;; -- force abort
+            .tpush([forceAbort::success::basic, "forceAbort::success::basic"])
+            .tpush([forceAbort::revert::noHash, "forceAbort::revert::noHash"])
+            .tpush([forceAbort::revert::wrongHash, "forceAbort::revert::wrongHash"])
+            ;; ;; -- zro management
+            .tpush([CoinsAmount::success::basic, "CoinsAmount::success::basic"])
+        ;
+}

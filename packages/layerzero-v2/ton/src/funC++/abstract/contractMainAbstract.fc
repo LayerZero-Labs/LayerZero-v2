@@ -1,0 +1,14 @@
+;; _executeOpcode is executed at the start of contractMain, after checking permissions.
+;; Each contract implements a list of opcodes, which calls a handler as the entry point
+;; of that opcode. The contract must be initialized in order to start executing opcodes.
+;; @in the opcode to execute
+;; @in the message data extracted from txnContext
+;; @out tuple of resultant actions
+tuple _executeOpcode(int op, cell $md) impure inline;
+
+;; Actions are executed after the opcode is executed. Each opcode must emit a tuple
+;; of actions, where each action is executed after the opcode is executed in order.
+;; @in the action to execute
+;; @in the value of the action
+;; @out a bool that determines if excess balance is to be sent back to the origin.
+int _executeAction(int actionType, tuple action) impure inline;

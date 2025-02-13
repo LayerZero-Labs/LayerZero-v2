@@ -1,0 +1,510 @@
+#include "../Packet.fc";
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../funC++/testutils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../protocol/endpoint/storage.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "lzClasses Serde"; }
+
+;;; ===============================TESTS=========================================
+
+;; -- Sorting these in the same order that it shows on the github PR.
+;; -- The main invariant for all of the [getBool, getData, getRef, multiget] is that
+;; none of the fields in the objects that are being checked against each other should have the 
+;; same value, so we can make sure that a field is not being returned in the place of another.
+;; therefore, we should be very careful when using the mocks we've had from before.
+
+
+;; Config: Has 1 multi-getter
+(int, slice) Serde::lz::Config::deserialize(cell $unused) impure {
+    cell $lzConfig = MOCK_RESOLVED_CONFIG();
+
+    (
+        cell $path, 
+        int forwardingAddress, 
+        int opCode, 
+        cell $config
+    ) = lz::Config::deserialize($lzConfig);
+
+    return test::multiget::equal(
+        $lzConfig,
+        unsafeTuple([
+            lz::Config::path,
+            lz::Config::forwardingAddress,
+            lz::Config::opCode,
+            lz::Config::config
+        ]),
+        unsafeTuple([
+            $path,
+            forwardingAddress,
+            opCode,
+            $config
+        ])
+    );
+}
+
+;; EpConfig: Has 2 multi-getters
+;;           Has 1 sanitizer
+(int, slice) Serde::lz::EpConfig::deserializeSendConfig(cell $unused) impure {
+    cell $epConfig = MOCK_RESOLVED_EP_CONFIG(true);
+
+    (
+        int optimizedIsNull,
+        int optimizedSendMsglibManager,
+        int optimizedSendMsglib, 
+        int optimizedSendMsglibConnection
+    ) = lz::EpConfig::deserializeSendConfig($epConfig);
+
+
+    return test::multiget::equal(
+        $epConfig,
+        unsafeTuple([
+            lz::EpConfig::isNull,
+            lz::EpConfig::sendMsglibManager,
+            lz::EpConfig::sendMsglib,
+            lz::EpConfig::sendMsglibConnection
+        ]),
+        unsafeTuple([
+            optimizedIsNull,
+            optimizedSendMsglibManager,
+            optimizedSendMsglib,
+            optimizedSendMsglibConnection
+        ])
+    );
+}
+
+(int, slice) Serde::lz::EpConfig::deserializeReceiveConfig(cell $unused) impure {
+    cell $epConfig = MOCK_RESOLVED_EP_CONFIG(true);
+
+    (
+        int optimizedIsNull, 
+        int optimizedReceiveMsglibConnection
+    ) = lz::EpConfig::deserializeReceiveConfig($epConfig);
+
+    return test::multiget::equal(
+        $epConfig,
+        unsafeTuple([
+            lz::EpConfig::isNull,
+            lz::EpConfig::receiveMsglibConnection
+        ]),
+        unsafeTuple([
+            optimizedIsNull,
+            optimizedReceiveMsglibConnection
+        ])
+    );
+}
+
+(int, slice) Serde::lz::EpConfig::sanitize(cell $unused) impure {
+    cell $epConfig = MOCK_RESOLVED_EP_CONFIG(true);
+
+    cell $sanitizedEpConfig = lz::EpConfig::sanitize(
+        _dupWithGarbage($epConfig)
+    );
+
+    return test::build::equal(
+        $epConfig,
+        $sanitizedEpConfig
+    );
+}
+
+;; MsglibInfo: Has 1 getter,
+;;             Has 1 utils,
+;;             Has 1 sanitizer
+(int, slice) Serde::lz::MsglibInfo::getMsglibAddress(cell $unused) impure {
+    cell $msglibInfo = MOCK_MSG_LIB_INFO(ULN_MANAGER_ADDRESS);
+
+    return test::getData::equal(
+        $msglibInfo,
+        lz::MsglibInfo::getMsglibAddress,
+        lz::MsglibInfo::msglibAddress
+    );
+}
+
+(int, slice) Serde::lz::MsglibInfo::getMsglibConnectionAddress(cell $unused) impure {
+    cell $msglibInfo = MOCK_MSG_LIB_INFO(ULN_MANAGER_ADDRESS);
+    cell $path = MOCK_RECEIVE_PATH();
+
+    int expectedAddress = computeContractAddress(
+        $msglibInfo
+            .cl::get<objRef>(lz::MsglibInfo::msglibConnectionInitStorage)
+            .cl::set(MsglibConnection::PathFieldIdx, $path),
+        $msglibInfo.cl::get<cellRef>(lz::MsglibInfo::msglibConnectionCode)
+    );
+
+    int address = lz::MsglibInfo::getMsglibConnectionAddress($msglibInfo, $path);
+
+    return test::shouldBeTrue(address == expectedAddress);
+}
+
+(int, slice) Serde::lz::MsglibInfo::sanitize(cell $unused) impure {
+    cell $msglibInfo = MOCK_MSG_LIB_INFO(ULN_MANAGER_ADDRESS);
+
+    cell $sanitizedMsglibInfo = lz::MsglibInfo::sanitize(
+        _dupWithGarbage($msglibInfo)
+    );
+
+    return test::build::equal(
+        $msglibInfo,
+        $sanitizedMsglibInfo
+    );
+}
+
+;; Packet: Has 1 builder,
+;;         Has 3 getters
+;;         Has 1 multi-getter (deserializer)
+(int, slice) Serde::lz::Packet::build(cell $unused) impure {
+    cell $expectedPacket = lz::Packet::New(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE(),
+        NONCE
+    );
+
+    cell $packet = lz::Packet::build(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE(),
+        NONCE
+    );
+
+    return test::build::equal(
+        $expectedPacket,
+        $packet
+    );
+}
+
+(int, slice) Serde::lz::Packet::nonceless(cell $unused) impure {
+    cell $expectedPacket = lz::Packet::New(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE(),
+        0
+    );
+
+    cell $packet = lz::Packet::nonceless(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE()
+    );
+
+    return test::build::equal($expectedPacket, $packet);
+}
+
+(int, slice) Serde::lz::Packet::getPath(cell $unused) impure {
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    return test::getRef::equal(
+        $packet,
+        lz::Packet::getPath,
+        lz::Packet::path
+    );
+}
+
+(int, slice) Serde::lz::Packet::getMessage(cell $unused) impure {
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    return test::getRef::equal(
+        $packet,
+        lz::Packet::getMessage,
+        lz::Packet::message
+    );
+}
+
+(int, slice) Serde::lz::Packet::getNonce(cell $unused) impure {
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    return test::getData::equal(
+        $packet,
+        lz::Packet::getNonce,
+        lz::Packet::nonce
+    );
+}
+
+(int, slice) Serde::lz::Packet::getGuid(cell $unused) impure {
+    int guid = 4591;
+    cell $packet = MOCK_RECEIVE_PACKET().cl::set(lz::Packet::guid, guid);
+
+    return test::getData::equal(
+        $packet,
+        lz::Packet::getGuid,
+        lz::Packet::guid
+    );
+}
+
+(int, slice) Serde::lz::Packet::deserialize(cell $unused) impure {
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    (cell $path, cell message, int nonce, int guid) = lz::Packet::deserialize($packet);
+
+    return test::multiget::equal(
+        $packet,
+        unsafeTuple([lz::Packet::path, lz::Packet::message, lz::Packet::nonce, lz::Packet::guid]),
+        unsafeTuple([$path, message, nonce, guid])
+    );
+}
+
+(int, slice) Serde::lz::Packet::setNonceAndGuid(cell $unused) impure {
+    int nonce = 100;
+    int guid = 200;
+    cell $packet = MOCK_RECEIVE_PACKET()
+        .cl::set(lz::Packet::nonce, nonce)
+        .cl::set(lz::Packet::guid, guid);
+
+    return test::set::equal(
+        $packet,
+        lz::Packet::setNonceAndGuid($packet, nonce, guid)
+    );
+}
+
+;; Path:   Has 1 builder
+;;         Has 1 getter
+;;         Has 2 multi-getters
+;;         Has 1 sanitizer
+(int, slice) Serde::lz::Path::build(cell $unused) impure {
+    cell $expectedPath = lz::Path::New(
+        SRC_EID,
+        SRC_OAPP,
+        DST_EID,
+        DST_OAPP
+    );
+
+    cell $path = lz::Path::build(
+        SRC_EID,
+        SRC_OAPP,
+        DST_EID,
+        DST_OAPP
+    );
+
+    return test::build::equal(
+        $expectedPath,
+        $path
+    );
+}
+
+(int, slice) Serde::lz::Path::getSrcOApp(cell $unused) impure {
+    cell $path = MOCK_SEND_PATH();
+
+    return test::getData::equal(
+        $path,
+        lz::Path::getSrcOApp,
+        lz::Path::srcOApp
+    );
+}
+
+(int, slice) Serde::lz::Path::getEidAndDstEid(cell $unused) impure {
+    cell $path = MOCK_SEND_PATH();
+
+    (
+        int srcEid,
+        int dstEid
+    ) = lz::Path::getEidAndDstEid($path);
+
+    return test::multiget::equal(
+        $path,
+        unsafeTuple([
+            lz::Path::srcEid,
+            lz::Path::dstEid
+        ]),
+        unsafeTuple([
+            srcEid,
+            dstEid
+        ])
+    );
+}
+
+(int, slice) Serde::lz::Path::deserialize(cell $unused) impure {
+    cell $path = MOCK_SEND_PATH();
+
+    (
+        int srcEid,
+        int srcOApp,
+        int dstEid,
+        int dstOApp
+    ) = lz::Path::deserialize($path);
+
+    return test::multiget::equal(
+        $path,
+        unsafeTuple([
+            lz::Path::srcEid,
+            lz::Path::srcOApp,
+            lz::Path::dstEid,
+            lz::Path::dstOApp
+        ]),
+        unsafeTuple([
+            srcEid,
+            srcOApp,
+            dstEid,
+            dstOApp
+        ])
+    );
+}
+
+(int, slice) Serde::lz::Path::sanitize(cell $unused) impure {
+    cell $path = MOCK_SEND_PATH();
+
+    cell $sanitizedPath = lz::Path::sanitize(
+        _dupWithGarbage($path)
+    );
+
+    return test::build::equal(
+        $path,
+        $sanitizedPath
+    );
+}
+
+;; ReceiveEpConfig: Has 1 builder,
+;;                  Has 1 getter
+(int, slice) Serde::lz::ReceiveEpConfig::build(cell $unused) impure {
+    cell $config = lz::ReceiveEpConfig::New(
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+    );
+
+    return test::build::equal(
+        $config,
+        lz::ReceiveEpConfig::build(
+            RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+            TIMEOUT_RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+            MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+        )
+    );
+}
+
+(int, slice) Serde::lz::ReceiveEpConfig::getReceiveMsglibConnection(cell $unused) impure {
+    cell $storage = MOCK_SML_RECEIVE_EP_CONFIG();
+
+    return test::getData::equal(
+        $storage,
+        lz::ReceiveEpConfig::getReceiveMsglibConnection,
+        lz::ReceiveEpConfig::receiveMsglibConnection
+    );
+}
+
+;; SendEpConfig: Has 1 builder,
+;;               Has 1 getter,
+;;               Has 1 multi-getter
+(int, slice) Serde::lz::SendEpConfig::build(cell $unused) impure {
+    return test::build::equal(
+        lz::SendEpConfig::New(
+            SEND_MSGLIB_MANAGER_ADDRESS,
+            SEND_MSGLIB_ADDRESS,
+            SEND_MSGLIB_CONNECTION_ADDRESS
+        ),
+        lz::SendEpConfig::build(
+            SEND_MSGLIB_MANAGER_ADDRESS,
+            SEND_MSGLIB_ADDRESS,
+            SEND_MSGLIB_CONNECTION_ADDRESS
+        )
+    );
+}
+
+(int, slice) Serde::lz::SendEpConfig::getSendMsglib(cell $unused) impure {
+    return test::getData::equal(
+        MOCK_SML_SEND_EP_CONFIG(),
+        lz::SendEpConfig::getSendMsglib,
+        lz::SendEpConfig::sendMsglib
+    );
+}
+
+(int, slice) Serde::lz::SendEpConfig::deserialize(cell $unused) impure {
+    cell $config = MOCK_SML_SEND_EP_CONFIG();
+
+    (int msglibManager, int msgLib, int connection) = lz::SendEpConfig::deserialize($config);
+
+    return test::multiget::equal(
+        $config,
+        unsafeTuple([lz::SendEpConfig::sendMsglibManager, lz::SendEpConfig::sendMsglib, lz::SendEpConfig::sendMsglibConnection]),
+        unsafeTuple([msglibManager, msgLib, connection])
+    );
+}
+
+;; BaseStorage: Has 4 getters
+
+(int, slice) Serde::BaseStorage::getOwner(cell $unused) impure {
+    cell $storage = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    cell $baseStorage = $storage.Endpoint::getBaseStorage();
+
+    return test::getData::equal(
+        $baseStorage,
+        BaseStorage::getOwner,
+        BaseStorage::owner
+    );
+}
+
+(int, slice) Serde::BaseStorage::getAuthenticated(cell $unused) impure {
+    cell $storage = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    cell $baseStorage = $storage.Endpoint::getBaseStorage().cl::set(BaseStorage::authenticated, true);
+
+    return test::getBool::equal(
+        $baseStorage,
+        BaseStorage::getAuthenticated,
+        BaseStorage::authenticated
+    );
+}
+
+(int, slice) Serde::BaseStorage::getInitialized(cell $unused) impure {
+    cell $storage = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    ;; set initialized to true to make sure it's not confused with Authenticated
+    cell $baseStorage = $storage.Endpoint::getBaseStorage().cl::set(BaseStorage::initialized, true);
+
+    return test::getBool::equal(
+        $baseStorage,
+        BaseStorage::getInitialized,
+        BaseStorage::initialized
+    );
+}
+
+(int, slice) Serde::BaseStorage::getInitialStorage(cell $unused) impure {
+    cell $storage = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    cell $baseStorage = $storage.Endpoint::getBaseStorage();
+
+    return test::getRef::equal(
+        $baseStorage,
+        BaseStorage::getInitialStorage,
+        BaseStorage::initialStorage
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+    ;; -- Config:
+        .tpush([Serde::lz::Config::deserialize, "Serde::lz::Config::deserialize"])
+    ;; -- EpConfig
+        .tpush([Serde::lz::EpConfig::deserializeSendConfig, "Serde::lz::EpConfig::deserializeSendConfig"])
+        .tpush([Serde::lz::EpConfig::deserializeReceiveConfig, "Serde::lz::EpConfig::deserializeReceiveConfig"])
+        .tpush([Serde::lz::EpConfig::sanitize, "Serde::lz::EpConfig::sanitize"])
+    ;; -- MsglibInfo:
+        .tpush([Serde::lz::MsglibInfo::getMsglibAddress, "Serde::lz::MsglibInfo::getMsglibAddress"])
+        .tpush([Serde::lz::MsglibInfo::getMsglibConnectionAddress, "Serde::lz::MsglibInfo::getMsglibConnectionAddress"])
+        .tpush([Serde::lz::MsglibInfo::sanitize, "Serde::lz::MsglibInfo::sanitize"])
+    ;; -- Packet:
+        .tpush([Serde::lz::Packet::build, "Serde::lz::Packet::build"])
+        .tpush([Serde::lz::Packet::nonceless, "Serde::lz::Packet::nonceless"])
+        .tpush([Serde::lz::Packet::getPath, "Serde::lz::Packet::getPath"])
+        .tpush([Serde::lz::Packet::getMessage, "Serde::lz::Packet::getMessage"])
+        .tpush([Serde::lz::Packet::getNonce, "Serde::lz::Packet::getNonce"])
+        .tpush([Serde::lz::Packet::getGuid, "Serde::lz::Packet::getGuid"])
+        .tpush([Serde::lz::Packet::deserialize, "Serde::lz::Packet::deserialize"])
+    ;; -- Path:
+        .tpush([Serde::lz::Path::build, "Serde::lz::Path::build"])
+        .tpush([Serde::lz::Path::getSrcOApp, "Serde::lz::Path::getSrcOApp"])
+        .tpush([Serde::lz::Path::getEidAndDstEid, "Serde::lz::Path::getEidAndDstEid"])
+        .tpush([Serde::lz::Path::deserialize, "Serde::lz::Path::deserialize"])
+        .tpush([Serde::lz::Path::sanitize, "Serde::lz::Path::sanitize"])
+        .tpush([Serde::lz::Packet::setNonceAndGuid, "Serde::lz::Packet::setNonceAndGuid"])
+    ;; -- ReceiveEpConfig:
+        .tpush([Serde::lz::ReceiveEpConfig::build, "Serde::lz::ReceiveEpConfig::build"])
+        .tpush([Serde::lz::ReceiveEpConfig::getReceiveMsglibConnection, "Serde::lz::ReceiveEpConfig::getReceiveMsglibConnection"])
+    ;; -- SendEpConfig:
+        .tpush([Serde::lz::SendEpConfig::build, "Serde::lz::SendEpConfig::build"])
+        .tpush([Serde::lz::SendEpConfig::getSendMsglib, "Serde::lz::SendEpConfig::getSendMsglib"])
+        .tpush([Serde::lz::SendEpConfig::deserialize, "Serde::lz::SendEpConfig::deserialize"])
+    ;; -- BaseStorage:
+        .tpush([Serde::BaseStorage::getOwner, "Serde::BaseStorage::getOwner"])
+        .tpush([Serde::BaseStorage::getAuthenticated, "Serde::BaseStorage::getAuthenticated"])
+        .tpush([Serde::BaseStorage::getInitialized, "Serde::BaseStorage::getInitialized"])
+        .tpush([Serde::BaseStorage::getInitialStorage, "Serde::BaseStorage::getInitialStorage"])
+    ;
+}

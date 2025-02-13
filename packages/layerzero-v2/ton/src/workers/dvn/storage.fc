@@ -1,0 +1,40 @@
+#include "../core/workerCoreStorage.fc";
+
+;; required object name
+const int Dvn::NAME = "dvn"u;
+
+;; field names
+const int Dvn::workerCoreStorage = 0; ;; = WORKER_CORE_STORAGE_IDX;
+const int Dvn::quorum = 1;
+const int Dvn::verifiers = 2;
+const int Dvn::setQuorumNonce = 3;
+const int Dvn::setVerifiersNonce = 4;
+const int Dvn::setAdminsByQuorumNonce = 5;
+
+;; @owner manager
+cell Dvn::New(cell admins, int version, int quorum, cell verifiers) impure inline method_id {
+    return cl::declare(
+        Dvn::NAME,
+        unsafeTuple([
+            [cl::t::objRef, WorkerCoreStorage::New(admins, NULLADDRESS, version)],     ;; Dvn::workerCoreStorage
+            [cl::t::uint64, quorum],                                                   ;; Dvn::quorum
+            [cl::t::dict256, verifiers],                                               ;; Dvn::verifiers
+            [cl::t::uint64, 1],                                                        ;; Dvn::setQuorumNonce
+            [cl::t::uint64, 1],                                                        ;; Dvn::setVerifiersNonce
+            [cl::t::uint64, 1]                                                         ;; Dvn::setAdminsByQuorumNonce
+        ])
+    );
+}
+
+const int Dvn::_quorumOffset = _HEADER_WIDTH;
+const int Dvn::_setQuorumNonceOffset = Dvn::_quorumOffset + 64;
+const int Dvn::_setVerifiersNonceOffset = Dvn::_setQuorumNonceOffset + 64;
+const int Dvn::_setAdminsByQuorumNonceOffset = Dvn::_setVerifiersNonceOffset + 64;
+
+(int, cell) Dvn::getQuorumAndVerifiers(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadUint64At(Dvn::_quorumOffset),
+        selfSlice.preloadRefAt(1)
+    );
+}

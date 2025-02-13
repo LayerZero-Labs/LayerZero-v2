@@ -1,0 +1,24 @@
+#include "handler.fc";
+#include "interface.fc";
+
+#include "../../../core/abstract/protocolMain.fc";
+#include "../../interface.fc";
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == SmlManager::OP::SET_MSGLIB_CONFIG) {
+        return setMsglibConfig($md);
+    } elseif (op == SmlManager::OP::SML_MANAGER_SEND) {
+        return smlManagerSend($md);
+    } elseif (op == SmlManager::OP::SML_MANAGER_COMMIT_PACKET) {
+        return smlManagerCommitPacket($md);
+    } elseif (op == SmlManager::OP::SML_MANAGER_COMMIT_PACKET_CALLBACK) {
+        return smlManagerCommitPacketCallback($md);
+    } elseif (op == MsglibManager::OP::GET_MSGLIB_INFO) {
+        return getMsgLibInfo($md);
+    } elseif (op == MsglibManager::OP::DEPLOY_CONNECTION) {
+        return deployConnection($md);
+    } else {
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+    return empty_tuple();
+}

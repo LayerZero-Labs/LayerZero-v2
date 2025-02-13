@@ -1,0 +1,211 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../core/interface.fc";
+
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../workers/core/tests/workerStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../funC++/baseInterface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/txnContext.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/handlerCore.fc";
+
+#include "../../../classes/msgdata/Bool.fc";
+
+#include "../../../../tests/consts.fc";
+#include "../../../funC++/actions/event.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Proxy"; }
+
+cell createContractStorage() impure {
+    setContractStorage(Proxy::New(
+        AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS])), 0)
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure { }
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) claimTon::success::basic() impure {
+    return test::handler::shouldPass(
+        claimTon,
+        md::ClaimTon::New(MOCK_CLAIM_AMOUNT, ARBITRARY_ADDRESS),
+        unsafeTuple([
+            MOCK_CLAIM_AMOUNT,
+            _newAction<payment>(
+                ARBITRARY_ADDRESS,
+                MOCK_CLAIM_AMOUNT,
+                MOCK_CLAIM_AMOUNT
+            ),
+            _newAction<event>(
+                Worker::event::CLAIMED_TON,
+                md::ClaimTon::New(MOCK_CLAIM_AMOUNT, ARBITRARY_ADDRESS)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) claimTon::revert::lessThanOneTonRemaining() impure {
+    int claimAmount = getInitialContractBalance() - ONE_TON + 1;
+    return test::handler::shouldFail(
+        claimTon,
+        md::ClaimTon::New(claimAmount, ARBITRARY_ADDRESS),
+        Worker::ERROR::insufficientBalance
+    );
+}
+
+(int, slice) setAdmins::success::basic() impure {
+    cell $admins = AddressList::serialize(unsafeTuple(
+        [getCaller(), ARBITRARY_ADDRESS]
+    ));
+
+    return test::handler::shouldPass(
+        setAdmins,
+        $admins,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Worker::event::ADMINS_SET,
+                $admins
+            )
+        ]),
+        getContractStorage().setCoreStorage(
+            getCoreStorage().cl::set(
+                WorkerCoreStorage::admins,
+                $admins
+            )
+        ),
+        txnContext
+    );
+}
+
+(int, slice) callContract::success::basic() impure {
+    cell $executeParams = md::ExecuteParams::New(
+        ARBITRARY_ADDRESS,
+        cl::nullObject(),
+        0,
+        OP::RANDOM,
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        callContract,
+        $executeParams,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ARBITRARY_ADDRESS,
+                OP::RANDOM,
+                cl::nullObject()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) callback::success::callbackEnabled(cell $storage) impure {
+    cell $md = _getRandomCode(132);
+    setContractStorage($storage.cl::set(Proxy::callbackEnabled, true));
+
+    return test::handler::shouldPass(
+        callback,
+        $md,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                getLatestAdmin(),
+                Proxy::OP::HANDLE_CALLBACK,
+                md::ExecuteParams::New(
+                    getCaller(),
+                    $md,
+                    0,
+                    getOpcode(),
+                    NULLADDRESS
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) callback::success::callbackDisabled(cell $storage) impure {
+    return test::handler::shouldPass(
+        callback,
+        _getRandomCode(132),
+        emptyActions(),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) toggleCallback::success::makeItTrue(cell $storage) impure {
+    return test::handler::shouldPass(
+        toggleCallback,
+        md::Bool::New(true),
+        unsafeTuple([0]),
+        $storage.cl::set(Proxy::callbackEnabled, true),
+        txnContext
+    );
+}
+
+(int, slice) toggleCallback::success::makeItFalse(cell $storage) impure {
+    setContractStorage(
+        $storage.cl::set(Proxy::callbackEnabled, false)
+    );
+
+    return test::handler::shouldPass(
+        toggleCallback,
+        md::Bool::New(false),
+        emptyActions(),
+        getContractStorage().cl::set(Proxy::callbackEnabled, false),
+        txnContext
+    );
+}
+
+(int, slice) emitEvent::success::basic() impure {
+    return test::handler::shouldPass(
+        emitEvent,
+        action::event::New(12, _getRandomCode(132), cl::nullObject()),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                12,
+                _getRandomCode(132)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            .tpush([claimTon::success::basic, "claimTon::success::basic"])
+            .tpush([claimTon::revert::lessThanOneTonRemaining, "claimTon::revert::lessThanOneTonRemaining"])
+            .tpush([setAdmins::success::basic, "setAdmins::success::basic"])
+            .tpush([callContract::success::basic, "callContract::success::basic"])
+            .tpush([callback::success::callbackEnabled, "callback::success::callbackEnabled"])
+            .tpush([callback::success::callbackDisabled, "callback::success::callbackDisabled"])
+            .tpush([toggleCallback::success::makeItTrue, "toggleCallback::success::makeItTrue"])
+            .tpush([toggleCallback::success::makeItFalse, "toggleCallback::success::makeItFalse"])
+            .tpush([emitEvent::success::basic, "emitEvent::success::basic"])
+    );
+}

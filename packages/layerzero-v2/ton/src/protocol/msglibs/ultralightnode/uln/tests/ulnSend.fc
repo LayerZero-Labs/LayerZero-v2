@@ -1,0 +1,325 @@
+#include "testutil.fc";
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../../msgdata/UlnSend.fc";
+#include "../../msgdata/UlnSendConfig.fc";
+#include "../../msgdata/UlnWorkerFeelibEvents.fc";
+
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../tests/testMain.fc";
+#include "../../../../interfaces.fc";
+#include "../../../../../funC++/utils.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../../classes/msgdata/MdObj.fc";
+#include "../../../../../funC++/actions/utils.fc";
+
+#include "../../../../channel/interface.fc";
+#include "../../../../../funC++/actions/call.fc";
+
+#include "./mockWorker.fc";
+#include "../../../BytesEncoder.fc";
+#include "../../msgdata/DvnFeesPaidEvent.fc";
+#include "../../msgdata/UlnEvents.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/constants.fc";
+#include "../../../../core/abstract/protocolHandler.fc";
+
+slice _testName() { return "ulnSend"; }
+
+() _createInitializedStorage() impure {
+    initialize(
+        md::InitUln::New(
+            MOCK_ULN_CONNECTION_CODE(),
+            TREASURY_FEE_BPS
+        )
+    );
+}
+
+cell createContractStorage() impure {
+    setContractStorage(Uln::New(ULN_MANAGER_ADDRESS, SRC_EID, DST_EID));
+    return getContractStorage();
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) ulnSend::success::basic(cell $storage) impure {
+    _registerCustomUlnWorkers();
+
+    int numWorkers = 5;
+
+    cell mockUlnWorkerEvent = MOCK_ULN_WORKER_EVENT();
+    cell expectedUlnWorkerFeelibEvents = UlnWorkerFeelibEvents::FromBuilder(
+        UlnWorkerFeelibEventsBuilder::create()
+            .UlnWorkerFeelibEventsBuilder::push(MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(1), mockUlnWorkerEvent)
+            .UlnWorkerFeelibEventsBuilder::push(MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0), mockUlnWorkerEvent)
+            .UlnWorkerFeelibEventsBuilder::push(MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(1), MOCK_ULN_WORKER_EVENT())
+            .UlnWorkerFeelibEventsBuilder::push(MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(0), MOCK_ULN_WORKER_EVENT())
+            .UlnWorkerFeelibEventsBuilder::push(CUSTOM_EXECUTOR, mockUlnWorkerEvent)
+    );
+
+    cell dvnPaidEvent = DvnFeesPaidEvent::New(
+        MOCK_CUSTOM_REQUIRED_DVN_CELL(2, 0),
+        MOCK_CUSTOM_OPTIONAL_DVN_CELL(2, 0),
+        serializePayees(
+            unsafeTuple([
+                [MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(1), NATIVE_FEE],
+                [MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0), NATIVE_FEE],
+                [MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(1), NATIVE_FEE],
+                [MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(0), NATIVE_FEE]
+            ])
+        )
+    );
+
+    cell executorPaidEvent = ExecutorFeePaidEvent::New(CUSTOM_EXECUTOR, NATIVE_FEE);
+
+    cell $expectedUlnEvents = UlnEvents::New(
+        expectedUlnWorkerFeelibEvents,
+        dvnPaidEvent,
+        executorPaidEvent
+    );
+
+    int treasuryFee = ((NATIVE_FEE * numWorkers) * TREASURY_FEE_BPS) / 10000;
+
+    return test::handler::shouldPass(
+        ulnSend,
+        MOCK_ULN_SEND(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                md::MsglibSendCallback::New(
+                    (NATIVE_FEE * numWorkers) + treasuryFee,
+                    0,
+                    MOCK_LZ_SEND(),
+                    BytesEncoder::build<PacketV1>(MOCK_NONCELESS_PACKET()).BytesEncoder::serialize(),
+                    serializePayees(
+                        unsafeTuple([
+                            [MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(1), NATIVE_FEE],
+                            [MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0), NATIVE_FEE],
+                            [MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(1), NATIVE_FEE],
+                            [MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(0), NATIVE_FEE],
+                            [CUSTOM_EXECUTOR, NATIVE_FEE],
+                            [getOwner(), treasuryFee]
+                        ])
+                    ),
+                    PacketV1::nonceOffsetBytes,
+                    PacketV1::nonceBytes,
+                    PacketV1::guidOffsetBytes,
+                    PacketV1::guidBytes,
+                    $expectedUlnEvents,
+                    Channel::NO_ERROR
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; both default and custom configs have executorNull set to true (see UlnSendConfig::newWithDefaults)
+(int, slice) ulnSend::success::bothConfigsExecutorNull::workerQuoteFailed(cell $storage) impure {
+    cell $customSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG()
+        .cl::set(UlnSendConfig::executorNull, true);
+
+    cell $ulnSend = MOCK_ULN_SEND()
+        .cl::set(md::UlnSend::customUlnSendConfig, $customSendConfig);
+
+    return test::handler::shouldPass(
+        ulnSend,
+        $ulnSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; both default and custom configs have requiredDVNsNull set to true (see UlnSendConfig::newWithDefaults)
+(int, slice) ulnSend::success::bothConfigsRequiredDVNsNull::workerQuoteFailed(cell $storage) impure {
+    cell $customSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG()
+                            .cl::set(UlnSendConfig::requiredDVNsNull, true);
+
+    cell $ulnSend = MOCK_ULN_SEND()
+                    .cl::set(md::UlnSend::customUlnSendConfig, $customSendConfig);
+
+    return test::handler::shouldPass(
+        ulnSend,
+        $ulnSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; both default and custom configs have optionalDVNsNull set to true (see UlnSendConfig::newWithDefaults)
+(int, slice) ulnSend::success::bothConfigsOptionalDVNsNull::workerQuoteFailed(cell $storage) impure {
+    cell $customSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG()
+                            .cl::set(UlnSendConfig::optionalDVNsNull, true);
+
+    cell $ulnSend = MOCK_ULN_SEND()
+                    .cl::set(md::UlnSend::customUlnSendConfig, $customSendConfig);
+
+    return test::handler::shouldPass(
+        ulnSend,
+        $ulnSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; both default and custom configs have optionalDVNsNull set to true (see UlnSendConfig::newWithDefaults)
+(int, slice) ulnSend::success::bothConfigsConfirmationsNull::workerQuoteFailed(cell $storage) impure {
+    cell $customSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG()
+                            .cl::set(UlnSendConfig::confirmationsNull, true);
+
+    cell $ulnSend = MOCK_ULN_SEND()
+                    .cl::set(md::UlnSend::customUlnSendConfig, $customSendConfig);
+
+    return test::handler::shouldPass(
+        ulnSend,
+        $ulnSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnSend::success::customExecutorNotInWorkerInfos::workerQuoteFailed(cell $storage) impure {
+    return test::handler::shouldPass(
+        ulnSend,
+        MOCK_ULN_SEND(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnSend::success::requiredCustomDvnNotInWorkerInfos::workerQuoteFailed(cell $storage) impure {
+    _registerMockWorkers(
+        MOCK_SEND_DVN_LIST(1, CUSTOM_EXECUTOR),
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        ulnSend,
+        MOCK_ULN_SEND(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnSend::success::optionalCustomDvnNotInWorkerInfos::workerQuoteFailed(cell $storage) impure {
+    _registerMockWorkers(
+        MOCK_SEND_DVN_LIST(2, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        NULLADDRESS
+    );
+    _registerMockWorkers(
+        MOCK_SEND_DVN_LIST(1, CUSTOM_EXECUTOR),
+        NULLADDRESS
+    );
+
+    return test::handler::shouldPass(
+        ulnSend,
+        MOCK_ULN_SEND(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnSend::success::greaterThanMaxMsgBytes::workerQuoteFailed(cell $storage) impure {
+    _registerCustomUlnWorkers();
+
+    return test::handler::shouldPass(
+        ulnSend,
+        md::UlnSend::New(
+            MOCK_LZ_SEND_WITH_MAX_PACKET(),
+            MOCK_CUSTOM_ULN_SEND_CONFIG(),
+            cl::nullObject(),
+            CHANNEL_ADDRESS
+        ),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(MOCK_LZ_SEND_WITH_MAX_PACKET())
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([ulnSend::success::basic, "ulnSend::success::basic"])
+        .tpush([ulnSend::success::bothConfigsExecutorNull::workerQuoteFailed, "ulnSend::success::bothConfigsExecutorNull::workerQuoteFailed"])
+        .tpush([ulnSend::success::bothConfigsRequiredDVNsNull::workerQuoteFailed, "ulnSend::success::bothConfigsRequiredDVNsNull::workerQuoteFailed"])
+        .tpush([ulnSend::success::bothConfigsOptionalDVNsNull::workerQuoteFailed, "ulnSend::success::bothConfigsOptionalDVNsNull::workerQuoteFailed"])
+        .tpush([ulnSend::success::bothConfigsConfirmationsNull::workerQuoteFailed, "ulnSend::success::bothConfigsConfirmationsNull::workerQuoteFailed"])
+        .tpush([ulnSend::success::customExecutorNotInWorkerInfos::workerQuoteFailed, "ulnSend::success::customExecutorNotInWorkerInfos::workerQuoteFailed"])
+        .tpush([ulnSend::success::requiredCustomDvnNotInWorkerInfos::workerQuoteFailed, "ulnSend::success::requiredCustomDvnNotInWorkerInfos::workerQuoteFailed"])
+        .tpush([ulnSend::success::optionalCustomDvnNotInWorkerInfos::workerQuoteFailed, "ulnSend::success::optionalCustomDvnNotInWorkerInfos::workerQuoteFailed"])
+        .tpush([ulnSend::success::greaterThanMaxMsgBytes::workerQuoteFailed, "ulnSend::success::greaterThanMaxMsgBytes::workerQuoteFailed"])
+    ;
+}

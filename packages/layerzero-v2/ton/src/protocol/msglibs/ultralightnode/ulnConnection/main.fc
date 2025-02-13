@@ -1,0 +1,32 @@
+#include "../../../core/abstract/protocolMain.fc";
+
+#include "../../interface.fc";
+
+#include "handler.fc";
+#include "interface.fc";
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == MsglibConnection::OP::MSGLIB_CONNECTION_QUOTE) {
+        return msglibConnectionQuote($md);
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_SEND) {
+        return msglibConnectionSend($md);
+    } elseif (op == UlnConnection::OP::ULN_CONNECTION_VERIFY) {
+        return ulnConnectionVerify($md);
+    } elseif (op == UlnConnection::OP::ULN_CONNECTION_COMMIT_PACKET) {
+        return ulnConnectionCommitPacket($md);
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK) {
+        return msglibConnectionCommitPacketCallback($md);
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE) {
+        return msglibConnectionSyncChannelState($md);
+    } elseif (op == UlnConnection::OP::SET_OAPP_ULN_SEND_CONFIG) {
+        return setOAppUlnSendConfig($md);
+    } elseif (op == UlnConnection::OP::SET_OAPP_ULN_RECEIVE_CONFIG) {
+        return setOAppUlnReceiveConfig($md);
+    } elseif (op == UlnConnection::OP::GARBAGE_COLLECT_INVALID_ATTESTATIONS) {
+        return garbageCollectInvalidAttestations($md);
+    } elseif (op == UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES) {
+        return garbageCollectExecutedNonces($md);
+    }
+    throw(BaseInterface::ERROR::invalidOpcode);
+    return null();
+}

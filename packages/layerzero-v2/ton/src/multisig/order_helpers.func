@@ -1,0 +1,89 @@
+#include "imports/stdlib.fc";
+#include "types.func";
+#include "auto/order_code.func";
+
+cell pack_order_init_data(slice multisig_address, int order_seqno) inline {
+    return begin_cell()
+    .store_slice(multisig_address)
+    .store_order_seqno(order_seqno)
+    .end_cell();
+}
+
+cell calculate_order_state_init(slice multisig_address, int order_seqno) inline {
+    {-
+    https://github.com/ton-blockchain/ton/blob/8a9ff339927b22b72819c5125428b70c406da631/crypto/block/block.tlb#L144
+    _ split_depth:(Maybe (## 5)) special:(Maybe TickTock)
+    code:(Maybe ^Cell) data:(Maybe ^Cell)
+    library:(Maybe ^Cell) = StateInit;
+  -}
+    return begin_cell()
+    .store_uint(0, 2) ;; 0b00 - No split_depth; No special
+    .store_maybe_ref(order_code())
+    .store_maybe_ref(pack_order_init_data(multisig_address, order_seqno))
+    .store_uint(0, 1) ;; Empty libraries
+    .end_cell();
+}
+
+slice calculate_address_by_state_init(int workchain, cell state_init) inline {
+    {-
+    https://github.com/ton-blockchain/ton/blob/8a9ff339927b22b72819c5125428b70c406da631/crypto/block/block.tlb#L105
+    addr_std$10 anycast:(Maybe Anycast) workchain_id:int8 address:bits256  = MsgAddressInt;
+    -}
+    return begin_cell()
+    .store_uint(4, 3) ;; 0b100 = addr_std$10 tag; No anycast
+    .store_int(workchain, 8)
+    .store_uint(cell_hash(state_init), 256)
+    .end_cell()
+    .begin_parse();
+}
+
+;;; @see /description.md "How is it calculated"
+
+const int MULTISIG_INIT_ORDER_GAS = 10232; ;; 255 signers 61634 gas total - size_counting gas(51402)
+const int ORDER_INIT_GAS = 4614;
+const int ORDER_EXECUTE_GAS = 11244; ;; 255 signers increases lookup costs
+const int MULTISIG_EXECUTE_GAS = 7576; ;; For single transfer action order
+;; we call number of bits/cells without order bits/cells as "overhead"
+const int INIT_ORDER_BIT_OVERHEAD = 1337;
+const int INIT_ORDER_CELL_OVERHEAD = 6;
+const int ORDER_STATE_BIT_OVERHEAD = 1760;
+const int ORDER_STATE_CELL_OVERHEAD = 6;
+const int EXECUTE_ORDER_BIT_OVERHEAD = 664;
+const int EXECUTE_ORDER_CELL_OVERHEAD = 1;
+
+int calculate_order_processing_cost(cell order_body, cell signers, int duration) inline {
+    {- There are following costs:
+       1) Gas cost on Multisig contract
+       2) Forward cost for Multisig->Order message
+       3) Gas cost on Order initialisation
+       4) Storage cost on Order
+       5) Gas cost on Order finalization
+       6) Forward cost for Order->Multisig message
+       7) Gas cost on Multisig till accept_message
+    -}
+
+    ;; compute_data_size is unpredictable in gas, so we need to measure gas prior to it and after
+    ;; and add difference to MULTISIG_INIT_ORDER_GAS
+    int initial_gas = gas_consumed();
+    (int order_cells, int order_bits, _) = compute_data_size(order_body, 8192); ;; max cells in external message = 8192
+    (int signers_cells, int signers_bits, _) = compute_data_size(signers, 512); ;; max 255 signers in dict, this max cells in dict = 511
+    int size_counting_gas = gas_consumed() - initial_gas;
+
+    int gas_fees = get_compute_fee(BASECHAIN,MULTISIG_INIT_ORDER_GAS + size_counting_gas) +
+    get_compute_fee(BASECHAIN, ORDER_INIT_GAS) +
+    get_compute_fee(BASECHAIN, ORDER_EXECUTE_GAS) +
+    get_compute_fee(BASECHAIN, MULTISIG_EXECUTE_GAS);
+
+    int forward_fees = get_forward_fee(BASECHAIN,
+                                       INIT_ORDER_BIT_OVERHEAD + order_bits + signers_bits,
+                                       INIT_ORDER_CELL_OVERHEAD + order_cells + signers_cells) +
+                       get_forward_fee(BASECHAIN,
+                                       EXECUTE_ORDER_BIT_OVERHEAD + order_bits,
+                                       EXECUTE_ORDER_CELL_OVERHEAD + order_cells);
+
+
+    int storage_fees = get_storage_fee(BASECHAIN, duration,
+                                       ORDER_STATE_BIT_OVERHEAD + order_bits + signers_bits,
+                                       ORDER_STATE_CELL_OVERHEAD + order_cells  + signers_cells);
+    return gas_fees + forward_fees + storage_fees;
+}

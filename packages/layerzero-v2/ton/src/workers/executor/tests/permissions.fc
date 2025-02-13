@@ -1,0 +1,237 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../workers/core/tests/workerStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../funC++/baseInterface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/txnContext.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/handlerCore.fc";
+
+#include "../../../../tests/consts.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../classes/msgdata/SetAddress.fc";
+#include "../../../funC++/abstract/handlerAbstract.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "executor::permissions"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Executor::New(
+            AddressList::serialize(unsafeTuple(
+                [ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS]
+            )),
+            0,
+            NATIVE_DROP_MAX_TOTAL
+        )
+    );
+
+    return getContractStorage();
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+(int, slice) checkPermissions::nativeDrop::success::admin1() impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::NATIVE_DROP,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::nativeDrop::success::admin2() impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::NATIVE_DROP,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::nativeDrop::revert::notAdmin() impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Executor::OP::NATIVE_DROP,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::nativeDropAndLzReceivePrepare::success::admin1() impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::NATIVE_DROP_AND_LZ_RECEIVE_PREPARE,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::nativeDropAndLzReceivePrepare::success::admin2() impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::NATIVE_DROP_AND_LZ_RECEIVE_PREPARE,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::nativeDropAndLzReceivePrepare::revert::notAdmin() impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Executor::OP::NATIVE_DROP_AND_LZ_RECEIVE_PREPARE,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::executorLzReceiveAlert::success::admin1() impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::LZ_RECEIVE_ALERT,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::executorLzReceiveAlert::success::admin2() impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Executor::OP::LZ_RECEIVE_ALERT,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::executorLzReceiveAlert::revert::notAdmin() impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Executor::OP::LZ_RECEIVE_ALERT,
+        cl::nullObject()
+    );
+}
+
+
+(int, slice) checkPermissions::callViaProxy::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_DEFAULT_PRICE_FEED_STORAGE()
+    );
+}
+
+(int, slice) checkPermissions::callViaProxy::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_DEFAULT_PRICE_FEED_STORAGE()
+    );
+}
+
+(int, slice) checkPermissions::callViaProxy::notUpdater(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_DEFAULT_PRICE_FEED_STORAGE()
+    );
+}
+
+(int, slice) checkPermissions::claimTon::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CLAIM_TON,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::claimTon::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CLAIM_TON,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::claimTon::revert::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::CLAIM_TON,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_ADMINS,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_ADMINS,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::revert::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::SET_ADMINS,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_PROXY,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_PROXY,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::revert::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::SET_PROXY,
+        cl::nullObject()
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([checkPermissions::nativeDrop::success::admin1, "checkPermissions::nativeDrop::success::admin1"])
+            .tpush([checkPermissions::nativeDrop::success::admin2, "checkPermissions::nativeDrop::success::admin2"])
+            .tpush([checkPermissions::nativeDrop::revert::notAdmin, "checkPermissions::nativeDrop::revert::notAdmin"])
+            .tpush([checkPermissions::nativeDropAndLzReceivePrepare::success::admin1, "checkPermissions::nativeDropAndLzReceivePrepare::success::admin1"])
+            .tpush([checkPermissions::nativeDropAndLzReceivePrepare::success::admin2, "checkPermissions::nativeDropAndLzReceivePrepare::success::admin2"])
+            .tpush([checkPermissions::nativeDropAndLzReceivePrepare::revert::notAdmin, "checkPermissions::nativeDropAndLzReceivePrepare::revert::notAdmin"])
+            .tpush([checkPermissions::executorLzReceiveAlert::success::admin1, "checkPermissions::executorLzReceiveAlert::success::admin1"])
+            .tpush([checkPermissions::executorLzReceiveAlert::success::admin2, "checkPermissions::executorLzReceiveAlert::success::admin2"])
+            .tpush([checkPermissions::executorLzReceiveAlert::revert::notAdmin, "checkPermissions::executorLzReceiveAlert::revert::notAdmin"])
+            .tpush([checkPermissions::callViaProxy::success::admin1, "checkPermissions::callViaProxy::success::admin1"])
+            .tpush([checkPermissions::callViaProxy::success::admin2, "checkPermissions::callViaProxy::success::admin2"])
+            .tpush([checkPermissions::callViaProxy::notUpdater, "checkPermissions::callViaProxy::notUpdater"])
+            .tpush([checkPermissions::claimTon::success::admin1, "checkPermissions::claimTon::success::admin1"])
+            .tpush([checkPermissions::claimTon::success::admin2, "checkPermissions::claimTon::success::admin2"])
+            .tpush([checkPermissions::claimTon::revert::notAdmin, "checkPermissions::claimTon::revert::notAdmin"])
+            .tpush([checkPermissions::setAdmins::success::admin1, "checkPermissions::setAdmins::success::admin1"])
+            .tpush([checkPermissions::setAdmins::success::admin2, "checkPermissions::setAdmins::success::admin2"])
+            .tpush([checkPermissions::setAdmins::revert::notAdmin, "checkPermissions::setAdmins::revert::notAdmin"])
+            .tpush([checkPermissions::setProxy::success::admin1, "checkPermissions::setProxy::success::admin1"])
+            .tpush([checkPermissions::setProxy::success::admin2, "checkPermissions::setProxy::success::admin2"])
+            .tpush([checkPermissions::setProxy::revert::notAdmin, "checkPermissions::setProxy::revert::notAdmin"])
+    );
+}

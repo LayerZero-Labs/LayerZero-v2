@@ -1,0 +1,38 @@
+#include "../storage.fc";
+#include "../extensions/ArbitrumPriceFeedExtension.fc";
+
+const int ARBITRUM_COMPRESSION_PERCENT = 47;
+
+;; Arbitrum model
+tuple priceFeedFeeLib::estimateFee(tuple inputs) impure method_id(11111) {
+    cell $priceFeedStorage = inputs.cell_at(0);
+    int callDataSize = inputs.int_at(1);
+    int remoteGas = inputs.int_at(2);
+
+    (
+        int priceRatio,
+        int gasPriceInRemoteUnit,
+        int gasPerByte,
+        int nativePriceUsd,
+        cell $arbitrumExtension,
+        _
+    ) = PriceFeedFeelib::deserialize($priceFeedStorage);
+
+    (
+        int gasPerL2Tx, 
+        int gasPerL1CallDataByte
+    ) = ArbitrumPriceFeedExtension::deserialize($arbitrumExtension);
+
+    int gasForL1CallData = ((callDataSize * ARBITRUM_COMPRESSION_PERCENT) / 100) * gasPerL1CallDataByte;
+    int gasForL2CallData = callDataSize * gasPerByte;
+
+    int gasFeeInRemoteUnit = (remoteGas + gasPerL2Tx + gasForL1CallData + gasForL2CallData) * gasPriceInRemoteUnit;
+
+    return unsafeTuple(
+        [
+            gasFeeInRemoteUnit,     ;; gasFee in Remote Unit, (e.g., WEI for ETH)
+            priceRatio,             ;; priceRatio
+            nativePriceUsd          ;; Native price in USD
+        ]
+    );
+}

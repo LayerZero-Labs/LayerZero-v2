@@ -1,0 +1,48 @@
+#include "../../../../../funC++/classlib.fc";
+
+const int ExecutorFeelib::NAME = "UlnExecutr"u;
+
+;; Bytecodes
+const int ExecutorFeelib::lzReceiveBaseGas = 0;
+const int ExecutorFeelib::multiplierBps = 1;
+const int ExecutorFeelib::floorMarginUSD = 2; ;; uses priceFeed PRICE_RATIO_DENOMINATOR
+const int ExecutorFeelib::nativeCap = 3;
+const int ExecutorFeelib::lzComposeBaseGas = 4;
+
+cell ExecutorFeelib::New(
+    int lzReceiveBaseGas,
+    int multiplierBps,
+    int floorMarginUSD,
+    int nativeCap,
+    int lzComposeBaseGas
+) impure inline method_id {
+    return cl::declare(
+        ExecutorFeelib::NAME,
+        unsafeTuple([
+            [cl::t::uint64, lzReceiveBaseGas],    ;; ExecutorFeelib::lzReceiveBaseGas
+            [cl::t::uint16, multiplierBps],       ;; ExecutorFeelib::multiplierBps
+            [cl::t::coins, floorMarginUSD],       ;; ExecutorFeelib::floorMarginUSD
+            [cl::t::coins, nativeCap],            ;; ExecutorFeelib::nativeCap
+            [cl::t::uint64, lzComposeBaseGas]     ;; ExecutorFeelib::lzComposeBaseGas
+        ])
+    );
+}
+
+;; ============================== Object Getters =========================================
+
+const int ExecutorFeelib::_lzReceiveBaseGasOffset = _HEADER_WIDTH;
+const int ExecutorFeelib::_multiplierBpsOffset = ExecutorFeelib::_lzReceiveBaseGasOffset + 64;
+const int ExecutorFeelib::_floorMarginUSDOffset = ExecutorFeelib::_multiplierBpsOffset + 16;
+const int ExecutorFeelib::_nativeCapOffset = ExecutorFeelib::_floorMarginUSDOffset + 128;
+const int ExecutorFeelib::_lzComposeBaseGasOffset = ExecutorFeelib::_nativeCapOffset + 128;
+
+(int, int, int, int, int) ExecutorFeelib::deserializeStorage(cell $storage) impure inline {
+    slice selfSlice = $storage.begin_parse();
+    return (
+        selfSlice.preloadUint64At(ExecutorFeelib::_lzReceiveBaseGasOffset),
+        selfSlice.preloadUint16At(ExecutorFeelib::_multiplierBpsOffset),
+        selfSlice.preloadCoinsAt(ExecutorFeelib::_floorMarginUSDOffset),
+        selfSlice.preloadCoinsAt(ExecutorFeelib::_nativeCapOffset),
+        selfSlice.preloadUint64At(ExecutorFeelib::_lzComposeBaseGasOffset)
+    );
+}

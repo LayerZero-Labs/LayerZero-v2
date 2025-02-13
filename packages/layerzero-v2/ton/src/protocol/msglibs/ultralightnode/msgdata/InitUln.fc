@@ -1,0 +1,25 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required md name
+const int md::InitUln::NAME = "initUln"u;
+
+;; field names
+const int md::InitUln::connectionCode = 0;
+const int md::InitUln::treasuryFeeBps = 1;
+
+cell md::InitUln::New(cell connectionCode, int treasuryFeeBps) impure inline method_id {
+    return cl::declare(
+        md::InitUln::NAME,
+        unsafeTuple([
+            [cl::t::cellRef, connectionCode],   ;; md::InitUln::connectionCode
+            [cl::t::uint16, treasuryFeeBps]    ;; md::InitUln::treasuryFeeBps
+        ])
+    );
+}
+
+cell md::InitUln::sanitize(cell $initUln) impure {
+    cell $connectionCode = $initUln.cl::get<cellRef>(md::InitUln::connectionCode);
+    int treasuryFeeBps = $initUln.cl::get<uint16>(md::InitUln::treasuryFeeBps);
+
+    return md::InitUln::New($connectionCode, treasuryFeeBps);
+}

@@ -1,0 +1,123 @@
+#include "../core/baseStorage.fc";
+
+;; required object name
+const int Endpoint::NAME = "endpoint"u;
+
+;; field names
+const int Endpoint::baseStorage = 0;
+const int Endpoint::eid = 1;
+const int Endpoint::dstEid = 2;
+const int Endpoint::msglibs = 3;
+const int Endpoint::numMsglibs = 4;
+const int Endpoint::channelCode = 5;
+const int Endpoint::channelStorageInit = 6;
+const int Endpoint::defaultSendMsglibManager = 7;
+const int Endpoint::defaultSendLibInfo = 8;
+const int Endpoint::defaultReceiveLibInfo = 9;
+const int Endpoint::defaultTimeoutReceiveLibInfo = 10;
+const int Endpoint::defaultExpiry = 11;
+
+;; @owner manager
+cell Endpoint::New(int eid, int dstEid, int owner) impure inline method_id {
+    return cl::declare(
+        Endpoint::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)],   ;; Endpoint::baseStorage
+            [cl::t::uint32, eid],                       ;; Endpoint::eid
+            [cl::t::uint32, dstEid],                    ;; Endpoint::dstEid
+            [cl::t::dict256, cl::dict256::New()],       ;; Endpoint::msglibs
+            [cl::t::uint8, 0],                          ;; Endpoint::numMsglibs
+            [cl::t::cellRef, empty_cell()],             ;; Endpoint::channelCode
+            [cl::t::objRef, cl::nullObject()],          ;; Endpoint::channelStorageInit
+            [cl::t::address, NULLADDRESS],              ;; Endpoint::defaultSendMsglibManager
+            [cl::t::objRef, cl::nullObject()],          ;; Endpoint::defaultSendLibInfo
+            [cl::t::objRef, cl::nullObject()],          ;; Endpoint::defaultReceiveLibInfo
+            [cl::t::objRef, cl::nullObject()],          ;; Endpoint::defaultTimeoutReceiveLibInfo
+            [cl::t::uint64, 0]                          ;; Endpoint::defaultExpiry
+        ])
+    );
+}
+
+;; ====================== Storage Accessors =====================
+
+const int Endpoint::_eidOffset = _HEADER_WIDTH;
+const int Endpoint::_dstEidOffset = Endpoint::_eidOffset + 32;
+const int Endpoint::_numMsglibsOffset = Endpoint::_dstEidOffset + 32;
+const int Endpoint::_defaultSendMsglibManagerOffset = Endpoint::_numMsglibsOffset + 8;
+const int Endpoint::_defaultExpiryOffset = Endpoint::_defaultSendMsglibManagerOffset + 256;
+
+cell Endpoint::getBaseStorage(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0);
+}
+
+cell Endpoint::getMsglibs(cell $self) impure inline {
+    return $self.cellPreloadRefAt(1);
+}
+
+cell Endpoint::getChannelCode(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadRefAt(0);
+}
+
+cell Endpoint::getChannelStorageInit(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadRefAt(1);
+}
+
+cell Endpoint::getDefaultSendLibInfo(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadRefAt(2);
+}
+
+cell Endpoint::getDefaultReceiveLibInfo(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadRefAt(3);
+}
+
+cell Endpoint::getDefaultTimeoutReceiveLibInfo(cell $self) impure inline {
+    return $self.cellPreloadRefAt(3).cellPreloadRefAt(0);
+}
+
+;; ====================== Composite Storage Accessors =====================
+
+;; (channelStorageInit, channelCode, defaultSendMsglibManager, defaultSendLibInfo)
+(cell, cell, int, cell) Endpoint::getSendConfiguration(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2Slice = selfSlice.preloadRefSliceAt(2);
+    return (
+        ref2Slice.preloadRefAt(1),
+        ref2Slice.preloadRefAt(0),
+        selfSlice.preloadAddressAt(Endpoint::_defaultSendMsglibManagerOffset),
+        ref2Slice.preloadRefAt(2)
+    );
+}
+
+;; (eid, dstEid, defaultExpiry, defaultReceiveLibInfo, timeoutReceiveLibInfo)
+(int, int, int, cell, cell) Endpoint::getCommitPacketInformation(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadUint32At(Endpoint::_eidOffset),
+        selfSlice.preloadUint32At(Endpoint::_dstEidOffset),
+        selfSlice.preloadUint64At(Endpoint::_defaultExpiryOffset),
+        selfSlice.preloadRefAt(2).cellPreloadRefAt(3),
+        selfSlice.preloadRefAt(3).cellPreloadRefAt(0)
+    );
+}
+
+;; ====================== Setters =====================
+
+cell Endpoint::setDstEid(cell $self, int dstEid) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return begin_cell()
+            .store_slice(selfSlice.scutfirst(Endpoint::_dstEidOffset, 3))
+            .store_uint32(dstEid)
+            .store_slice(selfSlice.sskipfirst(Endpoint::_numMsglibsOffset, 3))
+            .end_cell();
+}
+
+;; ====================== Sanitize =====================
+
+cell Endpoint::sanitize(cell $self) impure inline {
+    cell $baseStorage = $self.cl::get<cellRef>(Endpoint::baseStorage);
+    return Endpoint::New(
+        $self.cl::get<uint32>(Endpoint::eid),
+        $self.cl::get<uint32>(Endpoint::dstEid),
+        $baseStorage.cl::get<address>(BaseStorage::owner)
+    );
+}

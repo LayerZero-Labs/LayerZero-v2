@@ -1,0 +1,171 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/PacketId.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../protocol/channel/interface.fc";
+#include "../../baseOApp/interface.fc";
+#include "../../../funC++/stdlib.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Counter::permissions"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Counter::New(
+            getCaller(),
+            ENDPOINT_ADDRESS,
+            SRC_EID,
+            COUNTER_ID,
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================HELPER FUNCTIONS=========================================
+
+int getChannelAddress() impure {
+    cell $channelStorage = Channel::New(getCaller(), MOCK_SEND_PATH(), ENDPOINT_ADDRESS);
+    return _getChannelAddressFromStorageInit($channelStorage);
+}
+
+cell getChannelTestMd() impure inline {
+    cell $channelStorage = Channel::New(getCaller(), MOCK_SEND_PATH(), ENDPOINT_ADDRESS);
+    return md::ExtendedMd::New(MOCK_SEND_PACKET(), $channelStorage, NULLADDRESS);
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) checkPermissions::lzReceiveExecute::success::basic(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(getChannelAddress());
+    return test::permissions::shouldPass(Layerzero::OP::LZ_RECEIVE_EXECUTE, $md);
+}
+
+(int, slice) checkPermissions::lzReceiveExecute::revert::notChannel(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Layerzero::OP::LZ_RECEIVE_EXECUTE, $md);
+}
+
+(int, slice) checkPermissions::channelSendCallback::success::basic(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(getChannelAddress());
+    return test::permissions::shouldPass(Layerzero::OP::CHANNEL_SEND_CALLBACK, $md);
+}
+
+(int, slice) checkPermissions::channelSendCallback::revert::notChannel(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Layerzero::OP::CHANNEL_SEND_CALLBACK, $md);
+}
+
+(int, slice) checkPermissions::nilifyCallback::success::basic(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(getChannelAddress());
+    return test::permissions::shouldPass(Layerzero::OP::NILIFY_CALLBACK, $md);
+}
+
+(int, slice) checkPermissions::nilifyCallback::revert::notChannel(cell $storage) impure {
+    cell $md = getChannelTestMd();
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Layerzero::OP::NILIFY_CALLBACK, $md);
+}
+
+(int, slice) checkPermissions::deployChannel::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(OP::DeployChannel, cl::nullObject());
+}
+
+(int, slice) checkPermissions::deployChannel::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(OP::DeployChannel, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setLzConfig::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(OP::SetLzConfig, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setLzConfig::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(OP::SetLzConfig, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setPeer::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(OP::SetPeer, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setPeer::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(OP::SetPeer, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEnforcedOptions::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(OP::SetEnforcedOptions, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEnforcedOptions::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(OP::SetEnforcedOptions, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setLzReceivePrepare::success::basic(cell $storage) impure {
+    spoofCaller(ARBITRARY_ADDRESS);
+    return test::permissions::shouldPass(Layerzero::OP::LZ_RECEIVE_PREPARE, cl::nullObject());
+}
+
+(int, slice) checkPermissions::default::revert::invalidOpCode(cell $storage) impure {
+    ;; this is a generic opcode that we should NOT allow
+    return test::permissions::shouldFail(OP::RANDOM, cl::nullObject());
+}
+
+(int, slice) assertChannelAddress::success::basic(cell $storage) impure {
+    return (TEST_SUCCESS, "implement me");
+}
+
+(int, slice) assertChannelAddress::revert::basic(cell $storage) impure {
+    return (TEST_SUCCESS, "implement me");
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([checkPermissions::lzReceiveExecute::success::basic, "checkPermissions::lzReceiveExecute::success::basic"])
+        .tpush([checkPermissions::lzReceiveExecute::revert::notChannel, "checkPermissions::lzReceiveExecute::revert::notChannel"])
+        .tpush([checkPermissions::channelSendCallback::success::basic, "checkPermissions::channelSendCallback::success::basic"])
+        .tpush([checkPermissions::channelSendCallback::revert::notChannel, "checkPermissions::channelSendCallback::revert::notChannel"])
+        .tpush([checkPermissions::nilifyCallback::success::basic, "checkPermissions::nilifyCallback::success::basic"])
+        .tpush([checkPermissions::nilifyCallback::revert::notChannel, "checkPermissions::nilifyCallback::revert::notChannel"])
+        .tpush([checkPermissions::deployChannel::success::basic, "checkPermissions::deployChannel::success::basic"])
+        .tpush([checkPermissions::deployChannel::revert::notOwner, "checkPermissions::deployChannel::revert::notOwner"])
+        .tpush([checkPermissions::setLzConfig::success::basic, "checkPermissions::setLzConfig::success::basic"])
+        .tpush([checkPermissions::setLzConfig::revert::notOwner, "checkPermissions::setLzConfig::revert::notOwner"])
+        .tpush([checkPermissions::setPeer::success::basic, "checkPermissions::setPeer::success::basic"])
+        .tpush([checkPermissions::setPeer::revert::notOwner, "checkPermissions::setPeer::revert::notOwner"])
+        .tpush([checkPermissions::setEnforcedOptions::success::basic, "checkPermissions::setEnforcedOptions::success::basic"])
+        .tpush([checkPermissions::setEnforcedOptions::revert::notOwner, "checkPermissions::setEnforcedOptions::revert::notOwner"])
+        .tpush([checkPermissions::setLzReceivePrepare::success::basic, "checkPermissions::setLzReceivePrepare::success::basic"])
+        .tpush([checkPermissions::default::revert::invalidOpCode, "checkPermissions::default::revert::invalidOpCode"])
+        .tpush([assertChannelAddress::success::basic, "assertChannelAddress::success::basic"])
+        .tpush([assertChannelAddress::revert::basic, "assertChannelAddress::revert::basic"])
+    ;
+}

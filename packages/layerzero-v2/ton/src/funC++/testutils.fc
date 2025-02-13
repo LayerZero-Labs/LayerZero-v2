@@ -1,0 +1,98 @@
+#include "utils.fc";
+
+cell _garbageFilledCell() {
+    cell garbage2 = begin_cell()
+        .store_uint256("garbage2"c)
+        .end_cell();
+
+    cell garbage3 = begin_cell()
+        .store_uint256("garbage3"c)
+        .end_cell();
+
+    return begin_cell()
+        .store_uint256("garbage"c)
+        .store_ref(garbage2)
+        .store_ref(garbage3)
+        .end_cell();
+}
+
+cell _garbigify(cell $input, cell garbage) impure {
+    slice inputSlice = $input.begin_parse();
+    int numrefs = inputSlice.slice_refs();
+
+    if (numrefs <= 2) {
+        builder b = begin_cell().store_slice(inputSlice);
+        repeat (4 - numrefs) {
+            b = b.store_ref(garbage);
+        }
+        return b.end_cell();
+    } elseif (numrefs == 3) {
+        slice cutfirst = scutfirst(inputSlice, inputSlice.slice_bits(), 2);
+        builder b = begin_cell().store_slice(cutfirst);
+        slice s = inputSlice.preload_ref_at(2).begin_parse();
+        builder innerB = begin_cell().store_slice(s);
+        int innerNumRefs = s.slice_refs();
+
+        repeat (4 - innerNumRefs) {
+            innerB = innerB.store_ref(garbage);
+        }
+
+        return b.store_ref(innerB.end_cell()).store_ref(garbage).end_cell();
+    } elseif (numrefs == 4) {
+        builder b = begin_cell().store_slice(scutfirst(inputSlice, inputSlice.slice_bits(), 2));
+        slice s1 = inputSlice.preload_ref_at(2).begin_parse();
+        slice s2 = inputSlice.preload_ref_at(3).begin_parse();
+        builder innerb1 = begin_cell().store_slice(s1);
+        builder innerb2 = begin_cell().store_slice(s2);
+        int refs1 = s1.slice_refs();
+        int refs2 = s2.slice_refs();
+
+        repeat (4 - refs1) {
+            innerb1 = innerb1.store_ref(garbage);
+        }
+
+        repeat (4 - refs2) {
+            innerb2 = innerb2.store_ref(garbage);
+        }
+
+        return b.store_ref(innerb1.end_cell()).store_ref(innerb2.end_cell()).end_cell();
+    }
+
+    ;; Should never happen as the above checks and returns from all cases
+    ;; The compiler needs you to return from all possible control flows
+    ;; and it isn't smart enough to know that this will never be reached.
+    throw("garbigify: this print should never happen"c);
+    return empty_cell();
+}
+
+() profile_gas(var func, tuple args) impure {
+    int gas_consumed = get_gas_consumed();
+    int gas_consumed_consumed = get_gas_consumed();
+    int gas_consumed_of_gas_consumed = gas_consumed_consumed - gas_consumed;
+    int gas0 = get_gas_consumed();
+    var x = func(args);
+    int gas1 = get_gas_consumed();
+    ~strdump("ignore this dump, this is to not optimize out");
+    ~dump(x);
+    int final_gas = gas1 - gas0 - gas_consumed_of_gas_consumed;
+    ~dump(final_gas);
+}
+
+cell _dupWithGarbage(cell $input) {
+    return _garbigify($input, _garbageFilledCell());
+}
+
+cell headerCellGarbage(cell $input) {
+    int ind = 0;
+    slice inputSlice = $input.begin_parse();
+    builder b = begin_cell();
+    while (ind < inputSlice.slice_refs()) {
+        b = b.store_ref(inputSlice.preload_ref_at(ind));
+        ind += 1;
+    }
+    b = b.store_slice(
+        inputSlice
+        .scutfirst(min(inputSlice.slice_bits(), 512), 0))
+        .store_uint256("garbage1"c);
+    return b.end_cell();
+}

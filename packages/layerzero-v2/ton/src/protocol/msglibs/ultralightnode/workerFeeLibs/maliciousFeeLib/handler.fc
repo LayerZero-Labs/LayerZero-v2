@@ -1,0 +1,9 @@
+#include "../../../../../funC++/utils.fc";
+
+tuple ulnWorker::quote(tuple inputs) impure method_id {
+    int x = 0;
+    while (true) {
+        x += 1;
+    }
+    return unsafeTuple([x]);
+}

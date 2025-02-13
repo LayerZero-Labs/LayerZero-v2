@@ -1,0 +1,44 @@
+#include "../../../core/baseStorage.fc";
+
+;; 3 years
+const int UlnManager::CONST::minRentSeconds = 3600 * 24 * 365 * 3;
+
+const int UlnManager::NAME = "ulnMgr"u;
+
+const int UlnManager::baseStorage = 0;
+
+;; Bytecodes
+const int UlnManager::ulnCode = 1;
+const int UlnManager::ulnConnectionCode = 2;
+const int UlnManager::controllerAddress = 3;
+const int UlnManager::eid = 4;
+const int UlnManager::endpointCode = 5;
+const int UlnManager::channelCode = 6;
+const int UlnManager::workerFeelibBytecodes = 7;
+const int UlnManager::adminWorkers = 8;
+const int UlnManager::tentativeOwner = 9;
+
+;; @owner LayerZero admin EOA
+cell UlnManager::New(
+    int owner,
+    cell ulnCode,
+    cell connectionCode,
+    int controllerAddress,
+    int eid
+) impure inline method_id {
+    return cl::declare(
+        UlnManager::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)],  ;; UlnManager::baseStorage
+            [cl::t::cellRef, ulnCode],                 ;; UlnManager::ulnCode
+            [cl::t::cellRef, connectionCode],          ;; UlnManager::ulnConnectionCode
+            [cl::t::address, controllerAddress],       ;; UlnManager::controllerAddress
+            [cl::t::uint32, eid],                      ;; UlnManager::eid
+            [cl::t::cellRef, empty_cell()],            ;; UlnManager::endpointCode
+            [cl::t::cellRef, empty_cell()],            ;; UlnManager::channelCode
+            [cl::t::dict256, cl::dict256::New()],      ;; UlnManager::workerBytecodes
+            [cl::t::addressList, empty_cell()],        ;; UlnManager::adminWorkers
+            [cl::t::address, NULLADDRESS]              ;; UlnManager::tentativeOwner
+        ])
+    );
+}

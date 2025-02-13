@@ -1,0 +1,15 @@
+#include "../../../funC++/classlib.fc";
+#include "../../../protocol/core/baseStorage.fc";
+
+const int baseContract::NAME = "baseCntrct"u;
+
+const int baseContract::baseStorage = 0;
+
+cell baseContract::New(int owner) impure inline {
+    return cl::declare(
+        baseContract::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)]
+        ])
+    );
+}

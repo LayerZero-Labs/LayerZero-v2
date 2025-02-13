@@ -1,0 +1,84 @@
+#include "../core/abstract/workerHandler.fc";
+#include "../core/interface.fc";
+
+#include "../../classes/msgdata/MdAddress.fc";
+#include "../../classes/msgdata/Bool.fc";
+
+#include "../../protocol/msglibs/ultralightnode/uln/interface.fc";
+
+#include "./interface.fc";
+#include "./storage.fc";
+
+;;; ==========================PERMISSION FUNCTIONS=================================
+
+;; this is special in proxy, only the people in the address book can call 'callContract'
+() _checkPermissions(int op, cell $md) impure inline {
+    if (
+        (op == Worker::OP::SET_ADMINS)
+        | (op == Proxy::OP::CALL_CONTRACT)
+        | (op == Proxy::OP::EMIT_EVENT)
+        | (op == Worker::OP::CLAIM_TON)
+        | (op == Proxy::OP::TOGGLE_CALLBACK)
+    ) {
+        return assertAdmin();
+    }
+    return ();
+}
+
+;;; ==========================HANDLERS=====================================
+
+tuple setAdmins(cell $addressList) impure inline {
+    return _setAdmins(emptyActions(), $addressList);
+}
+
+tuple claimTon(cell $claimTon) impure inline {
+    return _claimTon(emptyActions(), $claimTon);
+}
+
+tuple callContract(cell $executeParams) impure inline {
+    return _callContract(emptyActions(), $executeParams);
+}
+
+tuple emitEvent(cell $event) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    actions~pushAction<event>(
+        $event.cl::get<uint256>(action::event::topic),
+        $event.cl::get<objRef>(action::event::body)
+    );
+
+    return actions;
+}
+
+tuple callback(cell $md) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    if ($storage.cl::get<bool>(Proxy::callbackEnabled)) {
+        actions~pushAction<call>(
+            getLatestAdmin(),
+            Proxy::OP::HANDLE_CALLBACK,
+            md::ExecuteParams::New(
+                getCaller(),
+                $md,
+                0,
+                getOpcode(),
+                NULLADDRESS
+            )
+        );
+    }
+
+    return actions;
+}
+
+tuple toggleCallback(cell $boolMd) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    setContractStorage(
+        $storage.cl::set(
+            Proxy::callbackEnabled,
+            $boolMd.cl::get<bool>(md::Bool::bool)
+        )
+    );
+
+    return actions;
+}

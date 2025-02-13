@@ -1,0 +1,30 @@
+;;; ================================================================
+;; The base main function for LayerZero Endpoint, UltraLightNode, and OApp
+;;; ================================================================
+#include "../../../funC++/actions/call.fc";
+#include "../../../funC++/actions/deploy.fc";
+#include "../../../funC++/actions/dispatch.fc";
+#include "../../../funC++/actions/event.fc";
+#include "../../../funC++/actions/payment.fc";
+
+#include "../../../funC++/contractMain.fc";
+#include "../../../funC++/handlerCore.fc";
+
+int _executeAction(int actionType, tuple action) impure inline {
+    if (actionType == action::event::NAME) {
+        return executeEvent(action);
+    } elseif (actionType == action::call::NAME) {
+        return executeCall(action);
+    } elseif (actionType == action::payment::NAME) {
+        return executePayment(action);
+    } elseif (actionType == action::dispatch::NAME) {
+        return executeDispatch(action);
+    } elseif (actionType == action::deploy::NAME) {
+        return executeDeploy(action);
+    } else {
+        throw(BaseInterface::ERROR::invalidActionType);
+    }
+
+    ;; compiler freaks out if you dont have something here returning an int, but this should never be reached
+    return false;
+}

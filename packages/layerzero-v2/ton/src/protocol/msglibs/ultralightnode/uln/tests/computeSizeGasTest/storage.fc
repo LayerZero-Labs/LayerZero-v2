@@ -1,0 +1,19 @@
+#include "../../../../../core/baseStorage.fc";
+
+;; required object name
+const int ComputeSizeGasTest::NAME = "cmptGas"u;
+
+;; field names
+const int ComputeSizeGasTest::baseStorage = 0;
+const int ComputeSizeGasTest::mockDict = 1;
+
+;; @owner manager
+cell ComputeSizeGasTest::New(int owner) method_id {
+    return cl::declare(
+        ComputeSizeGasTest::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)],      ;; ComputeSizeGasTest::baseStorage
+            [cl::t::dict256, cl::dict256::New()]           ;; ComputeSizeGasTest::mockDict
+        ])
+    );
+}

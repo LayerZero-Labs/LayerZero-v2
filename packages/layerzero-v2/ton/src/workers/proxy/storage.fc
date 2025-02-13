@@ -1,0 +1,21 @@
+#include "../../funC++/classlib.fc";
+
+#include "../core/workerCoreStorage.fc";
+
+;; required object name
+const int Proxy::NAME = "pfProxy"u;
+
+;; field names
+const int Proxy::workerCoreStorage = 0; ;; = WORKER_CORE_STORAGE_IDX
+const int Proxy::callbackEnabled = 1;
+
+;; @owner manager
+cell Proxy::New(cell admins, int version) impure inline method_id {
+    return cl::declare(
+        Proxy::NAME,
+        unsafeTuple([
+            [cl::t::objRef, WorkerCoreStorage::New(admins, NULLADDRESS, version)], ;; Proxy::workerCoreStorage
+            [cl::t::bool, false] ;; Proxy::callbackEnabled
+        ])
+    );
+}

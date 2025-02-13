@@ -1,0 +1,38 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::ChannelNonceInfo::NAME = "cNonceInfo"u;
+
+;; field names
+const int md::ChannelNonceInfo::nonce = 0;
+const int md::ChannelNonceInfo::firstUnexecutedNonce = 1;
+
+cell md::ChannelNonceInfo::New(int nonce, int firstUnexecutedNonce) impure inline method_id {
+    return cl::declare(
+        md::ChannelNonceInfo::NAME,
+        unsafeTuple([
+            [cl::t::uint64, nonce], ;; md::ChannelNonceInfo::nonce
+            [cl::t::uint64, firstUnexecutedNonce]   ;; md::ChannelNonceInfo::firstUnexecutedNonce
+        ])
+    );
+}
+
+;; ====================== Object Getters =====================
+
+const int md::ChannelNonceInfo::_nonceOffset = _HEADER_WIDTH;
+const int md::ChannelNonceInfo::_firstUnexecutedNonceOffset = md::ChannelNonceInfo::_nonceOffset + 64;
+
+(int, int) md::ChannelNonceInfo::deserialize(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadUint64At(md::ChannelNonceInfo::_nonceOffset),
+        selfSlice.preloadUint64At(md::ChannelNonceInfo::_firstUnexecutedNonceOffset)
+    );
+}
+
+cell md::ChannelNonceInfo::sanitize(cell $self) impure inline_ref {
+    int nonce = $self.cl::get<uint64>(md::ChannelNonceInfo::nonce);
+    int firstUnexecutedNonce = $self.cl::get<uint64>(md::ChannelNonceInfo::firstUnexecutedNonce);
+
+    return md::ChannelNonceInfo::New(nonce, firstUnexecutedNonce);
+}

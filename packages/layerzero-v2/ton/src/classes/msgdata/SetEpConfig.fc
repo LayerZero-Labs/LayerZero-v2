@@ -1,0 +1,50 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::SetEpConfig::NAME = "SetEpCfg"u;
+
+;; 'md::SetEpConfig::useDefaults' is ONLY used during the oapp config set flow.
+;; When setting 'epConfigDefaults' as the owner, the flag doesnt matter, because call is for defaults
+
+;; field names
+const int md::SetEpConfig::useDefaults = 0;
+const int md::SetEpConfig::sendMsglibManager = 1;
+const int md::SetEpConfig::receiveMsglibManager = 2;
+const int md::SetEpConfig::timeoutReceiveMsglibManager = 3;
+const int md::SetEpConfig::timeoutReceiveMsglibExpiry = 4;
+
+cell md::SetEpConfig::New(
+    int useDefaults,
+    int sendMsglibManager,
+    int receiveMsglibManager,
+    int timeoutReceiveMsglibManager,
+    int timeoutReceiveMsglibExpiry
+) impure inline method_id {
+    return cl::declare(
+        md::SetEpConfig::NAME,
+        unsafeTuple([
+            [cl::t::bool, useDefaults],                     ;; md::SetEpConfig::useDefaults
+            [cl::t::address, sendMsglibManager],            ;; md::SetEpConfig::sendMsglibManager
+            [cl::t::address, receiveMsglibManager],         ;; md::SetEpConfig::receiveMsglibManager
+            [cl::t::address, timeoutReceiveMsglibManager],  ;; md::SetEpConfig::timeoutReceiveMsglibManager
+            [cl::t::uint64, timeoutReceiveMsglibExpiry]     ;; md::SetEpConfig::timeoutReceiveMsglibExpiry
+        ])
+    );
+}
+
+;; Ensure SetEpConfig doesn't have garbage bits that would cause undefined behaviors in the protocol
+cell md::SetEpConfig::sanitize(cell $setEpConfig) impure inline_ref {
+    int useDefaults = $setEpConfig.cl::get<bool>(md::SetEpConfig::useDefaults);
+    int sendMsglibManager = $setEpConfig.cl::get<address>(md::SetEpConfig::sendMsglibManager);
+    int receiveMsglibManager = $setEpConfig.cl::get<address>(md::SetEpConfig::receiveMsglibManager);
+    int timeoutReceiveMsglibManager = $setEpConfig.cl::get<address>(md::SetEpConfig::timeoutReceiveMsglibManager);
+    int timeoutReceiveMsglibExpiry = $setEpConfig.cl::get<uint64>(md::SetEpConfig::timeoutReceiveMsglibExpiry);
+
+    return md::SetEpConfig::New(
+        useDefaults,
+        sendMsglibManager,
+        receiveMsglibManager,
+        timeoutReceiveMsglibManager,
+        timeoutReceiveMsglibExpiry
+    );
+}

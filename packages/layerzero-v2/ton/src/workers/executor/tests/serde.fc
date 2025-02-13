@@ -1,0 +1,31 @@
+#include "../storage.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/utils.fc";
+
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Executor::Serde"; }
+
+;; Executor: Has 1 getter
+(int, slice) Serde::Executor::getNativeDropTotalCap(cell $self) impure {
+    cell $executor = Executor::New(
+        MOCK_ADMIN_WORKER_LIST(),
+        0,
+        1
+    );
+    return test::getData::equal(
+        $executor,
+        Executor::getNativeDropTotalCap,
+        Executor::nativeDropTotalCap
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::Executor::getNativeDropTotalCap, "Serde::Executor::getNativeDropTotalCap"])
+    ;
+}

@@ -1,0 +1,49 @@
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/stdlib.fc";
+#include "../../../../../funC++/utils.fc";
+
+const int DvnFeelib::NAME = "UlnDvnFl"u;
+
+;; Bytecodes
+const int DvnFeelib::quorum = 0;
+const int DvnFeelib::remoteGas = 1;
+const int DvnFeelib::multiplierBps = 2;
+const int DvnFeelib::floorMarginUSD = 3; ;; uses priceFeed PRICE_RATIO_DENOMINATOR
+
+cell DvnFeelib::New(
+    int quorum,
+    int remoteGas,
+    int multiplierBps,
+    int floorMarginUSD
+) impure inline method_id {
+    return cl::declare(
+        DvnFeelib::NAME,
+        unsafeTuple([
+            [cl::t::uint64, quorum],        ;; DvnFeelib::quorum
+            [cl::t::uint64, remoteGas],     ;; DvnFeelib::remoteGas
+            [cl::t::uint16, multiplierBps], ;; DvnFeelib::multiplierBps
+            [cl::t::coins, floorMarginUSD]  ;; DvnFeelib::floorMarginUSD
+        ])
+    );
+}
+
+;; ============================== Object Getters ==============================
+
+const int DvnFeeLib::_quorumOffset = _HEADER_WIDTH;
+const int DvnFeeLib::_remoteGasOffset = DvnFeeLib::_quorumOffset + 64;
+const int DvnFeeLib::_multiplierBpsOffset = DvnFeeLib::_remoteGasOffset + 64;
+const int DvnFeeLib::_floorMarginUSDOffset = DvnFeeLib::_multiplierBpsOffset + 16;
+
+int DvnFeelib::getQuorum(cell $self) impure inline {
+    return $self.cellPreloadUint64At(DvnFeeLib::_quorumOffset);
+}
+
+;; (gas, multiplierBps, floorMarginUSD)
+(int, int, int) DvnFeelib::getRemoteGasMultiplierBpsAndFloorMarginUSD(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadUint64At(DvnFeeLib::_remoteGasOffset),
+        selfSlice.preloadUint16At(DvnFeeLib::_multiplierBpsOffset),
+        selfSlice.preloadCoinsAt(DvnFeeLib::_floorMarginUSDOffset)
+    );
+}

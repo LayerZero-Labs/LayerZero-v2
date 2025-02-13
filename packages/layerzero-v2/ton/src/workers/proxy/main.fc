@@ -1,0 +1,19 @@
+#include "../../protocol/core/abstract/protocolMain.fc";
+
+#include "handler.fc";
+#include "interface.fc";
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == Worker::OP::SET_ADMINS) {
+        return setAdmins($md);
+    } elseif (op == Worker::OP::CLAIM_TON) {
+        return claimTon($md);
+    } elseif (op == Proxy::OP::CALL_CONTRACT) {
+        return callContract($md);
+    } elseif (op == Proxy::OP::TOGGLE_CALLBACK) {
+        return toggleCallback($md);
+    } elseif (op == Proxy::OP::EMIT_EVENT) {
+        return emitEvent($md);
+    }
+    return callback($md);
+}

@@ -1,0 +1,47 @@
+#include "../storage.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/utils.fc";
+
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Dvn::Serde"; }
+
+;; Dvn: Has 1 multi-getter (deserializer),
+(int, slice) Serde::Dvn::getQuorumAndVerifiers(cell $unused) impure {
+    cell $dvn = Dvn::New(
+        MOCK_ADMIN_WORKER_LIST(),
+        12,
+        QUORUM,
+        cl::dict256::New()
+
+    );
+
+    tuple $expected = unsafeTuple([
+        QUORUM,
+        cl::dict256::New()
+    ]);
+
+    (
+        int $quorum,
+        cell $verifiers
+    ) = Dvn::getQuorumAndVerifiers($dvn);
+
+    return test::multiget::equal(
+        $dvn,
+        unsafeTuple([
+            Dvn::quorum,
+            Dvn::verifiers
+        ]),
+        unsafeTuple([$quorum, $verifiers])
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::Dvn::getQuorumAndVerifiers, "Serde::Dvn::getQuorumAndVerifiers"])
+    ;
+}

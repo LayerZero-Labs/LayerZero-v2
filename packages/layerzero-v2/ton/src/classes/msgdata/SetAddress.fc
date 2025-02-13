@@ -1,0 +1,23 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::SetAddress::NAME = "setAddress"u;
+
+;; field names
+const int md::SetAddress::address = 0;
+
+cell md::SetAddress::New(int address) impure inline method_id {
+    return cl::declare(
+        md::SetAddress::NAME,
+        unsafeTuple([
+            [cl::t::address, address] ;; md::SetAddress::owner
+        ])
+    );
+}
+
+;; Ensure SetAddress doesn't have garbage bits that would cause undefined behaviors in the protocol
+cell md::SetAddress::sanitize(cell $setAddress) impure {
+    return md::SetAddress::New(
+        $setAddress.cl::get<address>(md::SetAddress::address)
+    );
+}

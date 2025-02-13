@@ -1,0 +1,418 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "channelReceiveUtils.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/dataStructures/DeterministicInsertionCircularQueue.fc";
+#include "../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/LzReceivePrepare.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+#include "../../../funC++/actions/dispatch.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::receive"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+    setEpConfigOApp(MOCK_RESOLVED_EP_CONFIG(false));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+;; --------------- LZ Receive Prepare -----------------
+
+(int, slice) lzReceivePrepare::success::basic(cell $storage) impure {
+    cell $commitShiftMap = $storage.cl::get<objRef>(Channel::commitPOOO);
+    cell $executeShiftMap = $storage.cl::get<objRef>(Channel::executePOOO);
+
+    cell executionQueue = DeterministicInsertionCircularQueue::set(
+        $storage.cl::get<cellRef>(Channel::executionQueue),
+        NONCE,
+        MOCK_SEND_PACKET(),
+        ExecutionQueue::committed
+    );
+
+    setContractStorage($storage
+        .cl::set(
+            Channel::executePOOO,
+            $executeShiftMap.cl::set(POOO::nextEmpty, NONCE)
+        )
+        .cl::set(
+            Channel::commitPOOO,
+            $commitShiftMap.cl::set(POOO::nextEmpty, NONCE + 1)
+        )
+        .cl::set(
+            Channel::executionQueue,
+            executionQueue
+        )
+    );
+
+    cell $lzRecievePrepareMd = md::LzReceivePrepare::New(NONCE, LZ_RECEIVE_PREPARE_GAS);
+
+    return test::handler::shouldPass(
+        lzReceivePrepare,
+        $lzRecievePrepareMd,
+        unsafeTuple([
+            0,
+            _newAction<dispatch>(
+                SRC_OAPP,
+                Layerzero::OP::LZ_RECEIVE_PREPARE,
+                MOCK_SEND_PACKET(),
+                LZ_RECEIVE_PREPARE_GAS
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; nonces below and equal to 0 are disallowed
+(int, slice) lzReceivePrepare::revert::invalidNonce(cell $storage) impure {
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(0, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::invalidNonce
+    );
+}
+
+;; eg channel just initialized, no nonce has been committed and every nonce is committable
+(int, slice) lzReceivePrepare::revert::nullPacket(cell $storage) impure {
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(NONCE, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::notExecutable
+    );
+}
+
+;; nonce is smaller than the first available index in the queue
+(int, slice) lzReceivePrepare::revert::nonceTooSmall(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+    executeNonce(incomingNonce);
+
+    commitNonce(2);
+    lockNonce(2);
+
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(incomingNonce, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::notExecutable
+    );
+}
+
+;; nonce is bigger than the last available index in the queue
+(int, slice) lzReceivePrepare::revert::nonceTooBig(cell $storage) impure {
+    commitNonce(1);
+
+    int firstUnexecutedNonce = getContractStorage()
+        .cl::get<objRef>(Channel::executePOOO)
+        .cl::get<uint64>(POOO::nextEmpty);
+
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(firstUnexecutedNonce + MAX_CELL_BITS + 1, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::notExecutable
+    );
+}
+
+;; it is within window but the packet is already executed
+(int, slice) lzReceivePrepare::revert::alreadyExecuted(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+
+    int incomingNonce = 2;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+    executeNonce(incomingNonce);
+
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(incomingNonce, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::notExecutable
+    );
+}
+
+;; it is within window but the state is executing
+(int, slice) lzReceivePrepare::revert::nonceExecuting(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+
+    int incomingNonce = 2;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    return test::handler::shouldFail(
+        lzReceivePrepare,
+        md::LzReceivePrepare::New(incomingNonce, LZ_RECEIVE_PREPARE_GAS),
+        Channel::ERROR::notExecutable
+    );
+}
+
+;; --------------- LZ Receive Lock -----------------
+
+(int, slice) lzReceiveLock::success::nonce1(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    cell $packet = MOCK_RECEIVE_PACKET_WITH_NONCE(incomingNonce);
+
+    cell executionQueue = DeterministicInsertionCircularQueue::set(
+        getContractStorage().cl::get<cellRef>(Channel::executionQueue),
+        incomingNonce,
+        $packet,
+        ExecutionQueue::executing
+    );
+
+    cell $expectedStorage = getContractStorage()
+        .cl::set(Channel::executionQueue, executionQueue);
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                $storage
+                    .cl::get<objRef>(Channel::path)
+                    .cl::get<address>(lz::Path::srcOApp),
+                Layerzero::OP::LZ_RECEIVE_EXECUTE,
+                md::MdObj::New(
+                    $packet,
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveLock::success::nonce1Helper(cell $storage) impure {
+    int incomingNonce = 1;
+    cell $packet = MOCK_RECEIVE_PACKET_WITH_NONCE(incomingNonce);
+
+    commitNonce(incomingNonce);
+    $storage = getContractStorage();
+
+    lockNonce(1);
+    cell $expectedStorage = getContractStorage();
+    setContractStorage($storage);
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                $storage
+                    .cl::get<objRef>(Channel::path)
+                    .cl::get<address>(lz::Path::srcOApp),
+                Layerzero::OP::LZ_RECEIVE_EXECUTE,
+                md::MdObj::New(
+                    $packet,
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+;; the current nonce is uncommitted and therefore can't be locked.
+(int, slice) lzReceiveLock::success::uncommitted(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(2);
+    commitNonce(3);
+    int incomingNonce = 4;
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::NOT_EXECUTABLE,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; some nonce before the current one is uncommitted so we can't lock this one
+(int, slice) lzReceiveLock::success::previousUncommittedNonce(cell $storage) impure {
+    commitNonce(1);
+    ;; nonce 2 remains uncommitted
+    int incomingNonce = 3;
+    commitNonce(incomingNonce);
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::NOT_EXECUTABLE,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveLock::success::ignoreAlreadyExecuted(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(3);
+
+    int incomingNonce = 2;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+    executeNonce(incomingNonce);
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::NOT_EXECUTABLE,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveLock::success::nonceTooBig(cell $storage) impure {
+    int lastExecutedNonce = 1;
+    commitNonce(lastExecutedNonce);
+    lockNonce(lastExecutedNonce);
+    executeNonce(lastExecutedNonce);
+
+    int tooBigNonce = lastExecutedNonce + MAX_CELL_BITS + 1;
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(tooBigNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::NOT_EXECUTABLE,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    tooBigNonce
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveLock::success::nonceExecuting(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+
+    int incomingNonce = 2;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    commitNonce(3);
+    lockNonce(3);
+
+    return test::handler::shouldPass(
+        lzReceiveLock,
+        md::Nonce::New(incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::NOT_EXECUTABLE,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveLock::revert::invalidNonce(cell $storage) impure {
+    return test::handler::shouldFail(
+        lzReceiveLock,
+        md::Nonce::New(0),
+        Channel::ERROR::invalidNonce
+    );
+}
+
+;; --------------------------------------------------
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- lz receive prepare
+            .tpush([lzReceivePrepare::success::basic, "lzReceivePrepare::success::basic"])
+            .tpush([lzReceivePrepare::revert::invalidNonce, "lzReceivePrepare::revert::invalidNonce"])
+            .tpush([lzReceivePrepare::revert::nullPacket, "lzReceivePrepare::revert::nullPacket"])
+            .tpush([lzReceivePrepare::revert::nonceTooSmall, "lzReceivePrepare::revert::nonceTooSmall"])
+            .tpush([lzReceivePrepare::revert::nonceTooBig, "lzReceivePrepare::revert::nonceTooBig"])
+            .tpush([lzReceivePrepare::revert::alreadyExecuted, "lzReceivePrepare::revert::alreadyExecuted"])
+            .tpush([lzReceivePrepare::revert::nonceExecuting, "lzReceivePrepare::revert::nonceExecuting"])
+            ;; -- lz receive lock
+            .tpush([lzReceiveLock::success::nonce1, "lzReceiveLock::success::nonce1"])
+            .tpush([lzReceiveLock::success::nonce1Helper, "lzReceiveLock::success::nonce1Helper"])
+            .tpush([lzReceiveLock::revert::invalidNonce, "lzReceiveLock::revert::invalidNonce"])
+            .tpush([lzReceiveLock::success::uncommitted, "lzReceiveLock::success::uncommitted"])
+            .tpush([lzReceiveLock::success::previousUncommittedNonce, "lzReceiveLock::success::previousUncommittedNonce"])
+            .tpush([lzReceiveLock::success::nonceTooBig, "lzReceiveLock::success::nonceTooBig"])
+            .tpush([lzReceiveLock::success::ignoreAlreadyExecuted, "lzReceiveLock::success::ignoreAlreadyExecuted"])
+            .tpush([lzReceiveLock::success::nonceExecuting, "lzReceiveLock::success::nonceExecuting"])
+    );
+}

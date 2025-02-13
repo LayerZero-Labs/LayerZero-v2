@@ -1,0 +1,153 @@
+#include "../../../../tests/testMain.fc";
+#include "../../dataStructures/PipelinedOutOfOrder.fc";
+
+slice _testName() { return "POOO"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+(int, slice) POOO::setBitOne(cell $args) impure {
+    return test::shouldBeTrue(
+        POOO::New()
+            .POOO::set(1)
+            .cl::get<uint64>(POOO::nextEmpty) == 2
+    );
+}
+
+(int, slice) POOO::setBitTwo(cell $args) impure {
+    cell $pooo = POOO::New().POOO::set(2);
+    return test::shouldBeTrue(
+        ($pooo.cl::get<uint64>(POOO::nextEmpty) == 1)
+        & $pooo.POOO::isBitSet(2)
+    );
+}
+
+(int, slice) POOO::8bitOrdered(cell $args) impure {
+    cell $pooo = POOO::New()
+        .POOO::set(1)
+        .POOO::set(2)
+        .POOO::set(3)
+        .POOO::set(4)
+        .POOO::set(5)
+        .POOO::set(6)
+        .POOO::set(7)
+        .POOO::set(8);
+    return test::shouldBeTrue(
+        ($pooo.cl::get<uint64>(POOO::nextEmpty) == 9)
+    );
+}
+
+(int, slice) POOO::8bitUnordered(cell $args) impure {
+    cell $pooo = POOO::New()
+        .POOO::set(6)
+        .POOO::set(2)
+        .POOO::set(7)
+        .POOO::set(4)
+        .POOO::set(8)
+        .POOO::set(3)
+        .POOO::set(1)
+        .POOO::set(5);
+    return test::shouldBeTrue(
+        ($pooo.cl::get<uint64>(POOO::nextEmpty) == 9)
+    );
+}
+
+(int, slice) POOO::lastBit(cell $args) impure {
+    cell $pooo = POOO::New()
+        .POOO::set(MAX_CELL_BITS);
+    return test::shouldBeTrue(
+        $pooo.POOO::isBitSet(MAX_CELL_BITS)
+    );
+}
+
+(int, slice) POOO::revert::pastLastBit(cell $args) impure {
+    int success = false;
+    try {
+        cell $pooo = POOO::New().POOO::set(MAX_CELL_BITS + 1);
+    } catch (x, n) {
+        success = true;
+    }
+    if (success) {
+        return (TEST_SUCCESS, "");
+    }
+    return (TEST_FAILED, "Should have thrown an exception");
+}
+
+(int, slice) POOO::indexZero(cell $args) impure {
+    return test::shouldBeTrue(
+        POOO::New()
+            .POOO::set(0)
+            .cl::get<uint64>(POOO::nextEmpty) == 1
+    );
+}
+
+(int, slice) POOO::wrapsAtEnd(cell $args) impure {
+    ;; flip(1) bits starting at index 1 to index 1023 leaving index 0 as unflipped(0)
+    ;; Binary Representation: 011111...111111
+    cell $pooo = cl::declare(
+        POOO::NAME,
+        unsafeTuple([
+            [cl::t::uint64, 1],
+            [cl::t::cellRef, begin_cell()
+                .store_zeroes(1)
+                .store_ones(MAX_CELL_BITS - 1)
+                .end_cell()
+            ]
+        ])
+    );
+
+    throwErrorUnless(
+        $pooo.cl::get<uint64>(POOO::nextEmpty) == 1,
+        "nextEmpty should be 1"
+    );
+
+    ;; flip(1) index 0 and expect the bitmap to clear all bits
+    ;; and set nextEmpty to 1024 (MAX_CELL_BITS + 1)
+    $pooo = $pooo.POOO::set(1);
+    throwErrorUnless(
+        $pooo.cl::get<uint64>(POOO::nextEmpty) == 1024,
+        "nextEmpty should be 1024"
+    );
+
+    ;; flip(1) the nextEmpty nonce and expect it to increment by 1
+    $pooo = $pooo.POOO::set(1024);
+    throwErrorUnless(
+        $pooo.cl::get<uint64>(POOO::nextEmpty) == 1025,
+        "nextEmpty should be 1025"
+    );
+
+    ;; flip(1) index 1547 and expect nextEmpty to not change
+    $pooo = $pooo.POOO::set(1547);
+    return test::shouldBeTrue(
+        $pooo.cl::get<uint64>(POOO::nextEmpty) == 1025
+    );
+}
+
+(int, slice) POOO::negativeInput(cell $args) impure {
+    int success = false;
+    try {
+        POOO::New().POOO::set(-69);
+    } catch (_, n) {
+        if(n == POOO::ERROR::negativeIndex) {
+            success = true;
+        }
+    }
+    if (success) {
+        return (TEST_SUCCESS, "");
+    }
+    return (TEST_FAILED, "Should have thrown an exception");
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([POOO::setBitOne, "POOO::setBitOne"])
+        .tpush([POOO::setBitTwo, "POOO::setBitTwo"])
+        .tpush([POOO::8bitOrdered, "POOO::8bitOrdered"])
+        .tpush([POOO::8bitUnordered, "POOO::8bitUnordered"])
+        .tpush([POOO::lastBit, "POOO::lastBit"])
+        .tpush([POOO::revert::pastLastBit, "POOO::revert::pastLastBit"])
+        .tpush([POOO::indexZero, "POOO::indexZero"])
+        .tpush([POOO::wrapsAtEnd, "POOO::wrapsAtEnd"])
+        .tpush([POOO::negativeInput, "POOO::negativeInput"]);
+}

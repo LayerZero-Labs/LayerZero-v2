@@ -1,0 +1,95 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "channelReceiveUtils.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/dataStructures/DeterministicInsertionCircularQueue.fc";
+#include "../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::mgmt"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    setEpConfigOApp(MOCK_RESOLVED_EP_CONFIG(false));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+;; ---------------------- initialize channel ----------------------------
+
+(int, slice) initialize::revert::invalidSrcEid(cell $storage) impure {
+    cell $invalidPath = MOCK_SEND_PATH().cl::set(lz::Path::srcEid, 0);
+    setContractStorage($storage.cl::set(Channel::path, $invalidPath));
+
+    return test::handler::shouldFail(initialize, cl::nullObject(), Channel::ERROR::wrongPath);
+}
+
+(int, slice) initialize::revert::invalidDstEid(cell $storage) impure {
+    cell $invalidPath = MOCK_SEND_PATH().cl::set(lz::Path::dstEid, 0);
+    setContractStorage($storage.cl::set(Channel::path, $invalidPath));
+
+    return test::handler::shouldFail(initialize, cl::nullObject(), Channel::ERROR::wrongPath);
+}
+
+(int, slice) initialize::revert::invalidSrcOApp(cell $storage) impure {
+    cell $invalidPath = MOCK_SEND_PATH().cl::set(lz::Path::srcOApp, NULLADDRESS);
+    setContractStorage($storage.cl::set(Channel::path, $invalidPath));
+
+    return test::handler::shouldFail(initialize, cl::nullObject(), Channel::ERROR::wrongPath);
+}
+
+(int, slice) initialize::revert::invalidDstOApp(cell $storage) impure {
+    cell $invalidPath = MOCK_SEND_PATH().cl::set(lz::Path::dstOApp, NULLADDRESS);
+    setContractStorage($storage.cl::set(Channel::path, $invalidPath));
+
+    return test::handler::shouldFail(initialize, cl::nullObject(), Channel::ERROR::wrongPath);
+}
+
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- initialize
+            .tpush([initialize::revert::invalidSrcEid, "initialize::revert::invalidSrcEid"])
+            .tpush([initialize::revert::invalidDstEid, "initialize::revert::invalidDstEid"])
+            .tpush([initialize::revert::invalidSrcOApp, "initialize::revert::invalidSrcOApp"])
+            .tpush([initialize::revert::invalidDstOApp, "initialize::revert::invalidDstOApp"])
+    );
+}

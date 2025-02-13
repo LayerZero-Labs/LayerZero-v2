@@ -1,0 +1,27 @@
+{
+  "name": "@layerzerolabs/layerzero-v2-ton",
+  "private": true,
+  "license": "LZBL-1.2",
+  "scripts": {
+    "build": "$npm_execpath clean-prebuild && $npm_execpath blueprint build --all",
+    "clean-prebuild": "rimraf target",
+    "test": "$npm_execpath jest --verbose"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@ston-fi/funcbox": "^0.1.1",
+    "@ton/blueprint": "0.25.0-beta.1",
+    "@ton/core": "^0.59.0",
+    "@ton/crypto": "^3.3.0",
+    "@ton/sandbox": "^0.22.0",
+    "@ton/test-utils": "^0.4.2",
+    "@ton/ton": "15.1.0",
+    "@types/jest": "^29.5.10",
+    "@types/node": "^20.10.5",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.2.2"
+  }
+}

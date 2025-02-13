@@ -1,0 +1,405 @@
+#include "../core/interface.fc";
+
+#include "../../funC++/actions/call.fc";
+#include "../../funC++/actions/event.fc";
+
+#include "../../classes/msgdata/SetAddress.fc";
+
+#include "../msgdata/SignedRequest.fc";
+#include "../msgdata/SetQuorum.fc";
+#include "../msgdata/SetDict.fc";
+#include "../msgdata/ExecuteParams.fc";
+
+#include "../core/abstract/workerHandler.fc";
+#include "../../classes/msgdata/MdAddress.fc";
+#include "../proxy/interface.fc";
+#include "../../protocol/msglibs/ultralightnode/callbackOpcodes.fc";
+#include "../../protocol/msglibs/ultralightnode/msgdata/UlnVerification.fc";
+#include "../../protocol/msglibs/ultralightnode/uln/interface.fc";
+
+#include "interface.fc";
+#include "storage.fc";
+
+;;; Recovers public key from signature, identical to Bitcoin/Ethereum operations.
+;;; Takes 32-byte hash as uint256 hash; 65-byte signature as [uint1 v, uint256 r, uint256 s].
+;;; Returns (null, null, null, 0) on failure, (publickey, -1) on success. public key is returned as [uint8 h, uint256 x1, uint256 x2].
+;;; In the SEC (Standards for Efficient Cryptography) format, uncompressed public keys start with 0x04,
+;;; followed by the x and y coordinates of the point on the elliptic curve.
+;;; This prefix distinguishes uncompressed keys from compressed ones (which use 0x02 or 0x03).
+(int, int, int, int) ecrecover(int hash, int v, int r, int s) asm "ECRECOVER NULLSWAPIFNOT NULLSWAPIFNOT2";
+
+;;; Decodes a 65-byte signature into uint8 v, uint256 r, uint256 s
+(int, int, int) decodeSignature(cell signature) impure inline method_id {
+    slice signatureSlice = signature.begin_parse();
+
+    ;; Load r (first 32 bytes / 256 bits)  = the x-coordinate of a point on the elliptic curve.
+    int r = signatureSlice~load_uint(256);
+
+    ;; Load s (next 32 bytes / 256 bits)   = the y-coordinate of a point on the elliptic curve.
+    int s = signatureSlice~load_uint(256);
+
+    ;; Load v (last byte / 8 bits)         = the recovery ID.
+    int v = signatureSlice~load_uint(8);
+
+    ;; Adjust the 'v' value from 27/28 to 0/1 for passing to ecrecover.
+    return (v >= 27 ? v - 27 : v, r, s);
+}
+
+;;; Encodes [uint256 x1, uint256 x2] into a cell which represents the 64-byte public key
+cell encodePublicKey(int x1, int x2) impure inline method_id {
+    return begin_cell()
+        .store_uint256(x1)
+        .store_uint256(x2)
+        .end_cell();
+}
+
+;;; Verifies signatures on a dict256 of signatures
+;;; Signatures: Dict[publicKeyHash, signature]
+tuple _verifySignatures(tuple actions, int hash, cell signatures, cell verifiers, int quorum) impure inline {
+    int indexedPublicKeyHash = -1;
+    int validSignatures = 0;
+    ;; iterate over the signatures dict
+    do {
+        (indexedPublicKeyHash, cell signature) = signatures.cl::dict256::getNext<cellRef>(indexedPublicKeyHash);
+        if (indexedPublicKeyHash != -1) {
+            (int v, int r, int s) = decodeSignature(signature);
+            ;; recover the public key from the signature
+            (_, int x1, int x2, int signatureValid) = ecrecover(hash, v, r, s);
+            if (signatureValid) {
+                ;; encode the public key and hash it
+                int recoveredPublicKeyHash = encodePublicKey(x1, x2).cl::hash();
+                ;; check if the recovered public key is in the verifiers dict
+                ;; and matches the signature in the dict
+                (_, int verifierExists) = verifiers.cl::dict256::get(recoveredPublicKeyHash);
+                if ((verifierExists) & (recoveredPublicKeyHash == indexedPublicKeyHash)) {
+                    validSignatures += 1;
+                }
+            } else {
+                ;; emitting this from the proxy will cause the double-call issue
+                actions~pushAction<event>(
+                    Dvn::event::INVALID_SIGNATURE,
+                    begin_cell().store_uint256(indexedPublicKeyHash).end_cell()
+                );
+            }
+        }
+    } until (indexedPublicKeyHash == -1);
+
+    throw_if(Dvn::ERROR::notEnoughSignatures, validSignatures < quorum);
+
+    return actions;
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _checkPermissions(int op, cell $md) impure inline {
+    if (op == Dvn::OP::VERIFY) {
+        return assertAdmin();
+    } elseif (
+        (op == UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK)
+        | (op == Dvn::OP::SET_ADMINS_BY_QUORUM)
+    ) {
+        ;; NOP, so no need to check permissions
+        return ();
+    } elseif (
+        (op == Dvn::OP::SET_VERIFIERS)
+        | (op == Dvn::OP::SET_QUORUM)
+        | (op == Worker::OP::SET_ADMINS)
+        | (op == Worker::OP::SET_PROXY)
+        | (op == Worker::OP::CLAIM_TON)
+        | (op == Worker::OP::CLAIM_TON_FROM_PROXY)
+        | (op == Worker::OP::CALL_VIA_PROXY)
+        | (op == Dvn::OP::SET_PROXY_ADMINS)
+    ) {
+        return assertAdmin();
+    } elseif (op == Proxy::OP::HANDLE_CALLBACK) {
+        return ();
+    }
+    throw(BaseInterface::ERROR::invalidOpcode);
+}
+
+;;; ==========================HANDLERS=====================================
+
+tuple setVerifiers(cell $signedRequest) impure {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $setDict = $signedRequest.cl::get<objRef>(md::SignedRequest::request);
+    cell $newVerifiers = $setDict.cl::get<dict256>(md::SetDict::dict);
+
+    throw_if(
+        Dvn::ERROR::invalidVerifiers,
+        cl::dict256::size($newVerifiers) < 1
+    );
+
+    int incomingNonce = $setDict.cl::get<uint64>(md::SetDict::nonce);
+
+    throw_if(
+        Dvn::ERROR::invalidRequestNonce,
+        incomingNonce != $storage.cl::get<uint64>(Dvn::setVerifiersNonce)
+    );
+    
+    int signedOpcode = $setDict.cl::get<uint64>(md::SetDict::opcode);
+    throw_if(
+        Worker::ERROR::invalidSignedOpcode,
+        signedOpcode != Dvn::OP::SET_VERIFIERS
+    );
+
+    int target = $setDict.cl::get<address>(md::SetDict::target);
+    throw_if(
+        Worker::ERROR::invalidTarget,
+        target != getContractAddress()
+    );
+
+    actions = _verifySignatures(
+        actions,
+        $setDict.cl::hash(),
+        $signedRequest.cl::get<dict256>(md::SignedRequest::signatures),
+        $storage.cl::get<dict256>(Dvn::verifiers),
+        $storage.cl::get<uint64>(Dvn::quorum)
+    );
+
+    setContractStorage(
+        $storage
+            .cl::set(Dvn::verifiers, $newVerifiers)
+            .cl::set(Dvn::setVerifiersNonce, incomingNonce + 1)
+    );
+
+    actions = actions._emitViaProxy(
+        Dvn::event::SET_VERIFIERS,
+        $setDict
+    );
+
+    return actions;
+}
+
+tuple setQuorum(cell $signedRequest) impure {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $setQuorum = $signedRequest.cl::get<objRef>(md::SignedRequest::request);
+
+    int incomingNonce = $setQuorum.cl::get<uint64>(md::SetQuorum::nonce);
+
+    throw_if(
+        Dvn::ERROR::invalidRequestNonce,
+        incomingNonce != $storage.cl::get<uint64>(Dvn::setQuorumNonce)
+    );
+
+    int signedOpcode = $setQuorum.cl::get<uint64>(md::SetQuorum::opcode);
+    throw_if(
+        Worker::ERROR::invalidSignedOpcode,
+        signedOpcode != Dvn::OP::SET_QUORUM
+    );
+
+    int newQuorum = $setQuorum.cl::get<uint64>(md::SetQuorum::quorum);
+    cell $verifiers = $storage.cl::get<dict256>(Dvn::verifiers);
+
+    throw_if(
+        Dvn::ERROR::invalidQuorum,
+        (newQuorum < 1) | (newQuorum > cl::dict256::size($verifiers))
+    );
+
+    int target = $setQuorum.cl::get<address>(md::SetQuorum::target);
+    throw_if(
+        Worker::ERROR::invalidTarget,
+        target != getContractAddress()
+    );
+
+    actions = _verifySignatures(
+        actions,
+        $setQuorum.cl::hash(),
+        $signedRequest.cl::get<dict256>(md::SignedRequest::signatures),
+        $storage.cl::get<dict256>(Dvn::verifiers),
+        $storage.cl::get<uint64>(Dvn::quorum)
+    );
+
+    setContractStorage(
+        $storage
+            .cl::set(Dvn::quorum, newQuorum)
+            .cl::set(Dvn::setQuorumNonce, incomingNonce + 1)
+    );
+
+    actions = actions._emitViaProxy(
+        Dvn::event::SET_QUORUM,
+        $setQuorum
+    );
+
+    return actions;
+}
+
+tuple setAdminsByQuorum(cell $signedRequest) impure {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $setDict = $signedRequest.cl::get<objRef>(md::SignedRequest::request);
+
+    int incomingNonce = $setDict.cl::get<uint64>(md::SetDict::nonce);
+
+    throw_if(
+        Dvn::ERROR::invalidRequestNonce,
+        incomingNonce != $storage.cl::get<uint64>(Dvn::setAdminsByQuorumNonce)
+    );
+
+    int signedOpcode = $setDict.cl::get<uint64>(md::SetDict::opcode);
+    throw_if(
+        Worker::ERROR::invalidSignedOpcode,
+        signedOpcode != Dvn::OP::SET_ADMINS_BY_QUORUM
+    );
+
+    int target = $setDict.cl::get<address>(md::SetDict::target);
+    throw_if(
+        Worker::ERROR::invalidTarget,
+        target != getContractAddress()
+    );
+
+    actions = _verifySignatures(
+        actions,
+        $setDict.cl::hash(), 
+        $signedRequest.cl::get<dict256>(md::SignedRequest::signatures),
+        $storage.cl::get<dict256>(Dvn::verifiers),
+        $storage.cl::get<uint64>(Dvn::quorum)
+    );
+
+    actions = actions._emitViaProxy(
+        Dvn::event::SET_ADMINS_BY_QUORUM,
+        $setDict
+    );
+
+    setContractStorage(
+        $storage
+            .setCoreStorage(
+                getCoreStorage().cl::set(
+                    WorkerCoreStorage::admins,
+                    $setDict.cl::get<dict256>(md::SetDict::dict)
+                )
+            )
+            .cl::set(Dvn::setAdminsByQuorumNonce, incomingNonce + 1)
+    );
+
+    return actions;
+}
+
+;; Calldata = mdAddress(verification, ulnConnectionAddress)
+tuple verify(cell $signedRequest) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $executeParams = $signedRequest.md::SignedRequest::getRequest();
+
+    (
+        int expiration,
+        int target,
+        int signedOpcode,
+        int forwardingAddress
+    ) = $executeParams.md::ExecuteParams::deserialize();
+
+    throw_if(
+        Dvn::ERROR::expired,
+        ;; now() counts as expired, per the EVM spec
+        expiration <= now()
+    );
+    
+    throw_if(
+        Worker::ERROR::invalidSignedOpcode,
+        signedOpcode != Uln::OP::ULN_VERIFY
+    );
+
+    throw_if(
+        Worker::ERROR::invalidTarget,
+        target != getContractAddress()
+    );
+
+    (int quorum, cell verifiers) = $storage.Dvn::getQuorumAndVerifiers();
+
+    actions = _verifySignatures(
+        actions,
+        $executeParams.cl::hash(),
+        $signedRequest.md::SignedRequest::getSignatures(),
+        verifiers,
+        quorum
+    );
+
+    ;; for the inside call, the target is the proxy address
+    $executeParams = $executeParams.cl::set(md::ExecuteParams::target, forwardingAddress);
+
+    actions~pushAction<call>(
+        getProxyAddress(),
+        Proxy::OP::CALL_CONTRACT,
+        $executeParams
+    );
+
+    return actions;
+}
+
+tuple verifyCallback(cell $verifyStatus) impure inline {
+    (cell $storage, tuple actions) = preamble();
+    return actions;
+}
+
+tuple setProxyAdmins(cell $signedRequest) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $executeParams = $signedRequest.cl::get<objRef>(md::SignedRequest::request);
+
+    throw_if(
+        Dvn::ERROR::expired,
+        ;; now() counts as expired, per the EVM spec
+        $executeParams.cl::get<uint64>(md::ExecuteParams::expiration) <= now()
+    );
+
+    int signedOpcode = $executeParams.cl::get<uint32>(md::ExecuteParams::opcode);
+    throw_if(
+        Worker::ERROR::invalidSignedOpcode,
+        signedOpcode != Worker::OP::SET_ADMINS
+    );
+
+    int target = $executeParams.cl::get<address>(md::ExecuteParams::target);
+    throw_if(
+        Worker::ERROR::invalidTarget,
+        target != getContractAddress()
+    );
+
+    int forwardingAddress = $executeParams.cl::get<address>(md::ExecuteParams::forwardingAddress);
+    throw_if(
+        Worker::ERROR::invalidForwardingAddress,
+        forwardingAddress != getProxyAddress()
+    );
+
+    cell $newAdminList = $executeParams.cl::get<objRef>(md::ExecuteParams::callData);
+    throw_if(
+        Dvn::ERROR::invalidProxyAdmins,
+        AddressList::length($newAdminList) != 1
+    );
+
+    actions = _verifySignatures(
+        actions,
+        $executeParams.cl::hash(),
+        $signedRequest.cl::get<dict256>(md::SignedRequest::signatures),
+        $storage.cl::get<dict256>(Dvn::verifiers),
+        $storage.cl::get<uint64>(Dvn::quorum)
+    );
+
+    ;; for the inside call, the target is the proxy address
+    $executeParams = $executeParams.cl::set(md::ExecuteParams::target, forwardingAddress);
+
+    return _callContract(actions, $executeParams);
+}
+
+tuple setAdmins(cell $addressList) impure inline {
+    return _setAdmins(emptyActions(), $addressList);
+}
+
+tuple claimTon(cell $claimTon) impure inline {
+    return _claimTon(emptyActions(), $claimTon);
+}
+
+tuple claimTonFromProxy(cell $claimTon) impure inline {
+    return _claimTonFromProxy(emptyActions(), $claimTon);
+}
+
+tuple setProxy(cell $setAddress) impure inline {
+    return _setProxyAddress(
+        emptyActions(),
+        $setAddress.cl::get<address>(md::SetAddress::address)
+    );
+}
+
+tuple callViaProxy(cell $executeParams) impure inline {
+    return _callViaProxy(emptyActions(), $executeParams);
+}

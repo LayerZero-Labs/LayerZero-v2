@@ -1,0 +1,16 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::InitSmlConnection::NAME = "initSmlCon"u;
+
+;; field names
+const int md::InitSmlConnection::channelAddress = 0;
+
+cell md::InitSmlConnection::New(int channelAddress) inline method_id {
+    return cl::declare(
+        md::InitSmlConnection::NAME,
+        unsafeTuple([
+            [cl::t::address, channelAddress] ;; md::InitSmlConnection::channelAddress
+        ])
+    );
+}

@@ -1,0 +1,156 @@
+#include "interface.fc";
+
+#include "../msgdata/UlnReceiveConfig.fc";
+#include "../msgdata/UlnSendConfig.fc";
+
+#include "../../../core/baseStorage.fc";
+
+#include "../../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+
+const int UlnConnection::MAX_HASH_LOOKUPS = 1023;
+
+const int UlnConnection::NAME = "connection"u;
+
+const int UlnConnection::baseStorage = 0;
+const int UlnConnection::path = 1;
+;; the channel address is set during the initialize call
+const int UlnConnection::endpointAddress = 2;
+const int UlnConnection::channelAddress = 3;
+const int UlnConnection::firstUnexecutedNonce = 4; ;; first nonce that has not been executed
+const int UlnConnection::ulnAddress = 5;
+
+;; EVM struct ExecutorConfig
+;; uint32 maxMessageSize;
+;; address executor;
+const int UlnConnection::UlnSendConfigOApp = 6; ;; UlnSendConfig
+const int UlnConnection::UlnReceiveConfigOApp = 7; ;; UlnReceiveConfig
+;; breaking from EVM, we are using a fixed size array for the DVN verifications, and DVNs can
+;; only verify a packet for a specific inbound nonce range.
+const int UlnConnection::hashLookups = 8; ;; map nonce -> map dvnAddress -> {hash,confirmations}
+const int UlnConnection::commitPOOO = 9;
+
+;; @owner ulnManager
+cell UlnConnection::New(int owner, cell $path, int ulnAddress) impure method_id {
+    return cl::declare(
+        UlnConnection::NAME,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(owner)],             ;; UlnConnection::baseStorage
+            [cl::t::objRef, $path],                               ;; UlnConnection::path
+            [cl::t::address, NULLADDRESS],                        ;; UlnConnection::endpointAddress
+            [cl::t::address, NULLADDRESS],                        ;; UlnConnection::channelAddress
+            [cl::t::uint64, 1],                                   ;; UlnConnection::firstUnexecutedNonce
+            [cl::t::address, ulnAddress],                         ;; UlnConnection::ulnAddress
+            [cl::t::objRef, UlnSendConfig::NewWithDefaults()],    ;; UlnConnection::UlnSendConfigOApp
+            [cl::t::objRef, UlnReceiveConfig::NewWithDefaults()], ;; UlnConnection::UlnReceiveConfigOApp
+            [cl::t::dict256, cl::dict256::New()],                 ;; UlnConnection::hashLookups
+            [cl::t::objRef, empty_cell()]                         ;; UlnConnection::commitPOOO
+        ])
+    );
+}
+
+;; ====================== Storage Accessors =====================
+
+
+const int UlnConnection::_endpointAddressOffset = _HEADER_WIDTH;
+const int UlnConnection::_channelAddressOffset = UlnConnection::_endpointAddressOffset + 256;
+const int UlnConnection::_firstUnexecutedNonceOffset = UlnConnection::_channelAddressOffset + 256;
+const int UlnConnection::_rootSliceBits = UlnConnection::_firstUnexecutedNonceOffset + 64;
+
+const int UlnConnection::_ulnAddressOffset = 0;
+
+cell UlnConnection::getBaseStorage(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0);
+}
+
+int UlnConnection::getChannelAddress(cell $self) impure inline {
+    return $self.cellPreloadAddressAt(UlnConnection::_channelAddressOffset);
+}
+
+int UlnConnection::getUlnAddress(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadAddressAt(UlnConnection::_ulnAddressOffset);
+}
+
+cell UlnConnection::getCommitPOOO(cell $self) impure inline {
+    return $self.cellPreloadRefAt(2).cellPreloadRefAt(3);
+}
+
+;; ====================== Composite Storage Accessors =====================
+
+;; (ulnAddress, channelAddress, ulnSendConfigOApp)
+(int, int, cell) UlnConnection::getSendInformation(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2_slice = selfSlice.preloadRefSliceAt(2);
+    return (
+        ref2_slice.preloadAddressAt(UlnConnection::_ulnAddressOffset),
+        selfSlice.preloadAddressAt(UlnConnection::_channelAddressOffset),
+        ref2_slice.preloadRefAt(0)
+    );
+}
+
+;; (firstUnexecutedNonce, hashLookups, ulnReceiveConfigOApp)
+(int, cell, cell) UlnConnection::getVerifyInformation(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2Slice = selfSlice.preloadRefSliceAt(2);
+
+    return (
+        selfSlice.preloadUint64At(UlnConnection::_firstUnexecutedNonceOffset),
+        ref2Slice.preloadRefAt(2),
+        ref2Slice.preloadRefAt(1)
+    );
+}
+
+;; (endpointAddress, ulnReceiveConfigOApp, hashLookups)
+(int, cell, cell) UlnConnection::getCommitPacketInformation(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2Slice = selfSlice.preloadRefSliceAt(2);
+    return (
+        selfSlice.preloadAddressAt(UlnConnection::_endpointAddressOffset),
+        ref2Slice.preloadRefAt(1),
+        ref2Slice.preloadRefAt(2)
+    );
+}
+
+;; ====================== Storage Modifiers =====================
+
+
+cell UlnConnection::updateCommittmentInfo(
+    cell $self,
+    int committedNonce,
+    int firstUnexecutedNonce,
+    cell $commitPOOO
+) impure inline {
+    slice selfSlice = $self.begin_parse();
+
+    slice ref2Slice = selfSlice.preloadRefSliceAt(2);
+
+    cell hashLookups = ref2Slice.preloadRefAt(2).cl::dict256::delete(committedNonce);
+
+    cell new_ref2 = begin_cell()
+        .store_slice(ref2Slice.scutfirst(256, 2))
+        .store_ref(hashLookups)
+        .store_ref($commitPOOO)
+        .end_cell();
+
+    return begin_cell()
+        .store_slice(selfSlice.scutfirst(UlnConnection::_firstUnexecutedNonceOffset, 2))
+        .store_uint64(firstUnexecutedNonce)
+        .store_ref(new_ref2)
+        .end_cell();
+}
+
+cell UlnConnection::setHashLookups(cell $self, cell $hashLookups) impure inline {
+    slice selfSlice = $self.begin_parse();
+
+    slice originalStructuralCellSlice = selfSlice.preloadRefSliceAt(2);
+
+    cell newStructuralCell = begin_cell()
+        .store_slice(originalStructuralCellSlice.scutfirst(256, 2))
+        .store_ref($hashLookups)
+        .store_ref(originalStructuralCellSlice.preloadRefAt(3))
+        .end_cell();
+
+    return begin_cell()
+        .store_slice(selfSlice.scutfirst(UlnConnection::_rootSliceBits, 2))
+        .store_ref(newStructuralCell)
+        .end_cell();
+}

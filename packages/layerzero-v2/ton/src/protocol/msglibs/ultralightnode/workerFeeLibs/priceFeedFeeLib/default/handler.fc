@@ -1,0 +1,27 @@
+#include "../storage.fc";
+
+;; Default model
+
+tuple priceFeedFeeLib::estimateFee(tuple inputs) impure method_id(11111) {
+    cell $priceFeedStorage = inputs.cell_at(0);
+    int callDataSize = inputs.int_at(1);
+    int remoteGas = inputs.int_at(2);
+
+    (
+        int priceRatio,
+        int gasPriceInRemoteUnit,
+        int gasPerByte,
+        int nativePriceUsd
+    ) = PriceFeedFeelib::deserializeInts($priceFeedStorage);
+    
+    int gasForCallData = callDataSize * gasPerByte;
+    int gasFeeInRemoteUnit = (gasForCallData + remoteGas) * gasPriceInRemoteUnit;
+
+    return unsafeTuple(
+        [
+            gasFeeInRemoteUnit,     ;; gasFee in Remote Unit, (e.g., WEI for ETH)
+            priceRatio,             ;; priceRatio
+            nativePriceUsd          ;; Native price in USD
+        ]
+    );
+}

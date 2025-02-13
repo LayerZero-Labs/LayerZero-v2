@@ -1,0 +1,64 @@
+const int ERRORCODE_MASK = 0x7ff;
+const int CLASSLIB::ERROR::INVALID_FIELD_TYPE = 1059;
+const int CLASSLIB::ERROR::WRONG_ORDER_CONSTRUCTOR = 1060;
+
+const int MAX_U8    = 0xFF;
+const int MAX_U16   = 0xFFFF;
+const int MAX_U32   = 0xFFFFFFFF;
+const int MAX_U64   = 0xFFFFFFFFFFFFFFFF;
+const int MAX_U128  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+const int MAX_U256  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+const int MAX_COINS = 1329227995784915872903807060280344575; ;; 2^120 - 1
+
+const int ADDR_TYPE_NONE = 0;
+const int ADDR_TYPE_EXTERN = 1;
+const int ADDR_TYPE_STD = 2;
+const int ADDR_TYPE_VAR = 3;
+
+const int TRUE = -1;
+const int FALSE = 0;
+const int MASTERCHAIN = -1;
+const int BASECHAIN = 0;
+
+;; 0b011000 tag - 0, ihr_disabled - 1, bounce - 1, bounced - 0, src = adr_none$00
+const int SEND_MSG_BOUNCEABLE = 0x18;
+;; 0b010000 tag - 0, ihr_disabled - 1, bounce - 0, bounced - 0, src = adr_none$00
+const int SEND_MSG_NON_BOUNCEABLE = 0x10;
+
+;; MODIFIER
+const int NORMAL = 0;
+const int PAID_EXTERNALLY = 1;
+const int IGNORE_ERRORS = 2;
+
+;; SEND MODES
+const int BOUNCE_IF_FAIL = 16;
+const int DESTROY_IF_ZERO = 32;
+const int CARRY_REMAINING_GAS = 64;
+const int CARRY_ALL_BALANCE = 128;
+
+;; SENDMSG modes
+const int SUB_BALANCE_MSG = 64;
+const int SUB_BALANCE_CONTRACT = 128;
+const int ONLY_ESTIMATE_FEES = 1024;
+
+;; SEND MODES QUIETED
+const int QDESTROY_IF_ZERO = 34;
+const int QCARRY_REMAINING_GAS = 66;
+const int QCARRY_ALL_BALANCE = 130;
+
+const int RESERVE_EXACTLY    = 0;
+const int RESERVE_ALL_EXCEPT = 1;
+const int RESERVE_AT_MOST    = 2;
+const int EXTRN_DO_NOT_FAIL  = 2;
+const int BALANCE_INCREASED  = 4;
+const int BALANCE_DECREASED  = 8;
+const int RESERVE_BOUNCE_ON_ACTION_FAIL = 16;
+
+;; a lot of different constants, because arithmetic manipulation of constants is not optimized
+const int MAX_CELL_BITS = 1023;
+const int MAX_CELL_BYTES = 127;
+const int MAX_CELL_WHOLE_BYTE_BITS = MAX_CELL_BYTES * 8;
+const int MAX_CELL_BIT_INDEX = 1022;
+const int MAX_CELL_REFS = 4;
+
+const int NULLADDRESS = 0;

@@ -1,0 +1,46 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::Nonce::NAME = "nonce"u;
+
+;; field names
+const int md::Nonce::nonce = 0;
+
+cell md::Nonce::New(int nonce) impure inline method_id {
+    return cl::declare(
+        md::Nonce::NAME,
+        unsafeTuple([
+            [cl::t::uint64, nonce] ;; md::Nonce::nonce
+        ])
+    );
+}
+
+;; ========================== Object Builders ==========================
+const int md::Nonce::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 1);
+const int md::Nonce::_headerFillerBits = _HEADER_WIDTH - md::Nonce::_headerInfoBits;
+const int md::Nonce::_headerInfo = 124339069371385211;
+
+;; this function is unused by the protocol but will be used by OApps
+cell md::Nonce::build(int nonce) impure inline {
+    return begin_cell()
+        .store_uint(md::Nonce::_headerInfo, md::Nonce::_headerInfoBits) ;; header info
+        .store_ones(md::Nonce::_headerFillerBits)                       ;; header filler
+        .store_uint64(nonce)
+        .end_cell();
+}
+
+
+;; ========================== Object Getters ==========================
+const int md::Nonce::_nonceOffset = _HEADER_WIDTH;
+
+int md::Nonce::getNonce(cell $self) impure inline {
+    return $self.cellPreloadUint64At(md::Nonce::_nonceOffset);
+}
+
+;; ========================== Sanitize ==========================
+
+cell md::Nonce::sanitize(cell $self) impure inline_ref {
+    int nonce = $self.cl::get<uint64>(md::Nonce::nonce);
+
+    return md::Nonce::New(nonce);
+}

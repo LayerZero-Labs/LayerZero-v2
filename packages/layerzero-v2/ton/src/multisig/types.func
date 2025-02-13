@@ -1,0 +1,52 @@
+;; Multisig types
+
+#include "imports/stdlib.fc";
+
+;; Alias for load_ref
+(slice, cell) load_nonempty_dict(slice s) asm(-> 1 0) "LDREF";
+
+;; alias for store_ref
+builder store_nonempty_dict(builder b, cell c) asm(c b) "STREF";
+
+const int TIMESTAMP_SIZE = 48;
+
+(slice, int) ~load_timestamp(slice s) inline {
+    return s.load_uint(TIMESTAMP_SIZE);
+}
+builder store_timestamp(builder b, int timestamp) inline {
+    return b.store_uint(timestamp, TIMESTAMP_SIZE);
+}
+
+const int HASH_SIZE = 256;
+
+(slice, int) ~load_hash(slice s) inline {
+    return s.load_uint(HASH_SIZE);
+}
+builder store_hash(builder b, int hash) inline {
+    return b.store_uint(hash, HASH_SIZE);
+}
+
+{- By index we mean index of signer in signers dictionary. The same type is used
+   for threshold, singers number and for proposers indexes -}
+const int INDEX_SIZE = 8;
+const int MASK_SIZE = 1 << INDEX_SIZE;
+
+(slice, int) ~load_index(slice s) inline {
+    return s.load_uint(INDEX_SIZE);
+}
+builder store_index(builder b, int index) inline {
+    return b.store_uint(index, INDEX_SIZE);
+}
+
+const int ACTION_INDEX_SIZE = 8;
+
+
+const int ORDER_SEQNO_SIZE = 256;
+const int MAX_ORDER_SEQNO = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+
+(slice, int) ~load_order_seqno(slice s) inline {
+    return s.load_uint(ORDER_SEQNO_SIZE);
+}
+builder store_order_seqno(builder b, int seqno) inline {
+    return b.store_uint(seqno, ORDER_SEQNO_SIZE);
+}
