@@ -1,0 +1,87 @@
+#include "../testutil.fc";
+#include "../../handler.fc";
+#include "../../interface.fc";
+#include "../../../msgdata/UlnSend.fc";
+#include "../../../msgdata/UlnSendConfig.fc";
+#include "../../../msgdata/UlnWorkerFeelibEvents.fc";
+
+#include "../../../../../../../tests/consts.fc";
+#include "../../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../../tests/testMain.fc";
+#include "../../../../../interfaces.fc";
+#include "../../../../../../funC++/utils.fc";
+#include "../../../../../../../tests/mocks.fc";
+#include "../../../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../../../classes/msgdata/MdObj.fc";
+#include "../../../../../../funC++/actions/utils.fc";
+
+#include "../../../../../channel/interface.fc";
+#include "../../../../../../funC++/actions/call.fc";
+
+#include "../../../../../../funC++/classlib.fc";
+#include "../../../../../../funC++/constants.fc";
+
+slice _testName() { return "badFeeLib12"; }
+
+() _createInitializedStorage() impure {
+    initialize(
+        md::InitUln::New(
+            MOCK_ULN_CONNECTION_CODE(),
+            TREASURY_FEE_BPS
+        )
+    );
+}
+
+cell createContractStorage() impure {
+    setContractStorage(Uln::New(ULN_MANAGER_ADDRESS, SRC_EID, DST_EID));
+    return getContractStorage();
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;; this malicious fee lib does not implement the quote method
+
+;;; ===============================TESTS=========================================
+
+(int, slice) badFeeLib::methodNotPresent(cell $storage) impure {
+    ;; doesn't matter which one we use, the malicious fee lib will try to screw it up
+    ;; since it's read from my_code in unit tests.
+    _registerCustomUlnWorkersAllUsingDefaultExecutorFeeLib();
+
+    return test::handler::shouldPass(
+        ulnSend,
+        MOCK_ULN_SEND(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CHANNEL_ADDRESS,
+                Channel::OP::MSGLIB_SEND_CALLBACK,
+                md::MsglibSendCallback::New(
+                    0,
+                    0,
+                    MOCK_LZ_SEND(),
+                    empty_cell(),
+                    empty_cell(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    cl::nullObject(),
+                    Uln::ErrorCode::WORKER_QUOTE_FAILED
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([badFeeLib::methodNotPresent, "badFeeLib::methodNotPresent"])
+    ;
+}

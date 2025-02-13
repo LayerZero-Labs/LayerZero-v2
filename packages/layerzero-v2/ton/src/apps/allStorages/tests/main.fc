@@ -1,0 +1,13 @@
+#include "../../../../tests/testMain.fc";
+
+slice _testName() { return "allStorages"; }
+
+const int max_lz_message_cells = 100;
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple();
+}

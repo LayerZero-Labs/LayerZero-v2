@@ -1,0 +1,106 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required storage name
+const int UlnWorkerFeelibInfo::NAME = "UlnWrkInfo"u;
+
+;; 'UlnWorkerFeelibInfo::useDefaults' is ONLY used during the oapp config set flow.
+;; When setting 'epConfigDefaults' as the owner, the flag doesnt matter, because call is for defaults
+
+;; field names
+const int UlnWorkerFeelibInfo::workerAddress = 0;
+const int UlnWorkerFeelibInfo::workerFeelibBytecode = 1;
+const int UlnWorkerFeelibInfo::workerFeelibStorage = 2;
+const int UlnWorkerFeelibInfo::friendWorkerAddress = 3;
+const int UlnWorkerFeelibInfo::dstEid = 4;
+const int UlnWorkerFeelibInfo::rentBalance = 5;
+const int UlnWorkerFeelibInfo::lastRentTimestamp = 6;
+const int UlnWorkerFeelibInfo::isAdmin = 7;
+
+cell UlnWorkerFeelibInfo::New(
+    int workerAddress,
+    cell workerFeelibBytecode,
+    cell workerFeelibStorage,
+    int friendWorkerAddress,
+    int dstEid,
+    int rentBalance,
+    int isAdmin
+) impure inline method_id {
+    return cl::declare(
+        UlnWorkerFeelibInfo::NAME,
+        unsafeTuple([
+            [cl::t::address, workerAddress],        ;; UlnWorkerFeelibInfo::workerAddress
+            [cl::t::cellRef, workerFeelibBytecode], ;; UlnWorkerFeelibInfo::workerFeelibBytecode
+            [cl::t::objRef, workerFeelibStorage],   ;; UlnWorkerFeelibInfo::workerFeelibStorage
+            [cl::t::address, friendWorkerAddress],  ;; UlnWorkerFeelibInfo::friendWorkerAddress
+            [cl::t::uint32, dstEid],                ;; UlnWorkerFeelibInfo::dstEid
+            [cl::t::coins, rentBalance],            ;; UlnWorkerFeelibInfo::rentBalance
+            [cl::t::uint64, 0],                     ;; UlnWorkerFeelibInfo::lastRentTimestamp
+            [cl::t::bool, isAdmin]                  ;; UlnWorkerFeelibInfo::isAdmin
+        ])
+    );
+}
+
+;; ==================================== Object Getters =============================
+
+const int UlnWorkerFeelibInfo::_workerAddressOffset = _HEADER_WIDTH;
+const int UlnWorkerFeelibInfo::_friendWorkerAddressOffset = UlnWorkerFeelibInfo::_workerAddressOffset + 256;
+const int UlnWorkerFeelibInfo::_dstEidOffset = UlnWorkerFeelibInfo::_friendWorkerAddressOffset + 256;
+const int UlnWorkerFeelibInfo::_rentBalanceOffset = UlnWorkerFeelibInfo::_dstEidOffset + 32;
+
+const int UlnWorkerFeelibInfo::_rootSliceBits = UlnWorkerFeelibInfo::_rentBalanceOffset + 128;
+
+int UlnWorkerFeelibInfo::getWorkerAddress(cell $self) impure inline {
+    return $self.cellPreloadAddressAt(UlnWorkerFeelibInfo::_workerAddressOffset);
+}
+
+cell UlnWorkerFeelibInfo::getWorkerFeeLibStorage(cell $self) impure inline {
+    return $self.cellPreloadRefAt(1);
+}
+
+;; ==================================== Object Multi-Getters =============================
+
+;; (friendAddress, feelibStorage, feelibByteCode)
+(int, cell, cell) UlnWorkerFeelibInfo::getQuoteWorkerInformation(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadAddressAt(UlnWorkerFeelibInfo::_friendWorkerAddressOffset),
+        selfSlice.preloadRefAt(1),
+        selfSlice.preloadRefAt(0)
+    );
+}
+
+;; ==================================== Object Setters =============================
+
+cell UlnWorkerFeelibInfo::setWorkerFeeLibBytecode(cell $self, cell $workerFeeLibBytecode) impure inline {
+    slice selfSlice = $self.begin_parse();
+
+    return begin_cell()
+        .store_ref($workerFeeLibBytecode)                ;; replace ref[0] with the new workerFeeLibBytecode
+        .store_slice(selfSlice.sskipfirst(0, 1))         ;; store the rest of the fields
+        .end_cell();
+}
+
+cell UlnWorkerFeelibInfo::setWorkerFeeLibStorage(cell $self, cell $workerFeeLibStorage) impure inline {
+    slice selfSlice = $self.begin_parse();
+
+    return begin_cell()
+        .store_slice(selfSlice.scutfirst(UlnWorkerFeelibInfo::_rootSliceBits, 1))         ;; store every bit in root and ref[0]
+        .store_ref($workerFeeLibStorage)                    ;; replace ref[1] with the new workerFeeLibStorage
+        .store_slice(selfSlice.scutlast(0, 1))              ;; store ref[2]
+        .end_cell();
+}
+
+cell UlnWorkerFeelibInfo::sanitize(cell $ulnWorkerFeelibInfo) impure {
+    return UlnWorkerFeelibInfo::New(
+        $ulnWorkerFeelibInfo.cl::get<address>(UlnWorkerFeelibInfo::workerAddress),
+        $ulnWorkerFeelibInfo.cl::get<cellRef>(UlnWorkerFeelibInfo::workerFeelibBytecode),
+        $ulnWorkerFeelibInfo.cl::get<objRef>(UlnWorkerFeelibInfo::workerFeelibStorage),
+        $ulnWorkerFeelibInfo.cl::get<address>(UlnWorkerFeelibInfo::friendWorkerAddress),
+        $ulnWorkerFeelibInfo.cl::get<uint32>(UlnWorkerFeelibInfo::dstEid),
+        $ulnWorkerFeelibInfo.cl::get<coins>(UlnWorkerFeelibInfo::rentBalance),
+        $ulnWorkerFeelibInfo.cl::get<bool>(UlnWorkerFeelibInfo::isAdmin)
+    ).cl::set(
+        UlnWorkerFeelibInfo::lastRentTimestamp,
+        $ulnWorkerFeelibInfo.cl::get<uint64>(UlnWorkerFeelibInfo::lastRentTimestamp)
+    );
+}

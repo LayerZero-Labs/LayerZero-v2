@@ -1,0 +1,258 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/PacketId.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../protocol/channel/interface.fc";
+#include "../../baseOApp/handler.fc";
+#include "../../baseOApp/interface.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../funC++/txnContext.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+#include "../../../classes/msgdata/OptionsExtended.fc";
+#include "../../../classes/msgdata/OptionsV2.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "counter:setters"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Counter::New(
+            getCaller(),
+            CONTROLLER_ADDRESS,
+            SRC_EID,
+            COUNTER_ID,
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================HELPER FUNCTIONS===============================
+
+const int COUNTER_NONCE = 1;
+
+cell abIncrementPacket() impure {
+    return begin_cell().store_uint8(Counter::increment::ab)
+                       .store_uint32(SRC_EID)
+                       .store_uint32(2)
+                       .end_cell();
+}
+
+cell _getCounterSendPath() impure {
+    return lz::Path::New(
+        SRC_EID,
+        getContractAddress(),
+        DST_EID,
+        DST_OAPP
+    );
+}
+
+cell _getCounterReceivePath() impure {
+    return lz::Path::New(
+        DST_EID,
+        DST_OAPP,
+        SRC_EID,
+        getContractAddress()
+    );
+}
+
+cell _setAndGetPeer(cell $storage, int dstEid, int dstOApp) {
+    return $storage.setBaseOAppStorage(
+        getBaseOAppStorage().cl::nestedDict256::set(
+            BaseOApp::peers,
+            dstEid,
+            dstOApp
+        )
+    );
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) setOwner::success::basic(cell $storage) impure {
+    ;; update the owner to 'getContractAddress'
+    cell $baseStorage = $storage.cl::get<objRef>(Counter::baseStorage);
+    $baseStorage = $baseStorage.cl::set(BaseStorage::owner, getContractAddress());
+    cell $expectedStorage = $storage.cl::set(Counter::baseStorage, $baseStorage);
+
+    return test::handler::shouldPass(
+        setOwner,
+        md::SetAddress::New(getContractAddress()),
+        emptyActions(),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) setPeer::success::basic(cell $storage) impure {
+    cell $setPeerMd = md::SetPeer::New(DST_EID, DST_OAPP);
+
+    cell $expectedStorage = $storage._setAndGetPeer(DST_EID, DST_OAPP);
+
+    return test::handler::shouldPass(
+        setPeer,
+        $setPeerMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(EVENT::PeerSet, $setPeerMd)
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) setLzConfig::success::basic(cell $storage) impure {
+    setContractStorage($storage._setAndGetPeer(DST_EID, DST_OAPP));
+
+    ;; This can arbitrarily set configs, we are just picking rnadom potential address ie. 'Controller'
+    cell $path = _getCounterSendPath();
+    cell $epConfig = MOCK_EP_CONFIG(true);
+    cell $configMd = lz::Config::New($path, CONTROLLER_ADDRESS, OP::RANDOM, $epConfig);
+
+    return test::handler::shouldPass(
+        setLzConfig,
+        $configMd,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                CONTROLLER_ADDRESS,
+                OP::RANDOM,
+                md::MdObj::New($epConfig, $path)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) setLzConfig::revert::wrongSrcEid(cell $storage) impure {
+    setContractStorage($storage._setAndGetPeer(DST_EID, DST_OAPP));
+
+    ;; This can arbitrarily set configs, we are just picking rnadom potential address ie. 'Controller'
+    cell $path = _getCounterSendPath();
+    cell $epConfig = MOCK_EP_CONFIG(true);
+    cell $configMd = lz::Config::New($path, CONTROLLER_ADDRESS, OP::RANDOM, $epConfig);
+
+    ;; set an invalid srcEid
+    setContractStorage(getContractStorage().setBaseOAppStorage(
+        getBaseOAppStorage().cl::set(
+            BaseOApp::eid,
+            BAD_EID
+        )
+    ));
+
+    ;; We only need to trigger a single error from in here to validate that this hooks into the verifyPath
+    return test::handler::shouldFail(
+        setLzConfig,
+        $configMd,
+        ERROR::WrongSrcEid
+    );
+}
+
+(int, slice) setEnforcedOptions::success::basic(cell $storage) impure {
+    cell $optionsExtended = MOCK_OPTIONS_EXTENDED();
+
+    ;; update the base oApp storage
+    cell $baseOAppStorage = getBaseOAppStorage()
+        .cl::nestedDict256::setRef(
+            BaseOApp::enforcedOptions,
+            getEnforcedOptionsKey(
+                $optionsExtended.cl::get<uint32>(md::OptionsExtended::eid),
+                $optionsExtended.cl::get<uint32>(md::OptionsExtended::msgType)
+            ),
+            $optionsExtended.cl::get<objRef>(md::OptionsExtended::options)
+        );
+
+    ;; set the expected storage
+    cell $expectedStorage = $storage.setBaseOAppStorage($baseOAppStorage);
+
+    return test::handler::shouldPass(
+        setEnforcedOptions,
+        $optionsExtended,
+        unsafeTuple([
+            0,
+            _newAction<event>(EVENT::EnforcedOptionsSet, $optionsExtended)
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) setEnforcedOptions::revert::invalidEnforcedOptions(cell $storage) impure {
+    cell $optionsExtended = MOCK_OPTIONS_EXTENDED();
+
+    ;; set the options to an invalid ref, which contains another ref
+    $optionsExtended = $optionsExtended.cl::set(
+        md::OptionsExtended::options,
+        MOCK_OPTIONS_EXTENDED()
+    );
+
+    return test::handler::shouldFail(
+        setEnforcedOptions,
+        $optionsExtended,
+        ERROR::InvalidEnforcedOptions
+    );
+}
+
+(int, slice) getEnforcedOptions::success::basic(cell $storage) impure {
+    ;; Set some enforced options
+    setEnforcedOptions(MOCK_OPTIONS_EXTENDED());
+
+    ;; get the actual options and test this helper works as intended
+    cell $optionsExtended = MOCK_OPTIONS_EXTENDED();
+    cell $actualOptions = getEnforcedOptions(
+        $optionsExtended.cl::get<uint32>(md::OptionsExtended::eid),
+        $optionsExtended.cl::get<uint32>(md::OptionsExtended::msgType)
+    );
+
+    return test::shouldBeTrue(
+        objectsAreEqual(
+            $optionsExtended.cl::get<objRef>(md::OptionsExtended::options),
+            $actualOptions)
+    );
+}
+
+(int, slice) getEnforcedOptionsKey::success::basic(cell $storage) impure {
+    cell $optionsExtended = MOCK_OPTIONS_EXTENDED();
+
+    int key = getEnforcedOptionsKey(
+        $optionsExtended.cl::get<uint32>(md::OptionsExtended::eid),
+        $optionsExtended.cl::get<uint32>(md::OptionsExtended::msgType)
+    );
+
+    ;; 438086664193 == 110011000000000000000000000000000000001 (in binary) == uint32(DST_EID) << 32 | uint32(MSG_TYPE)
+    return test::shouldBeTrue(key == 438086664193);
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([setOwner::success::basic, "setOwner::success::basic"])
+            .tpush([setPeer::success::basic, "setPeer::success::basic"])
+            .tpush([setLzConfig::success::basic, "setLzConfig::success::basic"])
+            .tpush([setLzConfig::revert::wrongSrcEid, "setLzConfig::revert::wrongSrcEid"])
+            .tpush([setEnforcedOptions::success::basic, "setEnforcedOptions::success::basic"])
+            .tpush([setEnforcedOptions::revert::invalidEnforcedOptions, "setEnforcedOptions::revert::invalidEnforcedOptions"])
+            .tpush([getEnforcedOptions::success::basic, "getEnforcedOptions::success::basic"])
+            .tpush([getEnforcedOptionsKey::success::basic, "getEnforcedOptionsKey::success::basic"])
+    );
+}

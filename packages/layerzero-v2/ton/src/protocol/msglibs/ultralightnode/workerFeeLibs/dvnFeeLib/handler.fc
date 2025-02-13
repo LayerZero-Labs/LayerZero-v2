@@ -1,0 +1,110 @@
+#include "../../../../../classes/msgdata/OptionsV1.fc";
+#include "../../../../../classes/msgdata/OptionsV2.fc";
+
+#include "../priceFeedFeeLib/storage.fc";
+#include "../../feeLibInterface.fc";
+#include "../../msgdata/UlnWorkerFeelibInfo.fc";
+
+#include "../common.fc";
+#include "storage.fc";
+#include "../../feeLibUtils.fc";
+#include "../priceFeedFeeLib/interface.fc";
+
+;; From DVNFeeLib.sol
+;; encoded( execute(ExecuteParam[]) ):
+;; funcSigHash + params -> 4  + 32(Offset of the array) + 32(array size) + 32(first element start offset)
+;; + 32(vid) + 32(target) + 32(calldata-offset) + 32(expiration) + 32(signatures-offset) = 260
+const int DvnFeelib::EXECUTE_FIXED_BYTES = 260;
+const int DvnFeelib::SIGNATURE_RAW_BYTES = 65; ;; not encoded
+;; verify(bytes calldata _packetHeader, bytes32 _payloadHash, uint64 _confirmations)\
+;; 4 + 32(header offset) + 32(payloadHash) + 32(confirmations, 8 -> 32 padded) + 32(header-size) + 96(81 -> header-padded) = 228,
+;; padded to multiples of 32 = 256, encoded as bytes with an 32 byte for the bytes size = 288
+const int DvnFeelib::VERIFY_BYTES_ULN = 288;
+
+;; just validate options
+() _decodeOption(cell $options) impure inline_ref {
+    int optionsType = cl::typeof($options);
+    if (
+        (optionsType == md::OptionsV1::NAME)
+        | (optionsType == md::OptionsV2::NAME)
+        | (optionsType == cl::NULL_CLASS_NAME)
+    ) {
+        return ();
+    } else {
+        throw(UlnWorkerInterface::ERROR::UNKNOWN_OPTIONS);
+    }
+    return ();
+}
+
+() _decodeOptions(cell $extraOptions, cell $enforcedOptions) impure inline_ref {
+    _decodeOption($extraOptions);
+    _decodeOption($enforcedOptions);
+    return ();
+}
+
+int _getCallDataSize(cell $myStorage) impure inline_ref {
+    int quorum = $myStorage.DvnFeelib::getQuorum();
+
+    int totalSignatureBytes = DvnFeelib::SIGNATURE_RAW_BYTES * quorum;
+    ;; align on 32-byte boundary
+    if ((totalSignatureBytes % 32) != 0) {
+        totalSignatureBytes += (32 - (totalSignatureBytes % 32));
+    }
+    return DvnFeelib::EXECUTE_FIXED_BYTES + DvnFeelib::VERIFY_BYTES_ULN + totalSignatureBytes + 32;
+}
+
+tuple ulnWorker::quote(tuple inputs) impure method_id {
+    cell $myStorage = inputs.cell_at(0);
+    cell $priceFeedInfo = inputs.cell_at(1);
+    ;; cell $path = inputs.cell_at(2);
+    ;; int confirmations = inputs.int_at(3);
+    ;; int packetBytes = inputs.int_at(4);
+    cell $extraOptions = inputs.cell_at(5);
+    cell $enforcedOptions = inputs.cell_at(6);
+
+    cell $priceFeedStorage = $priceFeedInfo.UlnWorkerFeelibInfo::getWorkerFeeLibStorage();
+
+    _decodeOptions($extraOptions, $enforcedOptions);
+
+    (
+        int remoteGas, 
+        int multiplierBps, 
+        int floorMarginUSD
+    ) = DvnFeelib::getRemoteGasMultiplierBpsAndFloorMarginUSD($myStorage);
+
+    tuple returnStack = safePackedInputsRunVm(
+        unsafeTuple([
+            $priceFeedStorage,
+            _getCallDataSize($myStorage),
+            remoteGas
+        ]),
+        PriceFeedFeeLib::method_id::estimateFee,
+        1,
+        $priceFeedInfo.cl::get<cellRef>(UlnWorkerFeelibInfo::workerFeelibBytecode).begin_parse(),
+        1000000 ;; gas limit does not matter here
+    );
+
+    tuple retVal = returnStack.tuple_at(0);
+    ;; if it's not a tuple, then the worker returned an error or went OOG
+    ifnot (retVal.is_tuple()) {
+        return unsafeTuple(
+            [-1, -1, null()]
+        ); ;; failure case so it will fail inside the _quoteWorker runVM call
+    }
+
+    ;; gasFee in remote unit, (e.g., WEI for ETH)
+    int totalGasFeeInRemoteUnit = retVal.int_at(0);
+    int priceRatio = retVal.int_at(1);
+    int nativePriceUsd = retVal.int_at(2);
+
+    int totalGasFee = _applyPremiumAndFloor(
+        _remoteToNanoton(totalGasFeeInRemoteUnit, priceRatio),
+        multiplierBps,
+        floorMarginUSD,
+        nativePriceUsd
+    );
+
+    return unsafeTuple(
+        [totalGasFee, null()]
+    );
+}

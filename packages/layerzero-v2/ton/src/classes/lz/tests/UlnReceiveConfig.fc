@@ -1,0 +1,92 @@
+#include "../../../funC++/classlib.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../../tests/testMain.fc";
+
+slice _testName() { return "UlnReceiveConfig"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+;;; ===============================TESTS=========================================
+(int, slice) validateUlnReceiveConfig::shouldThrow(
+    cell $UlnReceiveConfig,
+    int expected_error
+) impure {
+    int failed = false;
+    try {
+        UlnReceiveConfig::sanitize($UlnReceiveConfig);
+        return (TEST_FAILED, "never throws");
+    } catch(x, n) {
+        if (n != expected_error) {
+            return (
+                TEST_FAILED,
+                "actual error: "
+                    .str::concatInt(n)
+                    .str::concat(" != expected: ")
+                    .str::concatInt(expected_error)
+            );
+        }
+    }
+    return test::shouldBeTrue(true);
+}
+
+(int, slice) UlnReceiveConfig::validate::success::defaultAllRequiredDVNs(cell $storage) impure {
+    UlnReceiveConfig::sanitize(MOCK_DEFAULT_ULN_RECEIVE_CONFIG());
+    return test::shouldBeTrue(true);
+}
+
+(int, slice) UlnReceiveConfig::validate::success::customAllRequiredDVNs(cell $storage) impure {
+    UlnReceiveConfig::sanitize(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(2, 0, 0));
+        return test::shouldBeTrue(true);
+
+}
+
+(int, slice) UlnReceiveConfig::validate::success::defaultWithOptionalDVNs(cell $storage) impure {
+    UlnReceiveConfig::sanitize(MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_OPTIONAL_DVNS(2, 2));
+    return test::shouldBeTrue(true);
+}
+
+(int, slice) UlnReceiveConfig::validate::success::customWithOptionalDVNs(cell $storage) impure {
+    UlnReceiveConfig::sanitize(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(2, 2, 2));
+    return test::shouldBeTrue(true);
+}
+
+(int, slice) UlnReceiveConfig::validate::fail::thresholdTooHigh(cell $storage) impure {
+    int optionalDvnCount = 2;
+    return validateUlnReceiveConfig::shouldThrow(
+        MOCK_CUSTOM_ULN_RECEIVE_CONFIG(2, optionalDvnCount, optionalDvnCount + 1),
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LARGE
+    );
+}
+
+(int, slice) UlnReceiveConfig::validate::fail::thresholdTooLow(cell $storage) impure {
+    return validateUlnReceiveConfig::shouldThrow(
+        MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 1, 0),
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LOW
+    );
+}
+
+(int, slice) UlnReceiveConfig::validate::fail::zeroDVNs(cell $storage) impure {
+    return validateUlnReceiveConfig::shouldThrow(
+        MOCK_CUSTOM_ULN_RECEIVE_CONFIG(
+            0,
+            0,
+            0
+        ),
+        UlnReceiveConfig::ERROR::DVN_COUNTS_ALL_NIL
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([UlnReceiveConfig::validate::success::defaultAllRequiredDVNs, "UlnReceiveConfig::validate::success::defaultAllRequiredDVNs"])
+        .tpush([UlnReceiveConfig::validate::success::customAllRequiredDVNs, "UlnReceiveConfig::validate::success::customAllRequiredDVNs"])
+        .tpush([UlnReceiveConfig::validate::success::defaultWithOptionalDVNs, "UlnReceiveConfig::validate::success::defaultWithOptionalDVNs"])
+        .tpush([UlnReceiveConfig::validate::success::customWithOptionalDVNs, "UlnReceiveConfig::validate::success::customWithOptionalDVNs"])
+        .tpush([UlnReceiveConfig::validate::fail::thresholdTooHigh, "UlnReceiveConfig::validate::fail::thresholdTooHigh"])
+        .tpush([UlnReceiveConfig::validate::fail::thresholdTooLow, "UlnReceiveConfig::validate::fail::thresholdTooLow"])
+        .tpush([UlnReceiveConfig::validate::fail::zeroDVNs, "UlnReceiveConfig::validate::fail::zeroDVNs"])
+    ;
+}

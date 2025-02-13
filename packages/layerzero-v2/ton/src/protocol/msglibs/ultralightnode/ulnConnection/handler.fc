@@ -1,0 +1,639 @@
+#include "../../../core/abstract/protocolHandler.fc";
+
+#include "../callbackOpcodes.fc";
+
+#include "../msgdata/InitUlnConnection.fc";
+#include "../msgdata/UlnSend.fc";
+#include "../msgdata/UlnReceiveConfig.fc";
+#include "../msgdata/UlnSendConfig.fc";
+#include "../msgdata/UlnVerification.fc";
+#include "../msgdata/VerificationStatus.fc";
+#include "../msgdata/Attestation.fc";
+
+#include "../uln/interface.fc";
+#include "../../interface.fc";
+
+#include "../../../interfaces.fc";
+
+#include "../../../../protocol/endpoint/interface.fc";
+
+#include "../../../../classes/lz/Packet.fc";
+#include "../../../../classes/msgdata/ChannelNonceInfo.fc";
+#include "../../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../classes/msgdata/MdObj.fc";
+#include "../../../../classes/msgdata/Nonce.fc";
+#include "../../../../classes/msgdata/SetAddress.fc";
+
+#include "../../../../funC++/dataStructures/AddressList.fc";
+#include "../../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+
+#include "interface.fc";
+#include "storage.fc";
+#include "utils.fc";
+
+;;; ================INTERFACE FUNCTIONS=====================
+(cell, tuple) _initialize(cell $initUlnConnection) impure inline {
+    (cell $storage, tuple actions) = preamble();
+
+    ;; sanitized by the ULN Manager
+    cell $ulnSendConfigOApp = $initUlnConnection.cl::get<objRef>(
+        md::InitUlnConnection::ulnSendConfigOApp
+    );
+
+    ;; sanitized by the ULN Manager
+    cell $UlnReceiveConfigOApp = $initUlnConnection.cl::get<objRef>(
+        md::InitUlnConnection::ulnReceiveConfigOApp
+    );
+
+    int endpointAddress = $initUlnConnection.cl::get<address>(md::InitUlnConnection::endpointAddress);
+    int channelAddress = $initUlnConnection.cl::get<address>(md::InitUlnConnection::channelAddress);
+
+    return (
+        $storage
+            .cl::set(UlnConnection::UlnSendConfigOApp, $ulnSendConfigOApp)
+            .cl::set(UlnConnection::UlnReceiveConfigOApp, $UlnReceiveConfigOApp)
+            .cl::set(UlnConnection::endpointAddress, endpointAddress)
+            .cl::set(UlnConnection::channelAddress, channelAddress)
+            .cl::set(UlnConnection::commitPOOO, POOO::New()),
+        actions
+    );
+}
+
+int _getEventSink() impure inline {
+    return getOwner();
+}
+
+() assertChannel() impure inline {
+    throw_unless(
+        UlnConnection::ERROR::onlyChannel,
+        getCaller() == getContractStorage().UlnConnection::getChannelAddress()
+    );
+}
+
+() assertUln() impure inline {
+    throw_unless(
+        UlnConnection::ERROR::onlyUln,
+        getCaller() == getContractStorage().UlnConnection::getUlnAddress()
+    );
+}
+
+int _committable(
+    cell hashlookups,
+    int nonce,
+    int packetHash,
+    cell requiredDVNs,
+    cell optionalDVNs,
+    int optionalDVNThreshold,
+    int requiredConfirmations
+) impure inline {
+    slice requiredDVNsSlice = requiredDVNs.begin_parse();
+    ;; iterate through each of the required DVNs
+
+    int dvnAddress = requiredDVNsSlice~AddressList::next();
+
+    while (dvnAddress > NULLADDRESS) {
+        cell $attestation = UlnConnection::utils::getHashLookup(
+            hashlookups,
+            nonce,
+            dvnAddress
+        );
+        if ($attestation.cl::isNullObject()) {
+            return false;
+        }
+        
+        (int hash, int confirmations) = $attestation.lz::Attestation::deserialize();
+        if (
+            (confirmations < requiredConfirmations)
+            | (hash != packetHash)
+        ) {
+            return false;
+        }
+        dvnAddress = requiredDVNsSlice~AddressList::next();
+    }
+
+    int optionalDVNAttestations = 0;
+
+    if (optionalDVNThreshold == 0) {
+        ;; Short-circuit for the common case of 0 optional DVN
+        return true;
+    }
+
+    slice optionalDVNsSlice = optionalDVNs.begin_parse();
+    dvnAddress = optionalDVNsSlice~AddressList::next();
+    while ((dvnAddress > NULLADDRESS) & (optionalDVNAttestations < optionalDVNThreshold)) {
+        cell $attestation = UlnConnection::utils::getHashLookup(
+            hashlookups,
+            nonce,
+            dvnAddress
+        );
+
+        ;; Nested if, else case is simply to do nothing
+        ifnot ($attestation.cl::isNullObject()) {
+            (int hash, int confirmations) = $attestation.lz::Attestation::deserialize();
+            if ((confirmations >= requiredConfirmations) & (hash == packetHash)) {
+                optionalDVNAttestations += 1;
+            }
+        }
+        dvnAddress = optionalDVNsSlice~AddressList::next();
+    }
+
+    if (
+        (optionalDVNAttestations < optionalDVNThreshold)
+    ) {
+        ;; If not enough dvn attestations, return false
+        return false;
+    }
+    return true;
+}
+
+int committableView(int nonce, cell $packet, cell $defaultUlnReceiveConfig) impure method_id {
+    int firstUnexecutedNonce = getContractStorage().cl::get<uint64>(UlnConnection::firstUnexecutedNonce);
+    if (nonce < firstUnexecutedNonce) {
+        return UlnConnection::verificationStatus::EXECUTED;
+    }
+    cell $commitPOOO = getContractStorage().cl::get<objRef>(UlnConnection::commitPOOO);
+    int firstUncommittedNonce = $commitPOOO.cl::get<uint64>(POOO::nextEmpty);
+
+    if (nonce < firstUncommittedNonce) {
+        return UlnConnection::verificationStatus::COMMITTED;
+    } elseif (nonce > $commitPOOO.POOO::maxSettableBit()) {
+        return UlnConnection::verificationStatus::VERIFYING;
+    } elseif ($commitPOOO.POOO::isBitSet(nonce)) {
+        return UlnConnection::verificationStatus::COMMITTED;
+    }
+
+    (
+        cell requiredDVNs,
+        cell optionalDVNs,
+        int optionalDVNThreshold,
+        int requiredConfirmations,
+        _,
+        int isValid
+    ) = UlnReceiveConfig::utils::getCommitConfig(
+        getContractStorage().cl::get<objRef>(UlnConnection::UlnReceiveConfigOApp),
+        $defaultUlnReceiveConfig
+    );
+
+    ifnot (isValid) {
+        return UlnConnection::verificationStatus::CONFIGURATION_ERROR;
+    }
+
+    cell hashLookups = getContractStorage().cl::get<dict256>(UlnConnection::hashLookups);
+
+    if (_committable(
+        hashLookups,
+        nonce,
+        $packet.cl::hash(),
+        requiredDVNs,
+        optionalDVNs,
+        optionalDVNThreshold,
+        requiredConfirmations
+    )) {
+        return UlnConnection::verificationStatus::COMMITTABLE;
+    }
+    return UlnConnection::verificationStatus::VERIFYING;
+}
+
+int verifiedView(int dvnAddress, int nonce, int packetHash, int requiredConfirmations) impure method_id {
+    cell hashLookups = getContractStorage().cl::get<dict256>(UlnConnection::hashLookups);
+    cell $attestation = UlnConnection::utils::getHashLookup(
+        hashLookups,
+        nonce,
+        dvnAddress
+    );
+
+    if ($attestation.cl::isNullObject()) {
+        return false;
+    }
+
+    int confirmations = $attestation.cl::get<uint64>(lz::Attestation::confirmations);
+    int storedHash = $attestation.cl::get<uint256>(lz::Attestation::hash);
+    return (confirmations >= requiredConfirmations) & (storedHash == packetHash);
+}
+
+int _dvnIsRequiredOrOptional(slice requiredDVNsSlice, slice optionalDVNsSlice, int dvnAddress) impure inline {
+    if (AddressList::includes(dvnAddress, requiredDVNsSlice)) {
+        ;; Most configurations will only use required DVNs, so short-circuit return if it is required
+        return true;
+    }
+
+    return AddressList::includes(dvnAddress, optionalDVNsSlice);
+}
+
+int _isDvnConfigured(int dvnAddress, cell $customUlnReceiveConfigOApp, cell $defaultUlnReceiveConfigOApp) impure inline {
+    (cell requiredDVNs, cell optionalDVNs, int isValid) = UlnReceiveConfig::utils::getVerifyConfig(
+        $customUlnReceiveConfigOApp,
+        $defaultUlnReceiveConfigOApp
+    );
+
+    if (isValid) {
+        return _dvnIsRequiredOrOptional(
+            requiredDVNs.begin_parse(),
+            optionalDVNs.begin_parse(),
+            dvnAddress
+        );
+    }
+    return false;
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _checkPermissions(int op, cell $md) impure inline {
+    if (
+        (op == MsglibConnection::OP::MSGLIB_CONNECTION_SEND)
+        | (op == MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK)
+    ) {
+        return assertChannel();
+    } elseif (
+        (op == UlnConnection::OP::ULN_CONNECTION_VERIFY)
+        | (op == UlnConnection::OP::ULN_CONNECTION_COMMIT_PACKET)
+    ) {
+        return assertUln();
+    } elseif (
+        (op == MsglibConnection::OP::MSGLIB_CONNECTION_QUOTE)
+    ) {
+        return ();
+    } elseif (op == UlnConnection::OP::GARBAGE_COLLECT_INVALID_ATTESTATIONS) {
+        return assertUln();
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE) {
+        return assertChannel();
+    } elseif (
+        (op == UlnConnection::OP::SET_OAPP_ULN_SEND_CONFIG)
+        | (op == UlnConnection::OP::SET_OAPP_ULN_RECEIVE_CONFIG)
+    ) {
+        return assertOwner();
+    } elseif (op == UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES) {
+        return ();
+    } else {
+        ;; we must put a check for all opcodes to make sure we don't
+        ;; mistakenly miss an opp code's permissions
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+}
+
+;;; ==========================HANDLERS=====================================
+
+;; permissionless
+tuple msglibConnectionQuote(cell $lzSend) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        $storage.cl::get<address>(UlnConnection::ulnAddress),
+        Uln::OP::ULN_QUOTE,
+        md::UlnSend::New(
+            $lzSend,
+            $storage.cl::get<objRef>(UlnConnection::UlnSendConfigOApp),
+            getInitialStorage(),
+            getCaller()
+        )
+    );
+
+    return actions;
+}
+
+;; only uln
+tuple msglibConnectionSend(cell $lzSend) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (
+        int ulnAddress,
+        int channelAddress,
+        cell $ulnSendConfigOApp
+    ) = $storage.UlnConnection::getSendInformation();
+
+    actions~pushAction<call>(
+        ulnAddress,
+        Uln::OP::ULN_SEND,
+        md::UlnSend::build(
+            $lzSend,
+            $ulnSendConfigOApp,
+            getInitialStorage(),
+            channelAddress
+        )
+    );
+
+    return actions;
+}
+
+;; permissionless
+;; @in $extendedMd { md: Verification, obj: defaultUlnReceiveConfig, address: dvnAddress }
+tuple ulnConnectionVerify(cell $extendedMd) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedExtendedMd = $extendedMd.md::ExtendedMd::sanitize();
+
+    (
+        cell $ulnVerification,
+        cell $defaultUlnReceiveConfigOApp,
+        int dvnAddress
+    ) = $sanitizedExtendedMd.md::ExtendedMd::deserialize();
+
+    (
+        int nonce,
+        cell $attestation
+    ) = $ulnVerification.md::UlnVerification::deserialize();
+
+    (
+        int firstUnexecutedNonce,
+        cell hashLookups,
+        cell $ulnReceiveConfigOApp
+    ) = $storage.UlnConnection::getVerifyInformation();
+
+    ;; assume success unless something fails in the verification logic
+    int statusCode = UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED;
+
+    if (
+        (nonce < firstUnexecutedNonce)
+        | (nonce >= (firstUnexecutedNonce + UlnConnection::MAX_HASH_LOOKUPS))
+    ) {
+        ;; if the nonce has already been executed, or if it is invalid (== 0),
+        ;; do not allow verification of the packet
+        statusCode = UlnConnection::ULN_CONNECTION_VERIFY_FAILED::NONCE_OUT_OF_RANGE;
+    } elseifnot (_isDvnConfigured(dvnAddress, $ulnReceiveConfigOApp, $defaultUlnReceiveConfigOApp)) {
+        statusCode = UlnConnection::ULN_CONNECTION_VERIFY_FAILED::DVN_NOT_CONFIGURED;
+    } else {
+        ;; Ensure the DVN is not passing a malicious attestation that is bigger than expected
+        lz::Attestation::validate($attestation);
+
+        setContractStorage(
+            UlnConnection::utils::setHashLookup(
+                $storage,
+                hashLookups,
+                nonce,
+                dvnAddress,
+                $attestation
+            )
+        );
+        actions~pushAction<event>(
+            UlnConnection::event::PACKET_VERIFIED,
+            $extendedMd
+        );
+    }
+
+    actions~pushAction<call>(
+        dvnAddress,
+        UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+        md::MdObj::build(
+            md::VerificationStatus::build(nonce, statusCode),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+;; removes all attestations for all dvns that are not in the current configuration
+tuple garbageCollectInvalidAttestations(cell $mdObj) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedMdObj = md::MdObj::sanitize($mdObj);
+
+    cell $mdNonce = $sanitizedMdObj.cl::get<objRef>(md::MdObj::md).md::Nonce::sanitize();
+    int nonce = $mdNonce.cl::get<uint64>(md::Nonce::nonce);
+
+    cell $defaultUlnReceiveConfigOApp = $sanitizedMdObj.cl::get<objRef>(md::MdObj::obj);
+
+    cell $customUlnReceiveConfigOApp = $storage.cl::get<objRef>(UlnConnection::UlnReceiveConfigOApp);
+    (cell requiredDVNs, cell optionalDVNs, int isValid) = UlnReceiveConfig::utils::getVerifyConfig(
+        $customUlnReceiveConfigOApp,
+        $defaultUlnReceiveConfigOApp
+    );
+    slice requiredDVNsSlice = requiredDVNs.begin_parse();
+    slice optionalDVNsSlice = optionalDVNs.begin_parse();
+
+    ifnot (isValid) {
+        return actions;
+    }
+
+    actions~pushAction<event>(
+        UlnConnection::event::ATTESTATIONS_EVICTED,
+        $mdNonce
+    );
+
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    cell $newStorage = UlnConnection::utils::deleteNonceAttestations($storage, hashLookups, nonce);
+
+    ;; iterate the required DVNs
+    int requiredDVNAddress = requiredDVNsSlice~AddressList::next();
+    while (requiredDVNAddress > NULLADDRESS) {
+        cell $attestation = UlnConnection::utils::getHashLookup(hashLookups, nonce, requiredDVNAddress);
+        ifnot (cl::isNullObject($attestation)) {
+            $newStorage = UlnConnection::utils::setHashLookup(
+                $newStorage,
+                hashLookups,
+                nonce,
+                requiredDVNAddress,
+                $attestation
+            );
+        }
+        requiredDVNAddress = requiredDVNsSlice~AddressList::next();
+    }
+
+   int optionalDVNAddress = optionalDVNsSlice~AddressList::next();
+    while (optionalDVNAddress > NULLADDRESS) {
+        cell $attestation = UlnConnection::utils::getHashLookup(hashLookups, nonce, optionalDVNAddress);
+        ifnot (cl::isNullObject($attestation)) {
+            $newStorage = UlnConnection::utils::setHashLookup(
+                $newStorage,
+                hashLookups,
+                nonce,
+                optionalDVNAddress,
+                $attestation
+            );
+        }
+        optionalDVNAddress = optionalDVNsSlice~AddressList::next();
+    }
+
+    setContractStorage($newStorage);
+
+    return actions;
+}
+
+tuple garbageCollectExecutedNonces(cell $empty) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    int firstUnexecutedNonce = $storage.cl::get<uint64>(UlnConnection::firstUnexecutedNonce);
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    (int minNonce, _) = cl::dict256::getMin<cellRef>(hashLookups);
+
+    if ((minNonce > 0) & (minNonce < firstUnexecutedNonce)) {
+        setContractStorage(
+            UlnConnection::utils::deleteNonceAttestations($storage, hashLookups, minNonce)
+        );
+        actions~pushAction<call>(
+            getContractAddress(),
+            UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES,
+            $empty
+        );
+    }
+
+    return actions;
+}
+
+;; (uln -> ulnConnection -> channel)
+;; @in_md { Packet }
+tuple ulnConnectionCommitPacket(cell $mdObj) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (cell $packet, cell $defaultUlnReceiveConfig) = $mdObj.md::MdObj::deserialize();
+    int packetHash = $packet.cl::hash();
+    int nonce = $packet.lz::Packet::getNonce();
+
+    (
+        int endpointAddress, 
+        cell $ulnReceiveConfigOApp,
+        cell hashLookups
+    ) = $storage.UlnConnection::getCommitPacketInformation();
+
+    (
+        cell requiredDVNs,
+        cell optionalDVNs,
+        int optionalDVNThreshold,
+        int requiredConfirmations,
+        int commitPacketGas,
+        int isValid
+    ) = UlnReceiveConfig::utils::getCommitConfig(
+        $ulnReceiveConfigOApp,
+        $defaultUlnReceiveConfig
+    );
+
+    ifnot (isValid) {
+        return actions;
+    }
+
+    ifnot (
+        _committable(hashLookups, nonce, packetHash, requiredDVNs, optionalDVNs, optionalDVNThreshold, requiredConfirmations)
+        & (
+            (getMsgValue() - _gasToNanoton(get_gas_consumed())) >= _gasToNanoton(commitPacketGas)
+        )
+    ) {
+        return actions;
+    }
+
+    ;; If all above checks pass (no early return)
+    ;; commit the packet to the endpoint
+    actions~pushAction<call>(
+        endpointAddress,
+        Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+        $packet
+    );
+
+    return actions;
+}
+
+;; only channel
+tuple msglibConnectionCommitPacketCallback(cell $channelNonceInfo) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (int committedNonce, int firstUnexecutedNonce) = $channelNonceInfo.md::ChannelNonceInfo::deserialize();
+
+    cell $commitPOOO = $storage.UlnConnection::getCommitPOOO();
+    if (committedNonce <= POOO::maxSettableBit($commitPOOO)) {
+        $commitPOOO = POOO::set($commitPOOO, committedNonce);
+    }
+
+    setContractStorage(
+        $storage.UlnConnection::updateCommittmentInfo(committedNonce, firstUnexecutedNonce, $commitPOOO)
+    );
+
+    ;; note that if msglibConnectionCommitPacketCallback is called before msglibConnectionSyncChannelState
+    ;; is called, and the nonce is greater than the max settable bit, the msglibConnection will be in
+    ;; a semi-blocked state until msglibConnectionSyncChannelState is called.
+    ;; best practice is to call msglibConnectionSyncChannelState *before* switching to this msglib
+    
+    return actions;
+}
+
+;; only channel
+tuple msglibConnectionSyncChannelState(cell $mdObj) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    $mdObj = $mdObj.md::MdObj::sanitize();
+
+    cell $channelNonceInfo = $mdObj
+            .cl::get<objRef>(md::MdObj::md)
+            .md::ChannelNonceInfo::sanitize();
+    
+    ;; invariant:
+    ;; firstUnexecutedNonce >= $storage.cl::get<uint64>(UlnConnection::firstUnexecutedNonce)
+    int firstUnexecutedNonce = $channelNonceInfo
+        .cl::get<uint64>(md::ChannelNonceInfo::firstUnexecutedNonce);
+    int firstUncommittedNonce = $channelNonceInfo
+        .cl::get<uint64>(md::ChannelNonceInfo::nonce);
+    
+    cell $commitPOOO = $storage.cl::get<objRef>(UlnConnection::commitPOOO);
+    int maxNonce = POOO::maxSettableBit($commitPOOO);
+
+    if (firstUncommittedNonce > (maxNonce + MAX_CELL_BIT_INDEX)) {
+        $commitPOOO = POOO::New().cl::set(POOO::nextEmpty, firstUncommittedNonce);
+    } elseif (firstUncommittedNonce > maxNonce) {
+        int nextEmpty = $commitPOOO.cl::get<uint64>(POOO::nextEmpty);
+        $commitPOOO = POOO::unsafeSetBits($commitPOOO, nextEmpty, maxNonce);
+    }
+
+    int nextEmpty = $commitPOOO.cl::get<uint64>(POOO::nextEmpty);
+    $commitPOOO = POOO::unsafeSetBits($commitPOOO, nextEmpty, firstUncommittedNonce);
+
+    setContractStorage(
+        $storage
+            .cl::set(
+                UlnConnection::firstUnexecutedNonce,
+                firstUnexecutedNonce
+            )
+            .cl::set(UlnConnection::commitPOOO, $commitPOOO)
+    );
+
+    return actions;
+}
+
+tuple setOAppUlnSendConfig(cell $ulnSendConfig) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedUlnSendConfig = UlnSendConfig::sanitize($ulnSendConfig);
+
+    setContractStorage(
+        $storage.cl::set(
+            UlnConnection::UlnSendConfigOApp,
+            $sanitizedUlnSendConfig
+        )
+    );
+
+    actions~pushAction<event>(
+        UlnConnection::event::ULN_SEND_CONFIG_SET,
+        $sanitizedUlnSendConfig
+    );
+
+    return actions;
+}
+
+tuple setOAppUlnReceiveConfig(cell $ulnReceiveConfig) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedUlnReceiveConfig = UlnReceiveConfig::sanitize($ulnReceiveConfig);
+
+    setContractStorage(
+        $storage.cl::set(
+            UlnConnection::UlnReceiveConfigOApp,
+            $sanitizedUlnReceiveConfig
+        )
+    );
+    
+    actions~pushAction<event>(
+        UlnConnection::event::ULN_RECEIVE_CONFIG_SET,
+        $sanitizedUlnReceiveConfig
+    );
+
+    return actions;
+}
+
+(int, int, int) version() impure method_id {
+    return (3, 0, 2);
+}
+
+cell viewHashLookup(int nonce, int dvnAddress) impure method_id {
+    cell hashLookups = getContractStorage().cl::get<dict256>(UlnConnection::hashLookups);
+    return UlnConnection::utils::getHashLookup(hashLookups, nonce, dvnAddress);
+}

@@ -1,0 +1,517 @@
+#include "../../classlib.fc";
+#include "../../stdlib.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../stringlib.fc";
+#include "../../utils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/msgdata/OptionsExtended.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+
+slice _testName() { return "classlib"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+(int, slice) get::success::basic(cell $storage) impure {
+    cell $child_obj = cl::declare(
+        "child"u,
+        unsafeTuple([
+            [cl::t::uint256, 0]
+        ])
+    );
+    cell my_dict = new_dict();
+    my_dict~udict_set(
+        256,
+        1,
+        begin_cell().store_uint256(1234).end_cell().begin_parse()
+    );
+    int start_gas = get_gas_consumed();
+    cell $obj = cl::declare(
+        "uints"u,
+        unsafeTuple([
+            [cl::t::uint8, MAX_U8],
+            [cl::t::uint16, MAX_U16],
+            [cl::t::uint32, MAX_U32],
+            [cl::t::uint64, MAX_U64],
+            [cl::t::coins, MAX_COINS],
+            [cl::t::uint256, MAX_U256],
+            [cl::t::address, getContractAddress()],
+            [cl::t::bool, true],
+            [cl::t::dict256, my_dict],
+            [cl::t::objRef, $child_obj],
+            [cl::t::cellRef, my_dict]
+        ])
+    );
+    throwErrorUnless($obj.cl::get<uint8>(0) == MAX_U8, "uint8");
+    throwErrorUnless($obj.cl::get<uint16>(1) == MAX_U16, "uint16");
+    throwErrorUnless($obj.cl::get<uint32>(2) == MAX_U32, "uint32");
+    throwErrorUnless($obj.cl::get<uint64>(3) == MAX_U64, "uint64");
+    throwErrorUnless($obj.cl::get<coins>(4) == MAX_COINS, "coins");
+    throwErrorUnless($obj.cl::get<uint256>(5) == MAX_U256, "uint256");
+    throwErrorUnless($obj.cl::get<address>(6) == getContractAddress(), "address");
+    throwErrorUnless($obj.cl::get<bool>(7) == true, "bool");
+    throwErrorUnless($obj.cl::get<objRef>(9).cell_hash() == $child_obj.cell_hash(), "objRef");
+    throwErrorUnless($obj.cl::get<cellRef>(10).cell_hash() == my_dict.cell_hash(), "cellRef");
+    throwErrorUnless($obj.cl::get<cellRef>(8).cell_hash() == my_dict.cell_hash(), "dict256");
+
+    my_dict~udict_set(256, 2, begin_cell().store_uint256(5678).end_cell().begin_parse());
+
+    cell $new_child_obj = cl::declare(
+        "child"u,
+        unsafeTuple([
+            [cl::t::uint256, 1]
+        ])
+    );
+
+    $obj = $obj.cl::set(0, MAX_U8 - 1);
+    $obj = $obj.cl::set(1, MAX_U16 - 1);
+    $obj = $obj.cl::set(2, MAX_U32 - 1);
+    $obj = $obj.cl::set(3, MAX_U64 - 1);
+    $obj = $obj.cl::set(4, MAX_COINS - 1);
+    $obj = $obj.cl::set(5, MAX_U256 - 1);
+    $obj = $obj.cl::set(6, 100);
+    $obj = $obj.cl::set(7, false);
+    $obj = $obj.cl::set(8, my_dict);
+    $obj = $obj.cl::set(9, $new_child_obj);
+    $obj = $obj.cl::set(10, my_dict);
+    ;;
+    throwErrorUnless($obj.cl::get<uint8>(0) == (MAX_U8 - 1), "set_uint8");
+    throwErrorUnless($obj.cl::get<uint16>(1) == MAX_U16 - 1, "set_uint16");
+    throwErrorUnless($obj.cl::get<uint32>(2) == MAX_U32 - 1, "set_uint32");
+    throwErrorUnless($obj.cl::get<uint64>(3) == MAX_U64 - 1, "set_uint64");
+    throwErrorUnless($obj.cl::get<coins>(4) == MAX_COINS - 1, "set_coins");
+    throwErrorUnless($obj.cl::get<uint256>(5) == MAX_U256 - 1, "set_uint256");
+    throwErrorUnless($obj.cl::get<address>(6) == 100, "set_address");
+    throwErrorUnless($obj.cl::get<bool>(7) == false, "set_bool");
+    throwErrorUnless($obj.cl::get<cellRef>(8).cell_hash() == my_dict.cell_hash(), "dict256");
+    throwErrorUnless($obj.cl::get<objRef>(9).cell_hash() == $new_child_obj.cell_hash(), "objRef");
+    throwErrorUnless($obj.cl::get<cellRef>(10).cell_hash() == my_dict.cell_hash(), "cellRef");
+
+    return (true, "");
+}
+
+global int myU8;
+global int myU16;
+global int myU32;
+global int myU64;
+global int myCoins;
+global int _my256;
+global int myAddr;
+global int myBool;
+global cell myDict;
+global cell myCell0;
+global cell myCell1;
+global cell myCell2;
+global cell myCell3;
+(int, slice) profileBaseline() impure {
+    cell test_cell = begin_cell().store_uint256(100).end_cell();
+    int start_gas = get_gas_consumed();
+    cell myStorage = begin_cell()
+        .store_uint8(MAX_U8)
+        .store_uint16(MAX_U16)
+        .store_uint32(MAX_U32)
+        .store_uint64(MAX_U64)
+        .store_coins(MAX_COINS)
+        .store_uint256(MAX_U256)
+        .store_uint256(getContractAddress())
+        .store_bool(true)
+        .store_ref(test_cell)
+        .store_ref(
+            begin_cell()
+                .store_ref(test_cell)
+                .store_ref(test_cell)
+                .store_ref(test_cell)
+                .store_ref(test_cell)
+            .end_cell()
+        )
+        .end_cell();
+    slice myStorageSlice = myStorage.begin_parse();
+    myU8 = myStorageSlice~load_uint8();
+    myU16 = myStorageSlice~load_uint16();
+    myU32 = myStorageSlice~load_uint32();
+    myU64 = myStorageSlice~load_uint64();
+    myCoins = myStorageSlice~load_coins();
+    _my256 = myStorageSlice~load_uint256();
+    myAddr = myStorageSlice~load_uint256();
+    myBool = myStorageSlice~load_bool();
+    myDict = myStorageSlice~load_ref();
+    cell myNestedCell = myStorageSlice~load_ref();
+    slice myNestedCellSlice = myNestedCell.begin_parse();
+    myCell0 = myNestedCellSlice~load_ref();
+    myCell1 = myNestedCellSlice~load_ref();
+    myCell2 = myNestedCellSlice~load_ref();
+    myCell3 = myNestedCellSlice~load_ref();
+    int end_gas = get_gas_consumed();
+    ;; ~dump(myU8);
+    ;; ~dump(myU16);
+    ;; ~dump(myU32);
+    ;; ~dump(myU64);
+    ;; ~dump(myCoins);
+    ;; ~dump(_my256);
+    ;; ~dump(myAddr);
+    ;; ~dump(myBool);
+    ;; ~dump(myDict);
+    ;; ~dump(myCell0);
+    ;; ~dump(myCell1);
+    ;; ~dump(myCell2);
+    ;; ~dump(myCell3);
+    return (true, "");
+}
+
+(int, slice) iterateDict256::uint256() impure {
+    cell dict256Uint256 = cl::dict256::New()
+        .cl::dict256::set(1, 1)
+        .cl::dict256::set(2, 2)
+        .cl::dict256::set(3, 3)
+        .cl::dict256::set(4, 4);
+
+    (int minKey, int minVal) = dict256Uint256.cl::dict256::getMin<uint256>();
+    throw_unless(1, (minKey == 1) & (minVal == 1));
+    (int curKey, int curVal) = dict256Uint256.cl::dict256::getNext<uint256>(minKey);
+    throw_unless(1, (curKey == 2) & (curVal == 2));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<uint256>(curKey);
+    throw_unless(1, (curKey == 3) & (curVal == 3));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<uint256>(curKey);
+    throw_unless(1, (curKey == 4) & (curVal == 4));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<uint256>(curKey);
+    throw_unless(1, (curKey == -1) & (curVal.is_null()));
+
+    return (true, "");
+}
+
+(int, slice) iterateDict256::slice() impure {
+    cell dict256Uint256 = cl::dict256::New()
+        .cl::dict256::set(1, begin_cell().store_uint256(1).as_slice())
+        .cl::dict256::set(2, begin_cell().store_uint256(2).as_slice())
+        .cl::dict256::set(3, begin_cell().store_uint256(3).as_slice())
+        .cl::dict256::set(4, begin_cell().store_uint256(4).as_slice());
+
+    (int minKey, slice minVal) = dict256Uint256.cl::dict256::getMin<slice>();
+    throw_unless(1, (minKey == 1) & (minVal~load_uint256() == 1));
+    (int curKey, slice curVal) = dict256Uint256.cl::dict256::getNext<slice>(minKey);
+    throw_unless(1, (curKey == 2) & (curVal~load_uint256() == 2));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<slice>(curKey);
+    throw_unless(1, (curKey == 3) & (curVal~load_uint256() == 3));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<slice>(curKey);
+    throw_unless(1, (curKey == 4) & (curVal~load_uint256() == 4));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<slice>(curKey);
+    throw_unless(1, (curKey == -1) & (curVal.is_null()));
+
+    return (true, "");
+}
+
+(int, slice) iterateDict256::cellRef() impure {
+    cell dict256Uint256 = cl::dict256::New()
+        .cl::dict256::setRef(1, begin_cell().store_uint256(1).end_cell())
+        .cl::dict256::setRef(2, begin_cell().store_uint256(2).end_cell())
+        .cl::dict256::setRef(3, begin_cell().store_uint256(3).end_cell())
+        .cl::dict256::setRef(4, begin_cell().store_uint256(4).end_cell());
+
+    (int minKey, cell minVal) = dict256Uint256.cl::dict256::getMin<cellRef>();
+    throw_unless(1, (minKey == 1) & (minVal.begin_parse().preload_uint(256) == 1));
+    (int curKey, cell curVal) = dict256Uint256.cl::dict256::getNext<cellRef>(minKey);
+    throw_unless(1, (curKey == 2) & (curVal.begin_parse().preload_uint(256) == 2));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<cellRef>(curKey);
+    throw_unless(1, (curKey == 3) & (curVal.begin_parse().preload_uint(256) == 3));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<cellRef>(curKey);
+    throw_unless(1, (curKey == 4) & (curVal.begin_parse().preload_uint(256) == 4));
+    (curKey, curVal) = dict256Uint256.cl::dict256::getNext<cellRef>(curKey);
+    throw_unless(1, (curKey == -1) & (curVal.is_null()));
+
+    return (true, "");
+}
+
+(int, slice) iterateDict256::empty() impure {
+    cell dict256Uint256 = cl::dict256::New();
+
+    (int minKey, int minUint256Val) = dict256Uint256.cl::dict256::getMin<uint256>();
+    throw_unless(1, (minKey == -1) & (minUint256Val.is_null()));
+    (int minKey, slice minSliceVal) = dict256Uint256.cl::dict256::getMin<slice>();
+    throw_unless(1, (minKey == -1) & (minSliceVal.is_null()));
+    (int minKey, cell minCellVal) = dict256Uint256.cl::dict256::getMin<cellRef>();
+    throw_unless(1, (minKey == -1) & (minCellVal.is_null()));
+
+    return (true, "");
+}
+
+(int, slice) noRefFields::basic() impure {
+
+    cell $path = MOCK_SEND_PATH();
+    throw_unless(1, $path.cl::noRefFields());
+
+    cell $optionsExtended = md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_ENFORCED_OPTIONS_V1()
+    );
+    throw_if(1, $optionsExtended.cl::noRefFields());
+
+    ;; null objects dont contain refs
+    throw_unless(1, cl::nullObject().cl::noRefFields());
+
+    cell $invalid = begin_cell().store_ref(empty_cell()).end_cell();
+    throw_if(1, $invalid.cl::noRefFields());
+
+    return (true, "");
+}
+
+(int, slice) equalObjTypeShallow::basic() impure {
+
+    ;; same type
+    cell $a = MOCK_SEND_PATH();
+    cell $b = MOCK_RECEIVE_PATH();
+    throw_unless(1, $a.cl::equalObjTypeShallow($b));
+
+    ;; same types SHALLOW... The refs are different, but they are BOTH refs
+    $a = md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_EXTRA_OPTIONS_V1()
+    );
+    $b = md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_EXTRA_OPTIONS_V2()
+    );
+    throw_unless(1, $a.cl::equalObjTypeShallow($b));
+
+    ;; same types SHALLOW... The refs are different, but they are BOTH refs
+    $a = md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_EXTRA_OPTIONS_V2()
+    );
+    $b = md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_EXTRA_OPTIONS_V1()
+    );
+    throw_unless(1, $a.cl::equalObjTypeShallow($b));
+
+    ;; mismatched types
+    $a = MOCK_SEND_PATH();
+    $b = MOCK_EP_CONFIG(true);
+    throw_if(1, $a.cl::equalObjTypeShallow($b));
+
+    ;; same types
+    $a = MOCK_EP_CONFIG(true);
+    $b = MOCK_EP_CONFIG(true);
+    throw_unless(1, $a.cl::equalObjTypeShallow($b));
+
+    return (true, "");
+}
+
+(int, slice) sanityBoolCheck::true() impure {
+    cell storeBool = begin_cell().store_bool(true).end_cell();
+    cell storeUint = begin_cell().store_uint(abs(-1), 1).end_cell();
+    cell storeIntTrue = begin_cell().store_int(true, 1).end_cell();
+    cell storeIntMinusOne = begin_cell().store_int(-1, 1).end_cell();
+
+    throw_unless(1, 
+        (storeBool.cell_hash() == storeUint.cell_hash()) & 
+        (storeUint.cell_hash() == storeIntTrue.cell_hash()) & 
+        (storeIntTrue.cell_hash() == storeIntMinusOne.cell_hash())
+    );
+
+    return (true, "");
+}
+
+(int, slice) sanityBoolCheck::false() impure {
+    cell storeBool = begin_cell().store_bool(false).end_cell();
+    cell storeUint = begin_cell().store_uint(0, 1).end_cell();
+    cell storeIntFalse = begin_cell().store_int(false, 1).end_cell();
+    cell storeIntZero = begin_cell().store_int(0, 1).end_cell();
+
+    throw_unless(1, 
+        (storeBool.cell_hash() == storeUint.cell_hash()) & 
+        (storeUint.cell_hash() == storeIntFalse.cell_hash()) & 
+        (storeIntFalse.cell_hash() == storeIntZero.cell_hash())
+    );
+
+    return (true, "");
+}
+
+(int, slice) getStorageFieldL0::uint() impure {
+    cell $oldStorage = getContractStorage();
+
+    int id = 10;
+    cell $lzSend = MOCK_LZ_SEND_WITH_ID(id);
+    setContractStorage($lzSend);
+
+    int condition = (
+        getStorageFieldL0<uint>(md::LzSend::sendRequestId) 
+        == id
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL0::cellRef() impure {
+    cell $oldStorage = getContractStorage();
+    cell $lzSend = MOCK_LZ_SEND_WITH_ID(10);
+    setContractStorage($lzSend);
+
+    int condition = (
+        getStorageFieldL0<cellRef>(md::LzSend::packet).cl::hash()
+        == MOCK_NONCELESS_PACKET().cl::hash()
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL1::uint() impure {
+    cell $oldStorage = getContractStorage();
+    cell $packet = MOCK_SEND_PACKET();
+    setContractStorage($packet);
+
+    int condition = (
+        getStorageFieldL1<uint>(lz::Packet::path, lz::Path::srcEid)
+        == SRC_EID
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL1::cellRef() impure {
+    cell $oldStorage = getContractStorage();
+    cell $lzSend = MOCK_LZ_SEND_WITH_ID(10);
+    setContractStorage($lzSend);
+
+    int condition = (
+        getStorageFieldL1<cellRef>(md::LzSend::packet, lz::Packet::path).cl::hash()
+        == MOCK_SEND_PATH().cl::hash()
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+;; -------- Dict helpers -----------
+cell _createDictRef(int maxCount) impure {
+    int count = 0;
+    cell myDict = cl::dict256::New();
+    while (count < maxCount) {
+        count += 1;
+        myDict = myDict.cl::dict256::setRef(count, _getRandomCode(count));
+    }
+    return myDict;
+}
+
+cell _createDictUint(int maxCount) impure {
+    int count = 0;
+    cell myDict = cl::dict256::New();
+    while (count < maxCount) {
+        count += 1;
+        myDict = myDict.cl::dict256::set(count, count * 2);
+    }
+    return myDict;
+}
+
+cell _createDictNestedRef(int maxCount) impure {
+    int count = 0;
+    cell myDict = cl::dict256::New();
+    while (count < maxCount) {
+        count += 1;
+        myDict = myDict.cl::dict256::setRef(count, _createDictRef((count)));
+    }
+    return myDict;
+}
+
+cell _createDictNestedUint(int maxCount) impure {
+    int count = 0;
+    cell myDict = cl::dict256::New();
+    while (count < maxCount) {
+        count += 1;
+        myDict = myDict.cl::dict256::setRef(count, _createDictUint((count)));
+    }
+    return myDict;
+}
+
+(int, slice) getStorageFieldL1::dict256::cellRef() impure {
+    cell $oldStorage = getContractStorage();
+    cell dict = _createDictRef(10);
+    cell $mdObj = md::MdObj::New(dict, empty_cell());
+    setContractStorage($mdObj);
+
+    int condition = (
+        getStorageFieldL1<dict256::cellRef>(md::MdObj::md, 7).cl::hash()
+        == _getRandomCode(7).cl::hash()
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL1::dict256::uint() impure {
+    cell $oldStorage = getContractStorage();
+    cell $dict = _createDictUint(10);
+    cell $mdObj = md::MdObj::New($dict, empty_cell());
+    setContractStorage($mdObj);
+
+    int condition = (
+        getStorageFieldL1<dict256::uint256>(md::MdObj::md, 7)
+        == 14
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL2::dict256::cellRef() impure {
+    cell $oldStorage = getContractStorage();
+    cell $dict = _createDictNestedRef(10);
+    cell $mdObj = md::MdObj::New($dict, empty_cell());
+    setContractStorage($mdObj);
+
+    int condition = (
+        getStorageFieldL2<dict256::cellRef>(md::MdObj::md, 7, 5).cl::hash()
+        == _getRandomCode(5).cl::hash()
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+(int, slice) getStorageFieldL2::dict256::uint() impure {
+    cell $oldStorage = getContractStorage();
+    cell $dict = _createDictNestedUint(10);
+    cell $mdObj = md::MdObj::New($dict, empty_cell());
+    setContractStorage($mdObj);
+
+    int condition = (
+        getStorageFieldL2<dict256::uint256>(md::MdObj::md, 7, 5)
+        == 10
+    );
+
+    setContractStorage($oldStorage);
+    return test::shouldBeTrue(condition);
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([get::success::basic, "get::success::basic"])
+            .tpush([profileBaseline, "profileBaseline"])
+            .tpush([iterateDict256::uint256, "iterateDict256::uint256"])
+            .tpush([iterateDict256::slice, "iterateDict256::slice"])
+            .tpush([iterateDict256::cellRef, "iterateDict256::cellRef"])
+            .tpush([iterateDict256::empty, "iterateDict256::empty"])
+            .tpush([noRefFields::basic, "noRefFields:basic"])
+            .tpush([equalObjTypeShallow::basic, "equalObjTypeShallow:basic"])
+            .tpush([sanityBoolCheck::true, "sanityBoolCheck::true"])
+            .tpush([sanityBoolCheck::false, "sanityBoolCheck::false"])
+            ;; -- getStorageField Tests
+            .tpush([getStorageFieldL0::uint, "getStorageFieldL0::uint"])
+            .tpush([getStorageFieldL0::cellRef, "getStorageFieldL0::cellRef"])
+            .tpush([getStorageFieldL1::uint, "getStorageFieldL1::uint"])
+            .tpush([getStorageFieldL1::cellRef, "getStorageFieldL1::cellRef"])
+            .tpush([getStorageFieldL1::dict256::cellRef, "getStorageFieldL1::dict256::cellRef"])
+            .tpush([getStorageFieldL1::dict256::uint, "getStorageFieldL1::dict256::uint"])
+            .tpush([getStorageFieldL2::dict256::cellRef, "getStorageFieldL2::dict256::cellRef"])
+            .tpush([getStorageFieldL2::dict256::uint, "getStorageFieldL2::dict256::uint"])
+    );
+}

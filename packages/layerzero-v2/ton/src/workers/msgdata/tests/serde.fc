@@ -1,0 +1,171 @@
+#include "../ExecuteParams.fc";
+#include "../NativeDrop.fc";
+#include "../SignedRequest.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../funC++/utils.fc";
+
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Workers MsgData Serde"; }
+
+;; ExecuteParams: Has 1 build
+;;                Has 1 getter
+;;                Has 2 multi-getter (deserializer),
+(int, slice) Serde::ExecuteParams::build(cell $unused) impure {
+    cell callData = begin_cell().store_uint(0, 32).store_uint256(1).store_uint(0, 32).store_uint256(1).end_cell();
+
+    return test::build::equal(
+        md::ExecuteParams::New(CHANNEL_ADDRESS, callData, 1, 2, NULLADDRESS),
+        md::ExecuteParams::build(CHANNEL_ADDRESS, callData, 1, 2, NULLADDRESS)
+    );
+}
+
+(int, slice) Serde::ExecuteParams::getOpcode(cell $self) impure {
+    cell $executeParams = md::ExecuteParams::New(
+        CHANNEL_ADDRESS,
+        begin_cell().end_cell(),
+        1,
+        2,
+        NULLADDRESS
+    );
+
+    return test::getData::equal(
+        $executeParams,
+        md::ExecuteParams::getOpcode,
+        md::ExecuteParams::opcode
+    );
+}
+
+(int, slice) Serde::ExecuteParams::deserialize(cell $self) impure {
+    int expectedExpiration = 3;
+    int expectedOpcode = 1;
+    int expectedTarget = CHANNEL_ADDRESS;
+    int expectedForwardingAddress = ENDPOINT_ADDRESS;
+    cell $executeParams = md::ExecuteParams::New(
+        expectedTarget,
+        begin_cell().end_cell(),
+        expectedExpiration,
+        expectedOpcode,
+        expectedForwardingAddress
+    );
+
+    (
+        int expiration,
+        int target,
+        int opcode,
+        int forwardingAddress
+    ) = $executeParams.md::ExecuteParams::deserialize();
+
+    return test::multiget::equal(
+        $executeParams,
+        unsafeTuple([
+            md::ExecuteParams::expiration,
+            md::ExecuteParams::target,
+            md::ExecuteParams::opcode,
+            md::ExecuteParams::forwardingAddress
+        ]),
+        unsafeTuple([
+            expiration,
+            target,
+            opcode,
+            forwardingAddress
+        ])
+    );
+}
+
+(int, slice) Serde::ExecuteParams::getActionArgs(cell $self) impure {
+    int expectedExpiration = 3;
+    int expectedOpcode = 1;
+    cell expectedCallData = begin_cell()
+        .store_uint(0, 32)
+        .store_uint256(1)
+        .store_uint(0, 32)
+        .store_uint256(1)
+        .end_cell();
+
+    cell $executeParams = md::ExecuteParams::New(
+        CHANNEL_ADDRESS,
+        expectedCallData,
+        expectedExpiration,
+        expectedOpcode,
+        NULLADDRESS
+    );
+
+    (int target, int opcode, cell callData) = $executeParams.md::ExecuteParams::getActionArgs();
+
+    return test::multiget::equal(
+        $executeParams,
+        unsafeTuple([
+            md::ExecuteParams::target,
+            md::ExecuteParams::opcode,
+            md::ExecuteParams::callData
+        ]),
+        unsafeTuple([
+            target,
+            opcode,
+            callData
+        ])
+    );
+}
+
+;; NativeDrop: Has 1 getter
+(int, slice) Serde::NativeDrop::getPayees(cell $self) impure {
+    cell $nativeDrop = md::NativeDrop::New(
+        serializePayees(MOCK_PAYEES(5)),
+        MOCK_PACKET_ID(),
+        MSGLIB_MANAGER_ADDRESS
+    );
+
+    return test::getRef::equal(
+        $nativeDrop,
+        md::NativeDrop::getPayees,
+        md::NativeDrop::payees
+    );
+}
+
+;; SignedRequest: Has 2 getters
+(int, slice) Serde::SignedReuest::getRequest(cell $self) impure {
+    cell $request = md::SignedRequest::New(
+        begin_cell().store_uint(1, 256).end_cell(),
+        begin_cell().store_uint(2, 256).end_cell()
+    );
+
+    return test::getRef::equal(
+        $request,
+        md::SignedRequest::getRequest,
+        md::SignedRequest::request
+    );
+}
+
+(int, slice) Serde::SignedReuest::getSignatures(cell $self) impure {
+    cell $request = md::SignedRequest::New(
+        begin_cell().store_uint(1, 256).end_cell(),
+        begin_cell().store_uint(2, 256).end_cell()
+    );
+
+    return test::getRef::equal(
+        $request,
+        md::SignedRequest::getSignatures,
+        md::SignedRequest::signatures
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        ;; -- ExecuteParams
+        .tpush([Serde::ExecuteParams::build, "Serde::ExecuteParams::build"])
+        .tpush([Serde::ExecuteParams::getOpcode, "Serde::ExecuteParams::getOpcode"])
+        .tpush([Serde::ExecuteParams::deserialize, "Serde::ExecuteParams::deserialize"])
+        .tpush([Serde::ExecuteParams::getActionArgs, "Serde::ExecuteParams::getActionArgs"])
+        ;; -- NativeDrop
+        .tpush([Serde::NativeDrop::getPayees, "Serde::NativeDrop::getPayees"])
+        ;; -- SignedRequest
+        .tpush([Serde::SignedReuest::getRequest, "Serde::SignedReuest::getRequest"])
+        .tpush([Serde::SignedReuest::getSignatures, "Serde::SignedReuest::getSignatures"])
+    ;
+}

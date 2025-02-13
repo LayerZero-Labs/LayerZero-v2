@@ -1,0 +1,12 @@
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/stdlib.fc";
+#include "../../../../../funC++/utils.fc";
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../../../../classes/msgdata/LzSend.fc";
+
+tuple ulnWorker::quote(tuple inputs) impure method_id(107686) {
+    return unsafeTuple(
+        [NATIVE_FEE, MOCK_ULN_WORKER_EVENT()]
+    );
+}

@@ -1,0 +1,12 @@
+const int op::new_order = 0xf718510f;
+const int op::execute = 0x75097f5d;
+const int op::execute_internal = 0xa32c59bf;
+
+const int op::init = 0x9c73fba2;
+const int op::approve = 0xa762230f;
+const int op::approve_accepted = 0x82609bf6;
+const int op::approve_rejected = 0xafaf283e;
+
+const int actions::send_message = 0xf1381e5b;
+const int actions::update_multisig_params = 0x1d0cfbd3;
+

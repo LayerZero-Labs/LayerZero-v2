@@ -1,0 +1,172 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/testMain.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Controller::permissions"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Controller::New(
+            getCaller(),
+            SRC_EID,
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(md::InitEndpoint::New(MOCK_CHANNEL_CODE()));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) checkPermissions::deployEndpoint::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(Controller::OP::DEPLOY_ENDPOINT, cl::nullObject());
+}
+
+(int, slice) checkPermissions::deployEndpoint::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::DEPLOY_ENDPOINT, cl::nullObject());
+}
+
+(int, slice) checkPermissions::deployChannel::success::basic(cell $storage) impure {
+    ;; Permissionless, can be called by anyone
+    spoofCaller(ARBITRARY_ADDRESS);
+    return test::permissions::shouldPass(Controller::OP::DEPLOY_CHANNEL, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEpConfigDefaults::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(Controller::OP::SET_EP_CONFIG_DEFAULTS, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEpConfigDefaults::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::SET_EP_CONFIG_DEFAULTS, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEpConfigOApp::success::basic(cell $storage) impure {
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(
+        Controller::OP::SET_EP_CONFIG_OAPP,
+        md::ExtendedMd::New(
+            cl::nullObject(),
+            MOCK_SEND_PATH(),
+            NULLADDRESS
+        )
+    );
+}
+
+(int, slice) checkPermissions::setEpConfigOApp::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::SET_EP_CONFIG_OAPP, cl::nullObject());
+}
+
+(int, slice) checkPermissions::addMsglib::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(Controller::OP::ADD_MSGLIB, cl::nullObject());
+}
+
+(int, slice) checkPermissions::addMsglib::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::ADD_MSGLIB, cl::nullObject());
+}
+
+(int, slice) checkPermissions::CoinsAmount::success::basic(cell $storage) impure {
+    spoofCaller(_getZroWalletAddress());
+    return test::permissions::shouldPass(Controller::OP::EXCESSES, cl::nullObject());
+}
+
+(int, slice) checkPermissions::CoinsAmount::revert::notWallet(cell $storage) impure {
+    return test::permissions::shouldFail(Controller::OP::DEPOSIT_ZRO, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setZroWallet::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(Controller::OP::SET_ZRO_WALLET, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setZroWallet::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::SET_ZRO_WALLET, cl::nullObject());
+}
+
+(int, slice) checkPermissions::transferOwnership::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(
+        Controller::OP::TRANSFER_OWNERSHIP, 
+        md::SetAddress::New(NEW_CONTROLLER_OWNER_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::transferOwnership::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::TRANSFER_OWNERSHIP, cl::nullObject());
+}
+
+(int, slice) checkPermissions::claimOwnership::success::basic(cell $storage) impure {
+    transferOwnership(md::SetAddress::New(NEW_CONTROLLER_OWNER_ADDRESS));
+    spoofCaller(NEW_CONTROLLER_OWNER_ADDRESS);
+    return test::permissions::shouldPass(
+        Controller::OP::CLAIM_OWNERSHIP,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::claimOwnership::revert::notTentativeOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Controller::OP::CLAIM_OWNERSHIP, cl::nullObject());
+}
+
+(int, slice) checkPermissions::default::revert::invalidOpCode(cell $storage) impure {
+    ;; this is a generic opcode that we should NOT allow
+    return test::permissions::shouldFail(OP::RANDOM, cl::nullObject());
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            ;; -- deploy endpoint
+            .tpush([checkPermissions::deployEndpoint::success::basic, "checkPermissions::deployEndpoint::success::basic"])
+            .tpush([checkPermissions::deployEndpoint::revert::notOwner, "checkPermissions::deployEndpoint::revert::notOwner"])
+            ;; -- deploy channel
+            .tpush([checkPermissions::deployChannel::success::basic, "checkPermissions::deployChannel::success::basic"])
+            ;; -- set ep config defaults
+            .tpush([checkPermissions::setEpConfigDefaults::success::basic, "checkPermissions::setEpConfigDefaults::success::basic"])
+            .tpush([checkPermissions::setEpConfigDefaults::revert::notOwner, "checkPermissions::setEpConfigDefaults::revert::notOwner"])
+            ;; -- set ep config oapp
+            .tpush([checkPermissions::setEpConfigOApp::success::basic, "checkPermissions::setEpConfigOApp::success::basic"])
+            .tpush([checkPermissions::setEpConfigOApp::revert::notOApp, "checkPermissions::setEpConfigOApp::revert::notOApp"])
+            ;; -- add msglib
+            .tpush([checkPermissions::addMsglib::success::basic, "checkPermissions::addMsglib::success::basic"])
+            .tpush([checkPermissions::addMsglib::revert::notOwner, "checkPermissions::addMsglib::revert::notOwner"])
+            ;; -- deposit zro
+            .tpush([checkPermissions::CoinsAmount::success::basic, "checkPermissions::CoinsAmount::success::basic"])
+            .tpush([checkPermissions::CoinsAmount::revert::notWallet, "checkPermissions::CoinsAmount::revert::notWallet"])
+            ;; -- set zro wallet
+            .tpush([checkPermissions::setZroWallet::success::basic, "checkPermissions::setZroWallet::success::basic"])
+            .tpush([checkPermissions::setZroWallet::revert::notOwner, "checkPermissions::setZroWallet::revert::notOwner"])
+            ;; -- transfer ownership
+            .tpush([checkPermissions::transferOwnership::success::basic, "checkPermissions::transferOwnership::success::basic"])
+            .tpush([checkPermissions::transferOwnership::revert::notOwner, "checkPermissions::transferOwnership::revert::notOwner"])
+            ;; -- claim ownership
+            .tpush([checkPermissions::claimOwnership::success::basic, "checkPermissions::claimOwnership::success::basic"])
+            .tpush([checkPermissions::claimOwnership::revert::notTentativeOwner, "checkPermissions::claimOwnership::revert::notTentativeOwner"])
+            .tpush([checkPermissions::default::revert::invalidOpCode, "checkPermissions::default::revert::invalidOpCode"])
+    );
+}

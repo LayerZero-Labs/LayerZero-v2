@@ -1,0 +1,18 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::SetSmlManagerConfig::NAME = "setSmlCfg"u;
+
+;; field names
+const int md::SetSmlManagerConfig::nativeFee = 0;
+const int md::SetSmlManagerConfig::zroFee = 1;
+
+cell md::SetSmlManagerConfig::New(int nativeFee, int zroFee) inline method_id {
+    return cl::declare(
+        md::SetSmlManagerConfig::NAME,
+        unsafeTuple([
+            [cl::t::coins, nativeFee],  ;; md::SetSmlManagerConfig::nativeFee
+            [cl::t::coins, zroFee]      ;; md::SetSmlManagerConfig::zroFee
+        ])
+    );
+}

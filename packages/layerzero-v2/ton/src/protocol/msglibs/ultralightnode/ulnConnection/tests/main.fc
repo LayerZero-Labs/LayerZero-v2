@@ -1,0 +1,1851 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../utils.fc";
+
+#include "../../callbackOpcodes.fc";
+#include "../../msgdata/Attestation.fc";
+#include "../../msgdata/InitUlnConnection.fc";
+#include "../../msgdata/UlnReceiveConfig.fc";
+#include "../../msgdata/UlnSendConfig.fc";
+#include "../../msgdata/UlnVerification.fc";
+#include "../../uln/interface.fc";
+
+#include "../../../../interfaces.fc";
+
+#include "../../../../../classes/lz/Path.fc";
+#include "../../../../../classes/msgdata/ChannelNonceInfo.fc";
+#include "../../../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../../../classes/msgdata/MdObj.fc";
+#include "../../../../../funC++/actions/call.fc";
+#include "../../../../../funC++/actions/utils.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/constants.fc";
+#include "../../../../../funC++/stdlib.fc";
+#include "../../../../../funC++/stringlib.fc";
+#include "../../../../../funC++/testutils.fc";
+#include "../../../../../funC++/utils.fc";
+
+#include "../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../tests/testMain.fc";
+#include "../../../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+
+slice _testName() { return "connection"; }
+
+() _createInitializedStorage() impure {
+    initialize(
+        md::InitUlnConnection::New(
+            UlnSendConfig::NewWithDefaults(),
+            UlnReceiveConfig::NewWithDefaults(),
+            ENDPOINT_ADDRESS,
+            CHANNEL_ADDRESS
+        )
+    );
+}
+
+cell createContractStorage() impure {
+    cell $path = lz::Path::New(SRC_EID, getContractAddress(), DST_EID, DST_OAPP);
+    setContractStorage(
+        UlnConnection::New(ULN_MANAGER_ADDRESS, $path, ULN_ADDRESS)
+    );
+    return getContractStorage();
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+(int, slice) _initialize::success::basic(cell $storage) impure {
+
+    cell $expectedULNSendConfigOApp = UlnSendConfig::NewWithDefaults();
+    cell $expectedUlnReceiveConfigOApp = UlnReceiveConfig::NewWithDefaults();
+
+    cell $actualSendUlnReceiveConfigOApp = $storage.cl::get<objRef>(UlnConnection::UlnSendConfigOApp);
+    cell $actualReceiveUlnReceiveConfigOApp = $storage.cl::get<objRef>(UlnConnection::UlnReceiveConfigOApp);
+
+    return test::shouldBeTrue(
+        ($actualSendUlnReceiveConfigOApp.cl::hash() == $expectedULNSendConfigOApp.cl::hash())
+        & ($actualReceiveUlnReceiveConfigOApp.cl::hash() == $expectedUlnReceiveConfigOApp.cl::hash())
+    );
+}
+
+(int, slice) UlnConnection::utils::getDVNsAndConf::fail(cell $storage) impure {
+    cell $badDefaults = UlnReceiveConfig::NewWithDefaults();
+    int failed = false;
+    try {
+        (_, _, _, int confirmations, _, _) = UlnReceiveConfig::utils::getCommitConfig(
+            $storage.cl::get<objRef>(UlnConnection::UlnReceiveConfigOApp),
+            $badDefaults
+        );
+        if (confirmations == DEFAULT_CONFIRMATIONS) {
+            failed = true;
+            return (TEST_FAILED, "never throws");
+        }
+    } catch(_, n) {
+        if (n != UlnReceiveConfig::ERROR::DVN_CONFIG_ERROR) {
+            return (
+                TEST_FAILED,
+                "actual error: "
+                    .str::concatInt(n)
+                    .str::concat(" != expected: ")
+                    .str::concatInt(UlnReceiveConfig::ERROR::DVN_CONFIG_ERROR)
+            );
+        }
+    }
+    return (TEST_SUCCESS, "");
+}
+
+(int, slice) UlnConnection::setHashLookup::success(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+    tuple requiredDVNAddresses = _receiveDvnListToTuple(
+        $defaultUlnReceiveConfig.cl::get<dict256>(UlnReceiveConfig::requiredDVNs)
+    );
+    int requiredDVN0Address = requiredDVNAddresses.int_at(0);
+
+    cell hashLookups = $storage.cl::get<cellRef>(UlnConnection::hashLookups);
+
+    $storage = UlnConnection::utils::setHashLookup(
+        $storage,
+        hashLookups,
+        NONCE,
+        requiredDVN0Address,
+        lz::Attestation::New(PACKET_HASH, DEFAULT_CONFIRMATIONS)
+    );
+
+    hashLookups = $storage.cl::get<cellRef>(UlnConnection::hashLookups);
+
+    ;; verify the hash was properly added
+    cell $attestation = UlnConnection::utils::getHashLookup(hashLookups, NONCE, requiredDVN0Address);
+    return test::shouldBeTrue(
+        ($attestation.cell_is_empty() == false)
+        & ($attestation.cl::get<uint256>(lz::Attestation::hash) == PACKET_HASH)
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::success::basic(cell $storage) impure {
+    cell $ulnSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG();
+    return test::handler::shouldPass(
+        setOAppUlnSendConfig,
+        $ulnSendConfig,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ULN_SEND_CONFIG_SET,
+                $ulnSendConfig
+            )
+        ]),
+        $storage.cl::set(UlnConnection::UlnSendConfigOApp, $ulnSendConfig),
+        txnContext
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::fail::nullAddress::dvnConfigError(cell $storage) impure {
+    cell $ulnSendConfig = UlnSendConfig::New(
+        CUSTOM_WORKER_QUOTE_GAS_LIMIT,
+        CUSTOM_MAX_MESSAGE_BYTES,
+        true,
+        CUSTOM_EXECUTOR,
+        true,
+        MOCK_DVN_CELL_WITH_NULL(2),
+        true,
+        MOCK_DEFAULT_OPTIONAL_DVN_CELL(2, 0),
+        true,
+        DEFAULT_CONFIRMATIONS
+    );
+
+    return test::handler::shouldFail(
+        setOAppUlnSendConfig,
+        $ulnSendConfig,
+        UlnSendConfig::ERROR::DVN_CONFIG_ERROR
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::fail::maxDVNCount::dvnConfigError(cell $storage) impure {
+    cell $ulnSendConfig = UlnSendConfig::New(
+        CUSTOM_WORKER_QUOTE_GAS_LIMIT,
+        CUSTOM_MAX_MESSAGE_BYTES,
+        true,
+        CUSTOM_EXECUTOR,
+        true,
+        MOCK_CUSTOM_REQUIRED_DVN_CELL(256, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        true,
+        MOCK_CUSTOM_OPTIONAL_DVN_CELL(2, 0),
+        true,
+        DEFAULT_CONFIRMATIONS
+    );
+
+    return test::handler::shouldFail(
+        setOAppUlnSendConfig,
+        $ulnSendConfig,
+        UlnSendConfig::ERROR::DVN_CONFIG_ERROR
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::fail::tooManyRefs::dvnConfigError(cell $storage) impure {
+    cell $ulnSendConfig = UlnSendConfig::New(
+        CUSTOM_WORKER_QUOTE_GAS_LIMIT,
+        CUSTOM_MAX_MESSAGE_BYTES,
+        true,
+        CUSTOM_EXECUTOR,
+        true,
+        MOCK_DVN_LIST_WITH_REF(2),
+        true,
+        MOCK_DEFAULT_OPTIONAL_DVN_CELL(2, 0),
+        true,
+        DEFAULT_CONFIRMATIONS
+    );
+
+    return test::handler::shouldFail(
+        setOAppUlnSendConfig,
+        $ulnSendConfig,
+        UlnSendConfig::ERROR::DVN_CONFIG_ERROR
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::success::basic(cell $storage) impure {
+    cell $ulnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0);
+    return test::handler::shouldPass(
+        setOAppUlnReceiveConfig,
+        $ulnReceiveConfig,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ULN_RECEIVE_CONFIG_SET,
+                $ulnReceiveConfig
+            )
+        ]),
+        $storage.cl::set(UlnConnection::UlnReceiveConfigOApp, $ulnReceiveConfig),
+        txnContext
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::fail::invalidMinCommitPacketGas(cell $storage) impure {
+    cell $ulnReceiveConfig = UlnReceiveConfig::New(
+        false,
+        0,
+        false,
+        CUSTOM_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(0, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        false,
+        _buildReceiveDvnList(0, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        0
+    );
+
+    return test::handler::shouldFail(
+        setOAppUlnReceiveConfig,
+        $ulnReceiveConfig,
+        UlnReceiveConfig::ERROR::INVALID_MIN_COMMIT_PACKET_GAS
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::fail::optionalThresholdTooLarge(cell $storage) impure {
+    cell $ulnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 1, 2);
+
+    return test::handler::shouldFail(
+        setOAppUlnReceiveConfig,
+        $ulnReceiveConfig,
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LARGE
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::fail::optionalThresholdTooLow(cell $storage) impure {
+    cell $ulnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 2, 0);
+
+    return test::handler::shouldFail(
+        setOAppUlnReceiveConfig,
+        $ulnReceiveConfig,
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LOW
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::fail::dvnCountsAllNil(cell $storage) impure {
+    cell $ulnReceiveConfig = UlnReceiveConfig::New(
+        false,
+        DEFAULT_MIN_COMMIT_PACKET_GAS,
+        false,
+        CUSTOM_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(0, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        false,
+        _buildReceiveDvnList(0, MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)),
+        0
+    );
+
+    return test::handler::shouldFail(
+        setOAppUlnReceiveConfig,
+        $ulnReceiveConfig,
+        UlnReceiveConfig::ERROR::DVN_COUNTS_ALL_NIL
+    );
+}
+
+;;; ===============================ULN CONNECTION VERIFY===========================
+
+(int, slice) ulnConnectionVerify::success::basic(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    $storage = getContractStorage();
+    cell $ulnVerificationMd = MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS);
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+    cell $extendedMd = md::ExtendedMd::New(
+        $ulnVerificationMd,
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+        MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+    );
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::PACKET_VERIFIED,
+                $extendedMd
+            ),
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(NONCE, UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        UlnConnection::utils::setHashLookup(
+            $storage,
+            hashLookups,
+            NONCE,
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+            $ulnVerificationMd.cl::get<objRef>(md::UlnVerification::attestation)
+        ),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::success::minVerifiableNonce(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    setContractStorage(
+        getContractStorage().cl::set(UlnConnection::firstUnexecutedNonce, NONCE)
+    );
+    $storage = getContractStorage();
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    cell $ulnVerificationMd = MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS);
+    cell $extendedMd = md::ExtendedMd::New(
+        $ulnVerificationMd,
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+        MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+    );
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::PACKET_VERIFIED,
+                $extendedMd
+            ),
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(NONCE, UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        UlnConnection::utils::setHashLookup(
+            $storage,
+            hashLookups,
+            NONCE,
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+            $ulnVerificationMd.cl::get<objRef>(md::UlnVerification::attestation)
+        ),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::success::maxVerifiableNonce(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    cell $storage = getContractStorage();
+
+    int firstUnexecutedNonce = $storage.cl::get<uint64>(UlnConnection::firstUnexecutedNonce);
+    int maxVerifiableNonce = firstUnexecutedNonce + UlnConnection::MAX_HASH_LOOKUPS - 1;
+
+    cell $ulnVerification = MOCK_ULN_VERIFICATION_FULL(
+        maxVerifiableNonce,
+        DEFAULT_CONFIRMATIONS,
+        MOCK_RECEIVE_PACKET_WITH_NONCE(maxVerifiableNonce).cl::hash()
+    );
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    cell $extendedMd = md::ExtendedMd::New(
+        $ulnVerification,
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+        MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::PACKET_VERIFIED,
+                $extendedMd
+            ),
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(maxVerifiableNonce, UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        UlnConnection::utils::setHashLookup(
+            $storage,
+            hashLookups,
+            maxVerifiableNonce,
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+            $ulnVerification.cl::get<objRef>(md::UlnVerification::attestation)
+        ),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::success::twoNonces(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION_FULL(
+                NONCE + 1,
+                DEFAULT_CONFIRMATIONS,
+                MOCK_RECEIVE_PACKET_WITH_NONCE(1)
+                    .cl::hash()
+            ),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    $storage = getContractStorage();
+    cell $ulnVerificationMd = MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS);
+    cell $extendedMd = md::ExtendedMd::New(
+        $ulnVerificationMd,
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+        MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+    );
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::PACKET_VERIFIED,
+                $extendedMd
+            ),
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(NONCE, UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        UlnConnection::utils::setHashLookup(
+            $storage,
+            hashLookups,
+            NONCE,
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+            $ulnVerificationMd.cl::get<objRef>(md::UlnVerification::attestation)
+        ),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::fail::nonceTooLarge(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+
+    int firstUnexecutedNonce = $storage.cl::get<uint64>(UlnConnection::firstUnexecutedNonce);
+    int tooLargeNonce = firstUnexecutedNonce + UlnConnection::MAX_HASH_LOOKUPS;
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION_FULL(
+                tooLargeNonce,
+                DEFAULT_CONFIRMATIONS,
+                MOCK_RECEIVE_PACKET_WITH_NONCE(tooLargeNonce).cl::hash()
+            ),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+        ),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(
+                        tooLargeNonce,
+                        UlnConnection::ULN_CONNECTION_VERIFY_FAILED::NONCE_OUT_OF_RANGE
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::fail::nonceTooSmall(cell $storage) impure {
+    int alreadyExecutedNonce = NONCE;
+    setContractStorage(
+        $storage.cl::set(UlnConnection::firstUnexecutedNonce, alreadyExecutedNonce + 1)
+    );
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION_FULL(
+                alreadyExecutedNonce,
+                DEFAULT_CONFIRMATIONS,
+                MOCK_RECEIVE_PACKET_WITH_NONCE(alreadyExecutedNonce).cl::hash()
+            ),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+        ),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(
+                        alreadyExecutedNonce,
+                        UlnConnection::ULN_CONNECTION_VERIFY_FAILED::NONCE_OUT_OF_RANGE
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::fail::wrongDVN(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            ATTACKER_ADDRESS
+        ),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ATTACKER_ADDRESS,
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(
+                        NONCE,
+                        UlnConnection::ULN_CONNECTION_VERIFY_FAILED::DVN_NOT_CONFIGURED
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionVerify::revert::malformedAttestationStructure(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    int addr = MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0);
+
+    cell $verification = cl::declare(
+        md::UlnVerification::NAME,
+        unsafeTuple([
+            [cl::t::uint64, NONCE],
+            [cl::t::objRef, _dupWithGarbage(lz::Attestation::New(
+                MOCK_RECEIVE_PACKET().cl::hash(),
+                DEFAULT_CONFIRMATIONS
+            ))]
+        ])
+    );
+
+    return test::handler::shouldFail(
+        ulnConnectionVerify,
+        md::ExtendedMd::New(
+            _dupWithGarbage($verification),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            addr
+        ),
+        cl::ERROR::MALFORMED_OBJECT
+    );
+}
+
+(int, slice) ulnConnectionVerify::revert::malformedAttestationHeader(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    int addr = MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0);
+    cell $verification = cl::declare(
+        md::UlnVerification::NAME,
+        unsafeTuple([
+            [cl::t::uint64, NONCE],
+            [cl::t::objRef, headerCellGarbage(lz::Attestation::New(
+                MOCK_RECEIVE_PACKET().cl::hash(),
+                DEFAULT_CONFIRMATIONS
+            ))]
+        ])
+    );
+    return test::handler::shouldFail(
+        ulnConnectionVerify,
+        md::ExtendedMd::New(
+            _dupWithGarbage($verification),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            addr
+        ),
+        cl::ERROR::MALFORMED_OBJECT
+    );
+}
+
+(int, slice) ulnConnectionVerify::success::partiallyMalformedAttestationHeader(cell $storage) impure {
+    setOAppUlnReceiveConfig(MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0));
+    $storage = getContractStorage();
+
+    slice attest = cl::declare(
+        lz::Attestation::NAME,
+        unsafeTuple([
+            [cl::t::uint256, MOCK_RECEIVE_PACKET().cl::hash()],
+            [cl::t::uint64, DEFAULT_CONFIRMATIONS]
+        ])
+    ).begin_parse();
+
+    attest = attest.scutfirst(256, attest.slice_refs());
+    builder attestB = begin_cell().store_slice(attest);
+
+    int ind = 0;
+    while (ind < (_HEADER_WIDTH + 256 + 64) - 256) {
+        attestB = attestB.store_bool(0);
+        ind += 1;
+    }
+
+    cell $attestation = attestB.end_cell();
+
+    cell $verification = cl::declare(
+        md::UlnVerification::NAME,
+        unsafeTuple([
+            [cl::t::uint64, NONCE],
+            [cl::t::objRef, $attestation]
+        ])
+    );
+    cell $extendedMd = md::ExtendedMd::New(
+        $verification,
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+        MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0)
+    );
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    return test::handler::shouldPass(
+        ulnConnectionVerify,
+        $extendedMd,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::PACKET_VERIFIED,
+                $extendedMd
+            ),
+            _newAction<call>(
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+                UltraLightNode::OP::ULN_CONNECTION_VERIFY_CALLBACK,
+                md::MdObj::New(
+                    md::VerificationStatus::New(NONCE, UlnConnection::ULN_CONNECTION_VERIFY_SUCCEEDED),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        UlnConnection::utils::setHashLookup(
+            $storage,
+            hashLookups,
+            NONCE,
+            MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(0),
+            $attestation
+        ),
+        txnContext
+    );
+}
+
+;;; ===============================ULN CONNECTION COMMIT PACKET===========================
+
+(int, slice) ulnConnectionCommitPacket::success::partiallyMalformedAttestationHeader(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = headerCellGarbage(MOCK_DEFAULT_ULN_RECEIVE_CONFIG());
+
+    ;; required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ENDPOINT_ADDRESS,
+                Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+                MOCK_RECEIVE_PACKET()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionCommitPacket::success::basic(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    ;; required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ENDPOINT_ADDRESS,
+                Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+                MOCK_RECEIVE_PACKET()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionCommitPacket::success::withOptionalDVNs(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_OPTIONAL_DVNS(1, 1);
+
+    ;; required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+           MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    ;; optional dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(0)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ENDPOINT_ADDRESS,
+                Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+                MOCK_RECEIVE_PACKET()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; packet commit comes in with the same nonce, but different hash
+(int, slice) ulnConnectionCommitPacket::fail::wrongPacket(cell $storage) impure {
+    ;; required dvns verify the wrong packet hash
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION_FULL(NONCE, DEFAULT_CONFIRMATIONS, MOCK_RECEIVE_PACKET().cl::hash()),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_SEND_PACKET(), ;; same nonce as receive packet, but different (path => hash)
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; none of the required DVNs have attested this packet, only some of the optional DVNs have
+(int, slice) ulnConnectionCommitPacket::fail::missingAllRequiredDVNs(cell $storage) impure {
+    cell $customUlnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(DEFAULT_REQUIRED_DVNS, 1, 1);
+
+    ;; optional dvns verify the wrong packet hash
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $customUlnReceiveConfig,
+            MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(0)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $customUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        unsafeTuple([0]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; some of the required DVNs have attested this packet, but not enough of them
+(int, slice) ulnConnectionCommitPacket::fail::missingSomeRequiredDVNs(cell $storage) impure {
+    ;; not enough required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; there are no attestations anywhere for this packet
+(int, slice) ulnConnectionCommitPacket::fail::noAttestation(cell $storage) impure {
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; one of the default DVNs doesn't have enough confirmations
+(int, slice) ulnConnectionCommitPacket::fail::notEnoughDefaultDVNConfirmations(cell $storage) impure {
+    ;; required dvns verify with not enough confirmations
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS - 1),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS - 2),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionCommitPacket::fail::notEnoughOptionalDVNConfirmations(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_OPTIONAL_DVNS(2, 2);
+
+    ;; the default dvns do verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+                MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    ;; only one optional dvn verifies
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(0)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionCommitPacket::success::someOptionalDVNsHaveWrongPacketHash(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_OPTIONAL_DVNS(3, 2);
+
+    ;; default dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+           MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    ;; optional dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(0)
+        )
+    );
+
+     ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(1)
+        )
+    );
+
+    ;; the last optional dvn has the wrong packet hash
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION_FULL(NONCE, CUSTOM_CONFIRMATIONS, MOCK_SEND_PACKET().cl::hash()),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(2)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ENDPOINT_ADDRESS,
+                Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+                MOCK_RECEIVE_PACKET()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) ulnConnectionCommitPacket::fail::notEnoughCommitPacketGas(cell $storage) impure {
+    txnContext~tset(_MSG_VALUE, _gasToNanoton(DEFAULT_MIN_COMMIT_PACKET_GAS) + 100);
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    ;; the default dvns do verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(CUSTOM_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    cell $mdObj = md::MdObj::New(
+        MOCK_RECEIVE_PACKET(),
+        $defaultUlnReceiveConfig
+    );
+
+    return test::handler::shouldPass(
+        ulnConnectionCommitPacket,
+        $mdObj,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;;; ===============================ULN CONNECTION COMMIT PACKET CALLBACK===========================
+
+(int, slice) msglibConnectionCommitPacketCallback::success::basic(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    $storage = getContractStorage();
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(
+        NONCE,
+        NONCE - 1
+    );
+
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    return test::handler::shouldPass(
+        msglibConnectionCommitPacketCallback,
+        $channelNonceInfo,
+        emptyActions(),
+        $storage
+            .UlnConnection::utils::deleteNonceAttestations(hashLookups, NONCE)
+            .cl::set(UlnConnection::firstUnexecutedNonce, NONCE - 1)
+            .cl::set(UlnConnection::commitPOOO, POOO::New().POOO::set(NONCE)),
+        txnContext
+    );
+}
+
+;; The callback for a given packet can be received multiple times
+(int, slice) msglibConnectionCommitPacketCallback::success::notifyPacketExecuted(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    $storage = getContractStorage();
+    ;; firstUnexecutedNonce can be greater than the current nonce if
+    ;; the first commitPacketCallback failed
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(NONCE, NONCE + 1);
+
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    return test::handler::shouldPass(
+        msglibConnectionCommitPacketCallback,
+        $channelNonceInfo,
+        emptyActions(),
+        $storage
+            .UlnConnection::utils::deleteNonceAttestations(hashLookups, NONCE)
+            .cl::set(UlnConnection::firstUnexecutedNonce, NONCE + 1)
+            .cl::set(UlnConnection::commitPOOO, POOO::New().POOO::set(NONCE)),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionCommitPacketCallback::success::idempotent(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    msglibConnectionCommitPacketCallback(
+        md::ChannelNonceInfo::New(NONCE, NONCE - 1)
+    );
+
+    $storage = getContractStorage();
+    ;; firstUnexecutedNonce can be greater than the current nonce if
+    ;; the first commitPacketCallback failed
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(NONCE, NONCE + 1);
+
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    return test::handler::shouldPass(
+        msglibConnectionCommitPacketCallback,
+        $channelNonceInfo,
+        emptyActions(),
+        $storage
+            .UlnConnection::utils::deleteNonceAttestations(hashLookups, NONCE)
+            .cl::set(UlnConnection::firstUnexecutedNonce, NONCE + 1),
+        txnContext
+    );
+}
+;;; ===============================EVICT ATTESATION===========================
+
+(int, slice) garbageCollectInvalidAttestations::success::basic(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    
+    return test::handler::shouldPass(
+        garbageCollectInvalidAttestations,
+        md::MdObj::New(
+            md::Nonce::New(NONCE),
+            MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0)
+        ),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ATTESTATIONS_EVICTED,
+                md::Nonce::New(NONCE)
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectInvalidAttestations::success::maxDVNs(cell $storage) impure {
+    int numDVNs = 8;
+    cell $ulnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(
+        UlnReceiveConfig::MaxRequiredDVNs,
+        UlnReceiveConfig::MaxOptionalDVNs,
+        UlnReceiveConfig::MaxOptionalDVNs
+    );
+    throw_if(1, numDVNs > UlnReceiveConfig::MaxRequiredDVNs);
+    int idx = 0;
+    while (idx < numDVNs) {
+        ulnConnectionVerify(
+            md::ExtendedMd::New(
+                MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+                $ulnReceiveConfig,
+                MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(idx)
+            )
+        );
+        idx += 1;
+    }
+
+    return test::handler::shouldPass(
+        garbageCollectInvalidAttestations,
+        md::MdObj::New(
+            md::Nonce::New(NONCE),
+            $ulnReceiveConfig
+        ),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ATTESTATIONS_EVICTED,
+                md::Nonce::New(NONCE)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectInvalidAttestations::success::noEvictedDvns(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    return test::handler::shouldPass(
+        garbageCollectInvalidAttestations,
+        md::MdObj::New(
+            md::Nonce::New(NONCE),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+        ),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ATTESTATIONS_EVICTED,
+                md::Nonce::New(NONCE)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectInvalidAttestations::success::noAttestation(cell $storage) impure {
+    return test::handler::shouldPass(
+        garbageCollectInvalidAttestations,
+        md::MdObj::New(
+            md::Nonce::New(NONCE),
+            MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0)
+        ),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ATTESTATIONS_EVICTED,
+                md::Nonce::New(NONCE)
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectExecutedNonces::success::noExecutedNonce(cell $storage) impure {
+    setContractStorage(
+        $storage.cl::set(UlnConnection::firstUnexecutedNonce, 0)
+    );
+
+    return test::handler::shouldPass(
+        garbageCollectExecutedNonces,
+        cl::nullObject(),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectExecutedNonces::success::noGarbageCollected(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    setContractStorage(
+        getContractStorage().cl::set(UlnConnection::firstUnexecutedNonce, NONCE)
+    );
+
+    return test::handler::shouldPass(
+        garbageCollectExecutedNonces,
+        cl::nullObject(),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) garbageCollectExecutedNonces::success::collectOne(cell $storage) impure {
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            MOCK_DEFAULT_ULN_RECEIVE_CONFIG(),
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+
+    setContractStorage(
+        getContractStorage().cl::set(UlnConnection::firstUnexecutedNonce, NONCE + 1)
+    );
+
+    return test::handler::shouldPass(
+        garbageCollectExecutedNonces,
+        cl::nullObject(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                getContractAddress(),
+                UlnConnection::OP::GARBAGE_COLLECT_EXECUTED_NONCES,
+                cl::nullObject()
+            )
+        ]),
+        ;; "rollback" the verify call
+        $storage.cl::set(UlnConnection::firstUnexecutedNonce, NONCE + 1),
+        txnContext
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::success::malicious(cell $storage) impure {
+    cell $ulnSendConfig = MOCK_CUSTOM_ULN_SEND_CONFIG();
+    cell $maliciousUlnSendConfig = _dupWithGarbage($ulnSendConfig);
+    return test::handler::shouldPass(
+        setOAppUlnSendConfig,
+        $maliciousUlnSendConfig,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ULN_SEND_CONFIG_SET,
+                $ulnSendConfig
+            )
+        ]),
+        $storage.cl::set(UlnConnection::UlnSendConfigOApp, $ulnSendConfig),
+        txnContext
+    );
+}
+
+(int, slice) setOAppUlnReceiveConfig::success::malicious(cell $storage) impure {
+    cell $ulnReceiveConfig = MOCK_CUSTOM_ULN_RECEIVE_CONFIG(1, 0, 0);
+    cell $maliciousUlnReceiveConfig = _dupWithGarbage($ulnReceiveConfig);
+    return test::handler::shouldPass(
+        setOAppUlnReceiveConfig,
+        $maliciousUlnReceiveConfig,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnConnection::event::ULN_RECEIVE_CONFIG_SET,
+                $ulnReceiveConfig
+            )
+        ]),
+        $storage.cl::set(UlnConnection::UlnReceiveConfigOApp, $ulnReceiveConfig),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSend::success::basic(cell $storage) impure {
+    cell $LzSend = MOCK_SEND_PACKET();
+
+    return test::handler::shouldPass(
+        msglibConnectionSend,
+        $LzSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ULN_ADDRESS,
+                Uln::OP::ULN_SEND,
+                md::UlnSend::New(
+                    $LzSend,
+                    $storage.cl::get<objRef>(UlnConnection::UlnSendConfigOApp),
+                    getInitialStorage(),
+                    $storage.cl::get<address>(UlnConnection::channelAddress)
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::basic(cell $storage) impure {
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(NONCE, NONCE - 10);
+    return test::handler::shouldPass(
+        msglibConnectionSyncChannelState,
+        md::MdObj::New($channelNonceInfo, getInitialStorage()),
+        emptyActions(),
+        $storage
+            .cl::set(UlnConnection::firstUnexecutedNonce, NONCE - 10)
+            .cl::set(UlnConnection::commitPOOO, POOO::unsafeSetBits(POOO::New(), 1, NONCE)),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionQuote::success::basic(cell $storage) impure {
+    cell $LzSend = MOCK_SEND_PACKET();
+    return test::handler::shouldPass(
+        msglibConnectionQuote,
+        $LzSend,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                ULN_ADDRESS,
+                Uln::OP::ULN_QUOTE,
+                md::UlnSend::New(
+                    $LzSend,
+                    $storage.cl::get<objRef>(UlnConnection::UlnSendConfigOApp),
+                    getInitialStorage(),
+                   getCaller()
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) committableView::success::basic(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+    cell $packet = MOCK_RECEIVE_PACKET();
+    int nonce = NONCE;
+
+    return test::shouldBeTrue(
+        committableView(nonce, $packet, $defaultUlnReceiveConfig) == UlnConnection::verificationStatus::VERIFYING
+    );
+}
+
+(int, slice) committableView::success::committed(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    cell $commitPOOO = $storage.cl::get<objRef>(UlnConnection::commitPOOO);
+    $commitPOOO = POOO::set($commitPOOO, nonce);
+
+    cell hashLookups = $storage.cl::get<dict256>(UlnConnection::hashLookups);
+
+    setContractStorage(
+        $storage
+            .UlnConnection::utils::deleteNonceAttestations(hashLookups, nonce)
+            .cl::set(UlnConnection::firstUnexecutedNonce, 1)
+            .cl::set(UlnConnection::commitPOOO, $commitPOOO)
+    );
+
+    return test::shouldBeTrue(
+        committableView(nonce, $packet, $defaultUlnReceiveConfig) == UlnConnection::verificationStatus::COMMITTED
+    );
+}
+
+
+(int, slice) committableView::success::verifyingBranchTwo(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE + 1234;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    return test::shouldBeTrue(committableView(nonce, $packet, $defaultUlnReceiveConfig) == UlnConnection::verificationStatus::VERIFYING);
+}
+
+(int, slice) committableView::success::executed(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    ;; required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    return test::shouldBeTrue(committableView(nonce, $packet, $defaultUlnReceiveConfig) == UlnConnection::verificationStatus::COMMITTABLE);
+}
+
+(int, slice) committableView::success::committedBranchTwo(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = 2;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    cell $commitPOOO = $storage.cl::get<objRef>(UlnConnection::commitPOOO);
+
+    $commitPOOO = POOO::set($commitPOOO, 1);
+    $commitPOOO = POOO::set($commitPOOO, 2);
+    $commitPOOO = POOO::set($commitPOOO, 3);
+
+    setContractStorage(
+        $storage
+            .cl::set(
+                UlnConnection::commitPOOO,
+                $commitPOOO
+            )
+    );
+
+    return test::shouldBeTrue(committableView(nonce, $packet, $defaultUlnReceiveConfig) == UlnConnection::verificationStatus::COMMITTED);
+}
+
+(int, slice) verifiedView::success::basic(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    return test::shouldBeTrue(
+        verifiedView(MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0), nonce, $packet.cl::hash(), DEFAULT_CONFIRMATIONS)
+        & verifiedView(MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1), nonce, $packet.cl::hash(), DEFAULT_CONFIRMATIONS)
+    );
+}
+
+(int, slice) verifiedView::success::notEnoughConfirmations(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+    int addr = MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0);
+
+    int nonce = NONCE;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS - 1),
+            $defaultUlnReceiveConfig,
+            addr
+        )
+    );
+    return test::shouldBeFalse(verifiedView(addr, nonce, $packet.cl::hash(), DEFAULT_CONFIRMATIONS));
+}
+
+(int, slice) verifiedView::success::wrongPacket(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE;
+    int wrongPacketHash = 1234;
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    return test::shouldBeFalse(
+        verifiedView(MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0), nonce, wrongPacketHash, DEFAULT_CONFIRMATIONS)
+        | verifiedView(MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1), nonce, wrongPacketHash, DEFAULT_CONFIRMATIONS)
+    );
+}
+
+(int, slice) verifiedView::success::wrongDvnAddress(cell $storage) impure {
+
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+
+    int nonce = NONCE;
+    cell $packet = MOCK_RECEIVE_PACKET();
+
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+
+    return test::shouldBeFalse(
+        verifiedView(ARBITRARY_ADDRESS, nonce, $packet.cl::hash(), DEFAULT_CONFIRMATIONS)
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::manualSetBits(cell $storage) inline {
+    int firstUnexecutedNonce = 1;
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(5, firstUnexecutedNonce);
+    cell $commitPOOO = $storage.cl::get<objRef>(UlnConnection::commitPOOO);
+
+    $commitPOOO = POOO::set($commitPOOO, 1);
+    $commitPOOO = POOO::set($commitPOOO, 2);
+    $commitPOOO = POOO::set($commitPOOO, 3);
+    $commitPOOO = POOO::set($commitPOOO, 4);
+
+    return test::handler::shouldPass(
+        msglibConnectionSyncChannelState,
+        md::MdObj::New($channelNonceInfo, getInitialStorage()),
+        emptyActions(),
+        $storage.cl::set(
+            UlnConnection::firstUnexecutedNonce,
+            firstUnexecutedNonce
+        ).cl::set(UlnConnection::commitPOOO, $commitPOOO),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::maxSettableBit(cell $storage) inline {
+    int firstUnexecutedNonce = 1;
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(1024, firstUnexecutedNonce);
+    cell $commitPOOO = POOO::New().cl::set(POOO::nextEmpty, 1024);
+
+    return test::handler::shouldPass(
+        msglibConnectionSyncChannelState,
+        md::MdObj::New($channelNonceInfo, getInitialStorage()),
+        emptyActions(),
+        $storage.cl::set(
+            UlnConnection::firstUnexecutedNonce,
+            firstUnexecutedNonce
+        )
+            .cl::set(UlnConnection::commitPOOO, $commitPOOO)
+        ,
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::maxSettableBitTwo(cell $storage) inline {
+    int firstUnexecutedNonce = 1;
+    int firstUncommittedNonce = 2048;
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(firstUncommittedNonce, firstUnexecutedNonce);
+    cell $commitPOOO = POOO::New().cl::set(POOO::nextEmpty, firstUncommittedNonce);
+
+    return test::handler::shouldPass(
+        msglibConnectionSyncChannelState,
+        md::MdObj::New($channelNonceInfo, getInitialStorage()),
+        emptyActions(),
+        $storage.cl::set(
+            UlnConnection::firstUnexecutedNonce,
+            firstUnexecutedNonce
+        ).cl::set(UlnConnection::commitPOOO, $commitPOOO),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::highBit(cell $storage) impure {
+    int firstUnexecutedNonce = 50;
+    int firstUncommittedNonce = 100;
+    cell $channelNonceInfo = md::ChannelNonceInfo::New(firstUncommittedNonce, firstUnexecutedNonce);
+    cell $commitPOOO = POOO::New();
+
+    int curNonce = 1;
+    while (curNonce < firstUncommittedNonce) {
+        $commitPOOO = POOO::set($commitPOOO, curNonce);
+        curNonce += 1;
+    }
+
+    return test::handler::shouldPass(
+        msglibConnectionSyncChannelState,
+        md::MdObj::New($channelNonceInfo, getInitialStorage()),
+        emptyActions(),
+        $storage.cl::set(
+            UlnConnection::firstUnexecutedNonce,
+            firstUnexecutedNonce
+        ).cl::set(UlnConnection::commitPOOO, $commitPOOO),
+        txnContext
+    );
+}
+
+(int, slice) msglibConnectionSyncChannelState::success::gaps(cell $storage) impure {
+    cell $commitPOOO = POOO::New().POOO::set( 1).POOO::set(4);
+    $commitPOOO = POOO::set($commitPOOO, 2);
+
+    cell $commitPOOO2 = POOO::New().POOO::set(1).POOO::set(4);
+
+    int spoofFirstUncommittedNonce = 3;
+    throw_if(1, spoofFirstUncommittedNonce > POOO::maxSettableBit($commitPOOO2));
+
+    int nextEmpty = $commitPOOO2.cl::get<uint64>(POOO::nextEmpty);
+    $commitPOOO2 = POOO::unsafeSetBits($commitPOOO2, nextEmpty, spoofFirstUncommittedNonce);
+
+    return test::shouldBeTrue($commitPOOO.cl::hash() == $commitPOOO2.cl::hash());
+}
+
+(int, slice) ulnConnection::viewHashLookup::success::basic(cell $storage) impure {
+    cell $defaultUlnReceiveConfig = MOCK_DEFAULT_ULN_RECEIVE_CONFIG();
+    ;; required dvns verify
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        )
+    );
+    ulnConnectionVerify(
+        md::ExtendedMd::New(
+            MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS),
+            $defaultUlnReceiveConfig,
+            MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(1)
+        )
+    );
+    return test::shouldBeTrue(
+        viewHashLookup(
+            NONCE, MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(0)
+        ).cl::hash() == MOCK_ULN_VERIFICATION(DEFAULT_CONFIRMATIONS).cl::get<objRef>(md::UlnVerification::attestation).cl::hash()
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([_initialize::success::basic, "_initialize::success::basic"])
+        ;; hashlookup utils
+        .tpush([UlnConnection::setHashLookup::success, "UlnConnection::setHashLookup::success"])
+        ;; isCommittable utils
+        .tpush([UlnConnection::utils::getDVNsAndConf::fail, "UlnConnection::utils::getDVNsAndConf::fail"])
+        ;; -- setOAppUlnSendConfig handler tests
+        .tpush([setOAppUlnSendConfig::success::basic, "setOAppUlnSendConfig::success::basic"])
+        .tpush([setOAppUlnSendConfig::fail::nullAddress::dvnConfigError, "setOAppUlnSendConfig::fail::nullAddress::dvnConfigError"])
+        .tpush([setOAppUlnSendConfig::fail::tooManyRefs::dvnConfigError, "setOAppUlnSendConfig::fail::tooManyRefs::dvnConfigError"])
+        .tpush([setOAppUlnSendConfig::fail::maxDVNCount::dvnConfigError, "setOAppUlnSendConfig::fail::maxDVNCount::dvnConfigError"])
+        .tpush([setOAppUlnSendConfig::success::malicious, "setOAppUlnSendConfig::success::malicious"])
+        ;; -- setOAppUlnReceiveConfig handler tests
+        .tpush([setOAppUlnReceiveConfig::success::basic, "setOAppUlnReceiveConfig::success::basic"])
+        .tpush([setOAppUlnReceiveConfig::fail::invalidMinCommitPacketGas, "setOAppUlnReceiveConfig::fail::invalidMinCommitPacketGas"])
+        .tpush([setOAppUlnReceiveConfig::fail::optionalThresholdTooLarge, "setOAppUlnReceiveConfig::fail::optionalThresholdTooLarge"])
+        .tpush([setOAppUlnReceiveConfig::fail::optionalThresholdTooLow, "setOAppUlnReceiveConfig::fail::optionalThresholdTooLow"])
+        .tpush([setOAppUlnReceiveConfig::fail::dvnCountsAllNil, "setOAppUlnReceiveConfig::fail::dvnCountsAllNil"])
+        .tpush([setOAppUlnReceiveConfig::success::malicious, "setOAppUlnReceiveConfig::success::malicious"])
+        ;; -- msglibConnectionSend handler tests
+        .tpush([msglibConnectionSend::success::basic, "msglibConnectionSend::success::basic"])
+        ;; -- ulnConnectionVerify handler tests
+        .tpush([ulnConnectionVerify::success::basic, "ulnConnectionVerify::success::basic"])
+        .tpush([ulnConnectionVerify::success::minVerifiableNonce, "ulnConnectionVerify::success::minVerifiableNonce"])
+        .tpush([ulnConnectionVerify::success::maxVerifiableNonce, "ulnConnectionVerify::success::maxVerifiableNonce"])
+        .tpush([ulnConnectionVerify::success::twoNonces, "ulnConnectionVerify::success::twoNonces"])
+        .tpush([ulnConnectionVerify::fail::nonceTooLarge, "ulnConnectionVerify::fail::nonceTooLarge"])
+        .tpush([ulnConnectionVerify::fail::nonceTooSmall, "ulnConnectionVerify::fail::nonceTooSmall"])
+        .tpush([ulnConnectionVerify::fail::wrongDVN, "ulnConnectionVerify::fail::wrongDVN"])
+        .tpush([ulnConnectionVerify::revert::malformedAttestationStructure, "ulnConnectionVerify::revert::malformedAttestationStructure"])
+        .tpush([ulnConnectionVerify::revert::malformedAttestationHeader, "ulnConnectionVerify::revert::malformedAttestationHeader"])
+        .tpush([ulnConnectionVerify::success::partiallyMalformedAttestationHeader, "ulnConnectionVerify::success::partiallyMalformedAttestationHeader"])
+        ;; -- ulnConnectionCommitPacket handler tests
+        .tpush([ulnConnectionCommitPacket::success::basic, "ulnConnectionCommitPacket::success::basic"])
+        .tpush([ulnConnectionCommitPacket::success::withOptionalDVNs, "ulnConnectionCommitPacket::success::withOptionalDVNs"])
+        .tpush([ulnConnectionCommitPacket::fail::wrongPacket, "ulnConnectionCommitPacket::fail::wrongPacket"])
+        .tpush([ulnConnectionCommitPacket::fail::missingAllRequiredDVNs, "ulnConnectionCommitPacket::fail::missingAllRequiredDVNs"])
+        .tpush([ulnConnectionCommitPacket::fail::missingSomeRequiredDVNs, "ulnConnectionCommitPacket::fail::missingSomeRequiredDVNs"])
+        .tpush([ulnConnectionCommitPacket::fail::noAttestation, "ulnConnectionCommitPacket::fail::noAttestation"])
+        .tpush([ulnConnectionCommitPacket::fail::notEnoughDefaultDVNConfirmations, "ulnConnectionCommitPacket::fail::notEnoughDefaultDVNConfirmations"])
+        .tpush([ulnConnectionCommitPacket::fail::notEnoughOptionalDVNConfirmations, "ulnConnectionCommitPacket::fail::notEnoughOptionalDVNConfirmations"])
+        .tpush([ulnConnectionCommitPacket::success::someOptionalDVNsHaveWrongPacketHash, "ulnConnectionCommitPacket::success::someOptionalDVNsHaveWrongPacketHash"])
+        .tpush([ulnConnectionCommitPacket::fail::notEnoughCommitPacketGas, "ulnConnectionCommitPacket::fail::notEnoughCommitPacketGas"])
+        .tpush([ulnConnectionCommitPacket::success::partiallyMalformedAttestationHeader, "ulnConnectionCommitPacket::success::partiallyMalformedAttestationHeader"])
+        ;; -- msglibConnectionCommitPacketCallback handler tests
+        .tpush([msglibConnectionCommitPacketCallback::success::basic, "msglibConnectionCommitPacketCallback::success::basic"])
+        .tpush([msglibConnectionCommitPacketCallback::success::notifyPacketExecuted, "msglibConnectionCommitPacketCallback::success::notifyPacketExecuted"])
+        .tpush([msglibConnectionCommitPacketCallback::success::idempotent, "msglibConnectionCommitPacketCallback::success::idempotent"])
+        ;; ;; -- garbageCollectInvalidAttestations handler tests
+        .tpush([garbageCollectInvalidAttestations::success::basic, "garbageCollectInvalidAttestations::success::basic"])
+        .tpush([garbageCollectInvalidAttestations::success::maxDVNs, "garbageCollectInvalidAttestations::success::maxDVNs"])
+        .tpush([garbageCollectInvalidAttestations::success::noEvictedDvns, "garbageCollectInvalidAttestations::success::noEvictedDvns"])
+        .tpush([garbageCollectInvalidAttestations::success::noAttestation, "garbageCollectInvalidAttestations::success::noAttestation"])
+        ;; -- garbageCollectExecutedNonces handler tests
+        .tpush([garbageCollectExecutedNonces::success::noExecutedNonce, "garbageCollectExecutedNonces::success::noExecutedNonce"])
+        .tpush([garbageCollectExecutedNonces::success::noGarbageCollected, "garbageCollectExecutedNonces::success::noGarbageCollected"])
+        .tpush([garbageCollectExecutedNonces::success::collectOne, "garbageCollectExecutedNonces::success::collectOne"])
+        ;; -- msglibConnectionSyncChannelState handler tests
+        .tpush([msglibConnectionSyncChannelState::success::basic, "msglibConnectionSyncChannelState::success::basic"])
+        .tpush([msglibConnectionSyncChannelState::success::manualSetBits, "msglibConnectionSyncChannelState::success::manualSetBits"])
+        .tpush([msglibConnectionSyncChannelState::success::maxSettableBit, "msglibConnectionSyncChannelState::success::maxSettableBit"])
+        .tpush([msglibConnectionSyncChannelState::success::highBit, "msglibConnectionSyncChannelState::success::highBit"])
+        .tpush([msglibConnectionSyncChannelState::success::maxSettableBitTwo, "msglibConnectionSyncChannelState::success::maxSettableBitTwo"])
+        .tpush([msglibConnectionSyncChannelState::success::gaps, "msglibConnectionSyncChannelState::success::gaps"])
+        ;; -- msglibConnectionQuote handler tests
+        .tpush([msglibConnectionQuote::success::basic, "msglibConnectionQuote::success::basic"])
+        ;; -- committableView view function tests
+        .tpush([committableView::success::basic, "committableView::success::basic"])
+        .tpush([committableView::success::committed, "committableView::success::committed"])
+        .tpush([committableView::success::verifyingBranchTwo, "committableView::success::verifyingBranchTwo"])
+        .tpush([committableView::success::executed, "committableView::success::executed"])
+        .tpush([committableView::success::committedBranchTwo, "committableView::success::committedBranchTwo"])
+        ;; -- verifiedView view function tests
+        .tpush([verifiedView::success::basic, "verifiedView::success::basic"])
+        .tpush([verifiedView::success::notEnoughConfirmations, "verifiedView::success::notEnoughConfirmations"])
+        .tpush([verifiedView::success::wrongPacket, "verifiedView::success::wrongPacket"])
+        .tpush([verifiedView::success::wrongDvnAddress, "verifiedView::success::wrongDvnAddress"])
+        ;; -- viewHashLookup view function tests
+        .tpush([ulnConnection::viewHashLookup::success::basic, "ulnConnection::viewHashLookup::success::basic"])
+    ;
+}

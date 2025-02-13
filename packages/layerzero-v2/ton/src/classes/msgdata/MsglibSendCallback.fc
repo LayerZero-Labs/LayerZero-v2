@@ -1,0 +1,195 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::MsglibSendCallback::NAME = "libSndCb"u;
+
+;; field names
+const int md::MsglibSendCallback::nativeFee = 0;
+const int md::MsglibSendCallback::zroFee = 1;
+const int md::MsglibSendCallback::lzSend = 2;
+const int md::MsglibSendCallback::packetEncoded = 3;
+const int md::MsglibSendCallback::payees = 4;
+const int md::MsglibSendCallback::nonceByteOffset = 5;
+const int md::MsglibSendCallback::nonceBytes = 6;
+const int md::MsglibSendCallback::guidByteOffset = 7;
+const int md::MsglibSendCallback::guidBytes = 8;
+const int md::MsglibSendCallback::msglibSendEvents = 9;
+const int md::MsglibSendCallback::errorCode = 10;
+
+cell md::MsglibSendCallback::New(
+    int nativeFee,
+    int zroFee,
+    cell $lzSend,
+    cell packetEncoded,
+    cell payees,
+    int nonceByteOffset,
+    int nonceBytes,
+    int guidByteOffset,
+    int guidBytes,
+    cell $msglibSendEvents,
+    int errorCode
+) impure inline method_id {
+    return cl::declare(
+        md::MsglibSendCallback::NAME,
+        unsafeTuple([
+            [cl::t::coins, nativeFee],          ;; md::MsglibSendCallback::nativeFee
+            [cl::t::coins, zroFee],             ;; md::MsglibSendCallback::zroFee
+            [cl::t::objRef, $lzSend],           ;; md::MsglibSendCallback::lzSend
+            [cl::t::cellRef, packetEncoded],    ;; md::MsglibSendCallback::packetEncoded
+            [cl::t::cellRef, payees],           ;; md::MsglibSendCallback::payees
+            [cl::t::uint16, nonceByteOffset],   ;; md::MsglibSendCallback::nonceByteOffset
+            [cl::t::uint8, nonceBytes],         ;; md::MsglibSendCallback::nonceBytes
+            [cl::t::uint16, guidByteOffset],    ;; md::MsglibSendCallback::guidByteOffset
+            [cl::t::uint8, guidBytes],          ;; md::MsglibSendCallback::guidBytes
+            [cl::t::objRef, $msglibSendEvents], ;; md::MsglibSendCallback::msglibEvents
+            [cl::t::uint8, errorCode]           ;; md::MsglibSendCallback::errorCode
+        ])
+    );
+}
+
+;; ========================== Object Builders ==========================
+
+const int md::MsglibSendCallback::_headerInfoBits = 198;
+const int md::MsglibSendCallback::_headerFillerBits = _HEADER_WIDTH - (198 + _NAME_WIDTH);
+const int md::MsglibSendCallback::_headerInfo = 177909621499943220462532613625031755041688677811453802367547;
+
+cell md::MsglibSendCallback::build(
+    int nativeFee,
+    int zroFee,
+    cell $lzSend,
+    cell packetEncoded,
+    cell payees,
+    int nonceByteOffset,
+    int nonceBytes,
+    int guidByteOffset,
+    int guidBytes,
+    cell $msglibSendEvents,
+    int errorCode
+) impure inline {
+    return begin_cell()
+        .store_uint(md::MsglibSendCallback::NAME, _NAME_WIDTH)                                    ;; name
+        .store_uint(md::MsglibSendCallback::_headerInfo, md::MsglibSendCallback::_headerInfoBits) ;; rest of the header
+        .store_ones(md::MsglibSendCallback::_headerFillerBits)                                    ;; header filler
+        .store_uint128(nativeFee)                                                                 ;; nativeFee
+        .store_uint128(zroFee)                                                                    ;; zroFee
+        .store_uint16(nonceByteOffset)                                                            ;; nonceByteOffset
+        .store_uint8(nonceBytes)                                                                  ;; nonceBytes
+        .store_uint16(guidByteOffset)                                                             ;; guidByteOffset
+        .store_uint8(guidBytes)                                                                   ;; guidBytes
+        .store_uint8(errorCode)                                                                   ;; errorCode
+        .store_ref($lzSend)                                                                       ;; lzSend
+        .store_ref(packetEncoded)                                                                 ;; packetEncoded
+        .store_ref(
+            begin_cell()
+                .store_ref(payees)                                                                ;; payees
+                .store_ref($msglibSendEvents)                                                     ;; msglibSendEvents
+            .end_cell()
+        )
+        .end_cell();
+}
+
+;; ========================== Object Getters ==========================
+
+const int md::MsglibSendCallback::_nativeFeeOffset = _HEADER_WIDTH;
+const int md::MsglibSendCallback::_zroFeeOffset = md::MsglibSendCallback::_nativeFeeOffset + 128;
+const int md::MsglibSendCallback::_nonceByteOffsetOffset = md::MsglibSendCallback::_zroFeeOffset + 128;
+const int md::MsglibSendCallback::_nonceBytesOffset = md::MsglibSendCallback::_nonceByteOffsetOffset + 16;
+const int md::MsglibSendCallback::_guidByteOffsetOffset = md::MsglibSendCallback::_nonceBytesOffset + 8;
+const int md::MsglibSendCallback::_guidBytesOffset = md::MsglibSendCallback::_guidByteOffsetOffset + 16;
+const int md::MsglibSendCallback::_errorCodeOffset = md::MsglibSendCallback::_guidBytesOffset + 8;
+
+
+cell md::MsglibSendCallback::getLzSend(cell $self) impure inline {
+    return $self
+        .begin_parse()
+        .preload_ref_at(0);
+}
+
+;; ========================== Object Multi-Getters ==========================
+
+;; (errorCode, nativeFee, zroFee, lzSend, payees, encodedPacket, nonceByteOffset, nonceBytes, guidByteOffset, guidBytes, sendEvents)
+(int, int, int, cell, cell, cell, int, int, int, int, cell) md::MsglibSendCallback::deserialize(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2 = selfSlice.preloadRefSliceAt(2);
+    
+    return (
+        selfSlice.preloadUint8At(md::MsglibSendCallback::_errorCodeOffset),       ;; errorCode
+        selfSlice.preloadCoinsAt(md::MsglibSendCallback::_nativeFeeOffset),       ;; nativeFee
+        selfSlice.preloadCoinsAt(md::MsglibSendCallback::_zroFeeOffset),          ;; zroFee
+        selfSlice.preloadRefAt(0),                                                ;; lzSend
+        ref2.preloadRefAt(0),                                                     ;; payees
+        selfSlice.preloadRefAt(1),                                                ;; encodedPacket
+        selfSlice.preloadUint16At(md::MsglibSendCallback::_nonceByteOffsetOffset),;; nonceByteOffset
+        selfSlice.preloadUint8At(md::MsglibSendCallback::_nonceBytesOffset),      ;; nonceBytes
+        selfSlice.preloadUint16At(md::MsglibSendCallback::_guidByteOffsetOffset), ;; guidByteOffset
+        selfSlice.preloadUint8At(md::MsglibSendCallback::_guidBytesOffset),       ;; guidBytes
+        ref2.preloadRefAt(1)
+    );
+}
+
+;; ========================== Payees Utilities ==========================
+
+const int payeesTuple::_addressIdx  = 0;
+const int payeesTuple::_nativeAmountIdx = 1;
+const int payees::_addressBits = 256;
+const int payees::_nativeAmountBits = 64;
+const int payees::_payeeBits = payees::_addressBits + payees::_nativeAmountBits;
+
+;; Serializes 3 payees (256-bit address => 64-bit TON coin amount) per cell.
+cell serializePayees(tuple payeesInfo) impure inline {
+    int numPayees = payeesInfo.tlen();
+    if (numPayees == 0) {
+        return empty_cell();
+    }
+
+    builder linkedList = begin_cell();
+    tuple curPayee = empty_tuple();
+    int idx = 1;
+    while (idx <= numPayees) {
+        curPayee = payeesInfo.tuple_at(numPayees - idx);
+        if (idx % 3 == 0) {
+            linkedList = begin_cell()
+                .store_ref(linkedList.end_cell())
+                .store_uint256(curPayee.int_at(payeesTuple::_addressIdx))
+                .store_uint64(curPayee.int_at(payeesTuple::_nativeAmountIdx));
+        } else {
+            linkedList = linkedList
+                .store_uint256(curPayee.int_at(payeesTuple::_addressIdx))
+                .store_uint64(curPayee.int_at(payeesTuple::_nativeAmountIdx));
+        }
+        idx += 1;
+    }
+
+    return linkedList.end_cell();
+}
+
+;; deserializePayees will ignore any bits beyond 960
+tuple deserializePayees(cell serializedPayees) impure inline {
+    slice payeesSlice = serializedPayees.begin_parse();
+    if (payeesSlice.slice_empty?()) {
+        return empty_tuple();
+    }
+    tuple payees = empty_tuple();
+    while (~ payeesSlice.slice_empty?()) {
+        payees = payees.tpush([payeesSlice~load_uint256(), payeesSlice~load_uint64()]);
+
+        ;; can you extract a second one?
+        if (payeesSlice.slice_bits() >= (payees::_payeeBits)) {
+            payees = payees.tpush([payeesSlice~load_uint256(), payeesSlice~load_uint64()]);
+        }
+
+        ;; how about a third?
+        if (payeesSlice.slice_bits() >= (payees::_payeeBits)) {
+            payees = payees.tpush([payeesSlice~load_uint256(), payeesSlice~load_uint64()]);
+        }
+
+        if (payeesSlice.slice_refs() > 0) {
+            payeesSlice = payeesSlice.preload_first_ref().begin_parse();
+        }
+    }
+    return payees;
+}
+
+;; Pop the last payee off the output of deserializePayees
+;; and return the modified payee list and the popped payee.
+(tuple, [int, int]) tpopPayee(tuple t) asm "TPOP";

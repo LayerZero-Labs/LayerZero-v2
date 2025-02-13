@@ -1,0 +1,23 @@
+;;; ==========================OPCODES=====================================
+
+const int Dvn::OP::SET_VERIFIERS = "Dvn::OP::SET_VERIFIERS"c;
+const int Dvn::OP::SET_QUORUM = "Dvn::OP::SET_QUORUM"c;
+const int Dvn::OP::VERIFY = "Dvn::OP::VERIFY"c;
+const int Dvn::OP::SET_ADMINS_BY_QUORUM = "Dvn::OP::SET_ADMINS_BY_QUORUM"c;
+const int Dvn::OP::SET_PROXY_ADMINS = "Dvn::OP::SET_PROXY_ADMINS"c;
+
+;;; ==========================ERRORS=====================================
+const int Dvn::ERROR::expired = 1983;
+const int Dvn::ERROR::quorumNotMet = 1982;
+const int Dvn::ERROR::notEnoughSignatures = 1981;
+const int Dvn::ERROR::invalidQuorum = 1980;
+const int Dvn::ERROR::invalidRequestNonce = 1979;
+const int Dvn::ERROR::invalidVerifiers = 1978;
+const int Dvn::ERROR::invalidProxyAdmins = 1977;
+
+;;; ==========================EVENTS=====================================
+const int Dvn::event::INVALID_SIGNATURE = "Dvn::event::INVALID_SIGNATURE"u;
+const int Dvn::event::SET_VERIFIERS = "Dvn::event::SET_VERIFIERS"u;
+const int Dvn::event::SET_QUORUM = "Dvn::event::SET_QUORUM"u;
+const int Dvn::event::SET_ADMINS_BY_QUORUM = "Dvn::event::SET_ADMINS_BY_QUORUM"u;
+const int Dvn::event::VERIFY = "Dvn::event::VERIFY"u;

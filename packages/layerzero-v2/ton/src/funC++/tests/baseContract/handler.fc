@@ -1,0 +1,15 @@
+#include "../../../protocol/core/abstract/protocolHandler.fc";
+
+#include "storage.fc";
+
+(cell, tuple) _initialize(cell $md) impure inline {
+    return preamble();
+}
+
+() _checkPermissions(int op, cell $md) impure inline {
+    return ();
+}
+
+int _getEventSink() impure inline {
+    return getContractAddress();
+}

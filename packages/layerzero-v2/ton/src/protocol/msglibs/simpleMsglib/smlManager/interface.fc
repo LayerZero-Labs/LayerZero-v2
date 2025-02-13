@@ -1,0 +1,14 @@
+#include "../../../../funC++/constants.fc";
+
+const int SmlManager::OP::SET_MSGLIB_CONFIG = "SmlManager::OP::SET_MSGLIB_CONFIG"c;
+const int SmlManager::OP::SML_MANAGER_COMMIT_PACKET_CALLBACK = "SmlManager::OP::SML_MANAGER_COMMIT_PACKET_CALLBACK"c;
+const int SmlManager::OP::SML_MANAGER_COMMIT_PACKET = "SmlManager::OP::SML_MANAGER_COMMIT_PACKET"c;
+
+const int SmlManager::OP::SML_MANAGER_SEND = "SmlManager::OP::SML_MANAGER_SEND"c;
+
+;; EVENTS
+const int SmlManager::event::SET_MSGLIB_CONFIG = "SET_MSGLIB_CONFIG"u;
+
+const int SmlManager::ERROR::packetHeaderNotFound = "packetHeaderNotFound"c & ERRORCODE_MASK;
+const int SmlManager::ERROR::optionsNotEmpty = "optionsNotEmpty"c & ERRORCODE_MASK;
+const int SmlManager::ERROR::onlyConnection = "onlyConnection"c & ERRORCODE_MASK;

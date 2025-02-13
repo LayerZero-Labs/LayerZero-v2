@@ -1,0 +1,58 @@
+#include "../../funC++/classlib.fc";
+#include "../../protocol/msglibs/interface.fc";
+
+;; required storage name
+const int lz::MsglibInfo::NAME = "MsglibInfo"u;
+
+;; field names
+const int lz::MsglibInfo::msglibAddress = 0;
+;; connectionCode + connectionInitStorage are used to programmatically derive the connection address
+const int lz::MsglibInfo::msglibConnectionCode = 1;
+const int lz::MsglibInfo::msglibConnectionInitStorage = 2;
+
+cell lz::MsglibInfo::New(int msglibAddress, cell msglibConnectionCode, cell msglibConnectionInitStorage) impure inline method_id {
+    return cl::declare(
+        lz::MsglibInfo::NAME,
+        unsafeTuple([
+            [cl::t::address, msglibAddress],             ;; lz::MsglibInfo::msglibAddress
+            [cl::t::cellRef, msglibConnectionCode],      ;; lz::MsglibInfo::msglibConnectionBytecode
+            [cl::t::objRef, msglibConnectionInitStorage] ;; lz::MsglibInfo::msglibConnectionInitStorage
+        ])
+    );
+}
+
+;; ====================== Object Getters =====================
+
+;; everything fits in the root cell
+const int lz::MsglibInfo::_msglibAddressOffset = _HEADER_WIDTH;
+
+int lz::MsglibInfo::getMsglibAddress(cell $self) impure inline {
+    return $self.cellPreloadAddressAt(lz::MsglibInfo::_msglibAddressOffset);
+}
+
+;; ====================== Object Utils =====================
+int lz::MsglibInfo::getMsglibConnectionAddress(cell $msglibInfo, cell $path) impure inline {
+    ;; Cannot optimize this cl::set because the messagelib interface is specified in terms of
+    ;; classlib member field idx rather than data/ref offsets
+    slice msglibInfoSlice = $msglibInfo.begin_parse();
+
+    cell msglibConnectionCode = msglibInfoSlice.preloadRefAt(0);
+    cell $msglibConnectionInitStorage = msglibInfoSlice
+        .preloadRefAt(1)
+        .cl::set(MsglibConnection::PathFieldIdx, $path);
+
+    return computeContractAddress(
+        $msglibConnectionInitStorage,
+        msglibConnectionCode
+    );
+}
+
+;; ========================== Sanitize ==========================
+
+cell lz::MsglibInfo::sanitize(cell $self) impure {
+    int msglibAddress = $self.cl::get<address>(lz::MsglibInfo::msglibAddress);
+    cell msglibConnectionCode = $self.cl::get<cellRef>(lz::MsglibInfo::msglibConnectionCode);
+    cell msglibConnectionInitStorage = $self.cl::get<objRef>(lz::MsglibInfo::msglibConnectionInitStorage);
+
+    return lz::MsglibInfo::New(msglibAddress, msglibConnectionCode, msglibConnectionInitStorage);
+}

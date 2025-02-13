@@ -1,0 +1,38 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required storage name
+const int ExecutorFeePaidEvent::NAME = "ExcFeePaid"u;
+
+const int ExecutorFeePaidEvent::CONSTS::NULL_WORKER_ID = 0;
+
+;; field names
+const int ExecutorFeePaidEvent::executorAddress = 0;
+const int ExecutorFeePaidEvent::feePaid = 1;
+
+cell ExecutorFeePaidEvent::New(
+    int executorAddress,
+    int feePaid
+) impure inline method_id {
+    return cl::declare(
+        ExecutorFeePaidEvent::NAME,
+        unsafeTuple([
+            [cl::t::address, executorAddress],   ;; ExecutorFeePaidEvent::executorAddress
+            [cl::t::coins, feePaid]              ;; ExecutorFeePaidEvent::feePaid
+        ])
+    );
+}
+
+;; ========================= Object Builders =========================
+
+const int ExecutorFeePaidEvent::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 2);
+const int ExecutorFeePaidEvent::_headerFillerBits = _HEADER_WIDTH - ExecutorFeePaidEvent::_headerInfoBits;
+const int ExecutorFeePaidEvent::_headerInfo = 22544389860372553502354985441937787;
+
+cell ExecutorFeePaidEvent::build(int executorAddress, int feePaid) impure inline {
+    return begin_cell()
+        .store_uint(ExecutorFeePaidEvent::_headerInfo, ExecutorFeePaidEvent::_headerInfoBits) ;; header info
+        .store_ones(ExecutorFeePaidEvent::_headerFillerBits)                                  ;; header filler
+        .store_uint256(executorAddress)
+        .store_uint128(feePaid)
+        .end_cell();
+}

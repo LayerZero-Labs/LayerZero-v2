@@ -1,0 +1,52 @@
+#include "interface.fc";
+#include "storage.fc";
+
+#include "../msgdata/Attestation.fc";
+#include "../msgdata/UlnReceiveConfig.fc";
+#include "../msgdata/UlnSendConfig.fc";
+
+;;; ===============================GETTERS===========================
+
+cell UlnConnection::utils::getHashLookup(cell hashLookups, int nonce, int dvnAddress) impure inline {
+    (cell addressLookup, int exists) = hashLookups.cl::dict256::get<cellRef>(nonce);
+    ifnot (exists) {
+        return cl::nullObject();
+    }
+
+    (cell $attestation, int exists) = addressLookup.cl::dict256::get<cellRef>(dvnAddress);
+    ifnot (exists) {
+        return cl::nullObject();
+    }
+
+    return $attestation;
+}
+
+;;; ===============================SETTERS===========================
+
+cell UlnConnection::utils::setHashLookup(
+    cell $self,
+    cell hashLookups,
+    int nonce,
+    int dvnAddress,
+    cell $attestation
+) impure inline {
+    (cell addressLookup, int exists) = hashLookups.cl::dict256::get<cellRef>(nonce);
+
+    ifnot (exists) {
+        addressLookup = cl::dict256::New();
+    }
+
+    ;; insert the attestation
+    addressLookup = addressLookup.cl::dict256::setRef(dvnAddress, $attestation);
+
+    ;; save the attestation hash
+    return $self.UlnConnection::setHashLookups(
+        hashLookups.cl::dict256::setRef(nonce, addressLookup)
+    );
+}
+
+cell UlnConnection::utils::deleteNonceAttestations(cell $self, cell hashLookups, int nonce) impure inline {
+    ;; delete is safe to call on a non-existent key
+    hashLookups = hashLookups.cl::dict256::delete(nonce);
+    return $self.UlnConnection::setHashLookups(hashLookups);
+}

@@ -1,0 +1,321 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "channelReceiveUtils.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/dataStructures/DeterministicInsertionCircularQueue.fc";
+#include "../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::receive"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+    setEpConfigOApp(MOCK_RESOLVED_EP_CONFIG(false));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+;; --------------- LZ Receive Callback -----------------
+
+(int, slice) lzReceiveExecuteCallback::success::nonce1(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+    
+    cell $executePOOO = getContractStorage().cl::get<objRef>(Channel::executePOOO);
+
+    cell executionQueue = DeterministicInsertionCircularQueue::delete(
+        getContractStorage().cl::get<cellRef>(Channel::executionQueue),
+        incomingNonce
+    );
+
+    cell $expectedStorage = getContractStorage()
+        .cl::set(Channel::executePOOO, POOO::set($executePOOO, incomingNonce))
+        .cl::set(Channel::executionQueue, executionQueue);
+
+    return test::handler::shouldPass(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(true, incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::DELIVERED,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) lzReceiveExecuteCallback::success::nonce1Helper(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    $storage = getContractStorage();
+    executeNonce(incomingNonce);
+
+    ;; get the expected storage after calling the helper and
+    ;; revert the state to what it was before to call the shouldPass
+    cell $expectedStorage = getContractStorage();
+    setContractStorage($storage);
+
+    return test::handler::shouldPass(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(true, incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::DELIVERED,
+                md::PacketId::New(
+                    getContractStorage().cl::get<objRef>(Channel::path).lz::Path::reverse(),
+                    incomingNonce
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+;; will emit a packet with NOT_DELIVERED if it's executing and we send a 
+;; lzReceiveStatus with success=false
+(int, slice) lzReceiveExecuteCallback::success::nonce1Unlock(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    $storage = getContractStorage();
+
+    cell executionQueue = DeterministicInsertionCircularQueue::set(
+        $storage.cl::get<cellRef>(Channel::executionQueue),
+        incomingNonce,
+        MOCK_RECEIVE_PACKET_WITH_NONCE(incomingNonce),
+        ExecutionQueue::committed
+    );
+
+    cell $expectedStorage = $storage
+        .cl::set(
+            Channel::executionQueue,
+            executionQueue
+        );
+
+    return test::handler::shouldPass(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(false, incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::LZ_RECEIVE_ALERT,
+                md::LzReceiveStatus::NewFull(
+                    false,
+                    incomingNonce,
+                    0,
+                    empty_cell(),
+                    empty_cell(),
+                    getOrigin(),
+                    MOCK_RECEIVE_PACKET_WITH_NONCE(incomingNonce),
+                    ExecutionStatus::executable
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+;; will emit a packet with NOT_DELIVERED if it's executing and we send a 
+;; lzReceiveStatus with success=false
+(int, slice) lzReceiveExecuteCallback::success::nonce1UnlockHelper(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    $storage = getContractStorage();
+    unlockNonce(incomingNonce);
+
+    ;; get the expected storage after calling the helper and
+    ;; revert the state to what it was before to call the shouldPass
+    cell $expectedStorage = getContractStorage();
+    setContractStorage($storage);
+
+    return test::handler::shouldPass(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(false, incomingNonce),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::LZ_RECEIVE_ALERT,
+                md::LzReceiveStatus::NewFull(
+                    false,
+                    incomingNonce,
+                    0,
+                    empty_cell(),
+                    empty_cell(),
+                    getOrigin(),
+                    MOCK_RECEIVE_PACKET_WITH_NONCE(incomingNonce),
+                    ExecutionStatus::executable
+                )
+            )
+        ]),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+;; nonce is not locked and therefore can't be executed
+(int, slice) lzReceiveExecuteCallback::revert::notExecutingOnSuccess(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(2);
+    int incomingNonce = 3;
+    commitNonce(incomingNonce);
+
+    return test::handler::shouldFail(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(true, incomingNonce),
+        Channel::ERROR::notExecuting
+    );
+}
+
+;; nonce is not locked and therefore can't be executed
+(int, slice) lzReceiveExecuteCallback::revert::notExecutingOnFailure(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(2);
+    int incomingNonce = 3;
+    commitNonce(incomingNonce);
+
+    return test::handler::shouldFail(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(false, incomingNonce),
+        Channel::ERROR::notExecuting
+    );
+}
+
+(int, slice) lzReceiveExecuteCallback::revert::nonceTooBigOnSuccess(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+
+    int lastLockedNonce = 2;
+    commitNonce(lastLockedNonce);
+    lockNonce(lastLockedNonce);
+
+    return test::handler::shouldFail(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(true, lastLockedNonce + MAX_CELL_BITS),
+        Channel::ERROR::notExecuting
+    );
+}
+
+(int, slice) lzReceiveExecuteCallback::revert::nonceTooBigOnFailure(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+
+    int lastLockedNonce = 2;
+    commitNonce(lastLockedNonce);
+    lockNonce(lastLockedNonce);
+
+    return test::handler::shouldFail(
+        lzReceiveExecuteCallback,
+        md::LzReceiveStatus::New(false, lastLockedNonce + MAX_CELL_BITS),
+        Channel::ERROR::notExecuting
+    );
+}
+
+(int, slice) emitPacketStatus::success::basic(cell $storage) impure {
+    int nonce = 1;
+    commitNonce(nonce);
+
+    cell $lzReceiveStatus = md::LzReceiveStatus::NewFull(
+        false,
+        nonce,
+        EXECUTION_VALUE_NANOS,
+        MOCK_EXTRA_DATA(),
+        MOCK_REASON(),
+        ;; Next 3 fields are ignored in input
+        NULLADDRESS,
+        cl::nullObject(),
+        0
+    );
+
+    cell $expectedLzReceiveStatus = md::LzReceiveStatus::NewFull(
+        false,
+        nonce,
+        EXECUTION_VALUE_NANOS,
+        MOCK_EXTRA_DATA(),
+        MOCK_REASON(),
+        getCaller(),
+        MOCK_RECEIVE_PACKET_WITH_NONCE(nonce),
+        ExecutionStatus::executable
+    );
+
+    return test::handler::shouldPass(
+        emitLzReceiveAlert,
+        $lzReceiveStatus,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Channel::event::LZ_RECEIVE_ALERT,
+                $expectedLzReceiveStatus
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; --------------------------------------------------
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- lz receive callback
+            .tpush([lzReceiveExecuteCallback::success::nonce1, "lzReceiveExecuteCallback::success::nonce1"])
+            .tpush([lzReceiveExecuteCallback::success::nonce1Helper, "lzReceiveExecuteCallback::success::nonce1Helper"])
+            .tpush([lzReceiveExecuteCallback::success::nonce1Unlock, "lzReceiveExecuteCallback::success::nonce1Unlock"])
+            .tpush([lzReceiveExecuteCallback::success::nonce1UnlockHelper, "lzReceiveExecuteCallback::success::nonce1UnlockHelper"])
+            .tpush([lzReceiveExecuteCallback::revert::notExecutingOnSuccess, "lzReceiveExecuteCallback::revert::notExecutingOnSuccess"])
+            .tpush([lzReceiveExecuteCallback::revert::notExecutingOnFailure, "lzReceiveExecuteCallback::revert::notExecutingOnFailure"])
+            .tpush([lzReceiveExecuteCallback::revert::nonceTooBigOnSuccess, "lzReceiveExecuteCallback::revert::nonceTooBigOnSuccess"])
+            .tpush([lzReceiveExecuteCallback::revert::nonceTooBigOnFailure, "lzReceiveExecuteCallback::revert::nonceTooBigOnFailure"])
+            ;; -- emitPacketStatus
+            .tpush([emitPacketStatus::success::basic, "emitPacketStatus::success::basic"])
+    );
+}

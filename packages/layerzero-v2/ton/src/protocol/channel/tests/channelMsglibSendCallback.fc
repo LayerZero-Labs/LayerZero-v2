@@ -1,0 +1,492 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/BytesEncoder.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+#include "../../../classes/msgdata/LzSend.fc";
+#include "../../../classes/msgdata/MsglibSendCallback.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::send"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;; --- helpers
+
+;; $mdMsglibSendCallback, expectedStorage, expectedLzSend, packet
+(cell, cell, cell, cell) msglibSendCallback::prepareWorkerQuoteFail(cell $storage) impure {
+    int sendRequestId = getContractStorage().cl::get<uint64>(Channel::lastSendRequestId) + 1;
+
+    ;; make sure the channel has enough ZRO to pay the fee
+    setContractStorage($storage.cl::set(Channel::zroBalance, ZRO_FEE));
+
+    ;; create a send request and call channelSend
+    channelSend(md::MdObj::New(MOCK_LZ_SEND(), MOCK_SML_SEND_EP_CONFIG()));
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(
+        MOCK_LZ_SEND_WITH_ID(sendRequestId)
+    );
+
+    cell expectedStorage = getContractStorage()
+        .cl::set(
+            Channel::sendRequestQueue,
+            DeterministicInsertionCircularQueue::delete(
+                getContractStorage().cl::get<cellRef>(Channel::sendRequestQueue),
+                sendRequestId
+            )
+        );
+
+    ;; create a mock send packet with nonce
+    cell $packet = MOCK_SEND_PACKET_WITH_NONCE(0);
+
+    cell $expectedLzSend = MOCK_LZ_SEND_WITH_ID(sendRequestId)
+        .cl::set(md::LzSend::packet, $packet)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+
+    return ($mdMsglibSendCallback, expectedStorage, $expectedLzSend, $packet);
+}
+
+;; mdMsglibSendCallback, expectedStorage, expectedLzSend, packet, expectedEncodedPacket, packetNonce
+(cell, cell, cell, cell, cell, int) msglibSendCallback::prepareSuccess(cell $storage, tuple payees) impure {
+    setContractStorage($storage.cl::set(Channel::zroBalance, ZRO_FEE));
+
+    int sendRequestId = getContractStorage()
+        .cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell $packet = MOCK_SEND_PACKET();
+
+    int packetGuid = lz::Packet::calculateGuid(MOCK_SEND_PATH(), sendRequestId);
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_PAYEES(
+        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+        payees
+    );
+
+    int packetNonce = getContractStorage().cl::get<uint64>(Channel::outboundNonce) + 1;
+    cell expectedEncodedPacket = BytesEncoder::build<PacketV1>(
+            $packet
+                .cl::set(lz::Packet::nonce, packetNonce)
+                .cl::set(lz::Packet::guid, packetGuid)
+        )
+        .BytesEncoder::serialize();
+
+    cell $expectedLzSend = MOCK_LZ_SEND_WITH_ID(sendRequestId)
+        .cl::set(
+            md::LzSend::packet,
+            $packet
+                .cl::set(lz::Packet::nonce, packetNonce)
+                .cl::set(lz::Packet::guid, packetGuid)
+        )
+        .cl::set(md::LzSend::sendMsglibManager, SEND_MSGLIB_MANAGER_ADDRESS)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+
+   cell expectedSendQueue = DeterministicInsertionCircularQueue::delete(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        sendRequestId
+    );
+
+    cell expectedStorage = getContractStorage()
+            .cl::set(Channel::zroBalance, 0)
+            .cl::set(Channel::sendRequestQueue, expectedSendQueue)
+            .cl::set(Channel::outboundNonce, packetNonce);
+
+    return ($mdMsglibSendCallback, expectedStorage, $expectedLzSend, $packet, expectedEncodedPacket, packetNonce);
+}
+
+tuple generateActionsForMsglibSendCallback(cell $mdMsglibSendCallback, cell $expectedLzSend, cell $packet, cell expectedEncodedPacket, int packetNonce) impure {
+    (_, tuple actions) = preamble();
+    cell serializedPayees = $mdMsglibSendCallback
+        .cl::get<cellRef>(md::MsglibSendCallback::payees);
+    tuple payees = deserializePayees(serializedPayees);
+
+    int numPayees = payees.tlen();
+    repeat (numPayees) {
+        [int payeeAddress, int nativeAmount] = payees~tpopPayee();
+        actions~pushAction<payment>(
+            payeeAddress,
+            nativeAmount,
+            0
+        );
+    }
+
+    actions~pushAction<event>(
+        Channel::event::PACKET_SENT,
+        ;; if state == success, emit the Packet sent event to the controller
+        md::PacketSent::New(
+            NATIVE_FEE,
+            ZRO_FEE,
+            $expectedLzSend.cl::get<objRef>(md::LzSend::extraOptions),
+            $expectedLzSend.cl::get<objRef>(md::LzSend::enforcedOptions),
+            expectedEncodedPacket,
+            packetNonce,
+            SEND_MSGLIB_MANAGER_ADDRESS,
+            lz::SmlJobAssigned::New(MOCK_FEE)
+            ;; that the msglib connection claims is the manager address
+        )
+    );
+
+    actions~pushAction<call>(
+        $packet
+            .cl::get<objRef>(lz::Packet::path)
+            .cl::get<address>(lz::Path::srcOApp),
+        Layerzero::OP::CHANNEL_SEND_CALLBACK,
+        md::MdObj::New(
+            md::MessagingReceipt::New(
+                $expectedLzSend,
+                NATIVE_FEE,
+                ZRO_FEE,
+                Channel::NO_ERROR
+            ),
+            getInitialStorage()
+        )
+    );
+    
+    return actions;
+}
+
+tuple generateActionsForMsglibSendCallbackWithErrors(cell $expectedLzSend, cell $packet) impure {
+    (_, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        $packet
+            .cl::get<objRef>(lz::Packet::path)
+            .cl::get<address>(lz::Path::srcOApp),
+        Layerzero::OP::CHANNEL_SEND_CALLBACK,
+        md::MdObj::New(
+            md::MessagingReceipt::New(
+                $expectedLzSend,
+                0,
+                0,
+                Uln::ErrorCode::WORKER_QUOTE_FAILED
+            ),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+(int, slice) _msglibSendCallbackWithPayees(cell $storage, int numPayees) impure {
+    (   cell $mdMsglibSendCallback,
+        cell $expectedStorage,
+        cell $expectedLzSend,
+        cell $packet,
+        cell expectedEncodedPacket,
+        int packetNonce
+    ) = msglibSendCallback::prepareSuccess($storage, MOCK_PAYEES(numPayees));
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        generateActionsForMsglibSendCallback(
+            $mdMsglibSendCallback,
+            $expectedLzSend,
+            $packet,
+            expectedEncodedPacket,
+            packetNonce
+        ),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) msglibSendCallback::success::zeroPayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 0);
+}
+
+(int, slice) msglibSendCallback::success::onePayee(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 1);
+}
+
+(int, slice) msglibSendCallback::success::twoPayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 2);
+}
+
+(int, slice) msglibSendCallback::success::threePayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 3);
+}
+
+(int, slice) msglibSendCallback::success::fourPayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 4);
+}
+
+(int, slice) msglibSendCallback::success::fivePayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 5);
+}
+
+(int, slice) msglibSendCallback::success::sixPayees(cell $storage) impure {
+    return _msglibSendCallbackWithPayees($storage, 6);
+}
+
+(int, slice) msglibSendCallback::revert::notEnoughNative(cell $storage) impure {
+    setContractStorage($storage.cl::set(Channel::zroBalance, ZRO_FEE));
+    int sendRequestId = getContractStorage().cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES(
+        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+        NATIVE_FEE + 1,
+        ZRO_FEE
+    );
+
+   cell expectedSendQueue = DeterministicInsertionCircularQueue::delete(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        sendRequestId
+    );
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+                        NATIVE_FEE + 1,
+                        ZRO_FEE,
+                        Channel::ERROR::notEnoughNative
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage.cl::set(Channel::sendRequestQueue, expectedSendQueue),
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::revert::notEnoughZroToken(cell $storage) impure {
+    setContractStorage($storage.cl::set(Channel::zroBalance, ZRO_FEE + 1));
+    int sendRequestId = getContractStorage().cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES(
+        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+        NATIVE_FEE,
+        ZRO_FEE + 1
+    );
+    
+   cell expectedSendQueue = DeterministicInsertionCircularQueue::delete(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        sendRequestId
+    );
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+                        NATIVE_FEE,
+                        ZRO_FEE + 1,
+                        Channel::ERROR::notEnoughZroToken
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage.cl::set(Channel::sendRequestQueue, expectedSendQueue),
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::revert::notEnoughZroTokenBalance(cell $storage) impure {
+    setContractStorage($storage.cl::set(Channel::zroBalance, ZRO_FEE - 1));
+    int sendRequestId = getContractStorage().cl::get<uint64>(Channel::lastSendRequestId) + 1;
+    cell $lzSend = MOCK_LZ_SEND();
+    cell $mdObj = md::MdObj::New(
+        $lzSend,
+        MOCK_SML_SEND_EP_CONFIG()
+    );
+    channelSend($mdObj);
+    $storage = getContractStorage();
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES(
+        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+        NATIVE_FEE,
+        ZRO_FEE
+    );
+
+   cell expectedSendQueue = DeterministicInsertionCircularQueue::delete(
+        $storage.cl::get<cellRef>(Channel::sendRequestQueue),
+        sendRequestId
+    );
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                SRC_OAPP,
+                Layerzero::OP::CHANNEL_SEND_CALLBACK,
+                md::MdObj::New(
+                    md::MessagingReceipt::New(
+                        MOCK_LZ_SEND_WITH_ID(sendRequestId),
+                        NATIVE_FEE,
+                        ZRO_FEE,
+                        Channel::ERROR::notEnoughZroTokenBalance
+                    ),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        $storage.cl::set(Channel::sendRequestQueue, expectedSendQueue),
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::success::lzSendHashMismatch(cell $storage) impure {
+    channelSend(md::MdObj::New(MOCK_LZ_SEND_WITH_ID(9), MOCK_SML_SEND_EP_CONFIG()));
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK()
+        .cl::set(md::MsglibSendCallback::lzSend, MOCK_LZ_SEND_WITH_ID(10));
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::success::lzSendHashMismatchWithCorrectRequestId(cell $storage) impure {
+    channelSend(md::MdObj::New(MOCK_LZ_SEND(), MOCK_SML_SEND_EP_CONFIG()));
+
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK()
+        .cl::set(
+            md::MsglibSendCallback::lzSend,
+            MOCK_LZ_SEND_WITH_ID(1).cl::set(md::LzSend::nativeFee, NATIVE_FEE * 2)
+        );
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::success::mdMsglibSendCallbackWithError(cell $storage) impure {
+    (   cell $mdMsglibSendCallback,
+        cell $expectedStorage,
+        cell $expectedLzSend,
+        cell $packet
+    ) = msglibSendCallback::prepareWorkerQuoteFail($storage);
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        generateActionsForMsglibSendCallbackWithErrors(
+            $expectedLzSend,
+            $packet
+        ),
+        $expectedStorage,
+        txnContext
+    );
+}
+
+(int, slice) msglibSendCallback::success::sendRequestDoesNotExist(cell $storage) impure {
+    cell $mdMsglibSendCallback = MOCK_MSGLIB_SEND_CALLBACK()
+        .cl::set(md::MsglibSendCallback::lzSend, MOCK_LZ_SEND_WITH_ID(10));
+
+    return test::handler::shouldPass(
+        msglibSendCallback,
+        $mdMsglibSendCallback,
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- msglib send Callback
+            .tpush([msglibSendCallback::success::zeroPayees, "msglibSendCallback::success::zeroPayees"])
+            .tpush([msglibSendCallback::success::onePayee, "msglibSendCallback::success::onePayee"])
+            .tpush([msglibSendCallback::success::twoPayees, "msglibSendCallback::success::twoPayees"])
+            .tpush([msglibSendCallback::success::threePayees, "msglibSendCallback::success::threePayees"])
+            .tpush([msglibSendCallback::success::fourPayees, "msglibSendCallback::success::fourPayees"])
+            .tpush([msglibSendCallback::success::fivePayees, "msglibSendCallback::success::fivePayees"])
+            .tpush([msglibSendCallback::success::sixPayees, "msglibSendCallback::success::sixPayees"])
+            .tpush([msglibSendCallback::revert::notEnoughNative, "msglibSendCallback::revert::notEnoughNative"])
+            .tpush([msglibSendCallback::revert::notEnoughZroToken, "msglibSendCallback::revert::notEnoughZroToken"])
+            .tpush([msglibSendCallback::revert::notEnoughZroTokenBalance, "msglibSendCallback::revert::notEnoughZroTokenBalance"])
+            .tpush([msglibSendCallback::success::lzSendHashMismatch, "msglibSendCallback::success::lzSendHashMismatch"])
+            .tpush([msglibSendCallback::success::mdMsglibSendCallbackWithError, "msglibSendCallback::success::mdMsglibSendCallbackWithError"])
+            .tpush([msglibSendCallback::success::sendRequestDoesNotExist, "msglibSendCallback::success::sendRequestDoesNotExist"])
+            .tpush([msglibSendCallback::success::lzSendHashMismatchWithCorrectRequestId, "msglibSendCallback::success::lzSendHashMismatchWithCorrectRequestId"])
+    );
+}

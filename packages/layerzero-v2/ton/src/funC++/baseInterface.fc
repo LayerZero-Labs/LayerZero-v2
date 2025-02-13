@@ -1,0 +1,15 @@
+const int BaseInterface::event::AUTHENTICATED = "AUTHENTICATED"u;
+const int BaseInterface::event::INITIALIZED = "INITIALIZED"u;
+
+const int BaseInterface::ERROR::notAuthenticated = 257;
+const int BaseInterface::ERROR::onlyOwner = 258;
+const int BaseInterface::ERROR::notInitialized = 259;
+const int BaseInterface::ERROR::alreadyInitialized = 260;
+const int BaseInterface::ERROR::invalidOpcode = 261;
+const int BaseInterface::ERROR::eventEmitted = 262;
+const int BaseInterface::ERROR::invalidActionType = 263;
+const int BaseInterface::ERROR::invalidEventSource = 264;
+
+const int BaseInterface::OP::INITIALIZE = "BaseInterface::OP::INITIALIZE"c;
+const int BaseInterface::OP::EMPTY = 0;
+const int BaseInterface::OP::EVENT = "BaseInterface::OP::EVENT"c;

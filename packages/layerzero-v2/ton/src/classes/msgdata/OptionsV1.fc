@@ -1,0 +1,51 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::OptionsV1::NAME = "OptionsV1"u;
+
+;; field names
+const int md::OptionsV1::lzReceiveGas = 0;
+const int md::OptionsV1::lzReceiveValue = 1;
+const int md::OptionsV1::nativeDropAddress = 2;
+const int md::OptionsV1::nativeDropAmount = 3;
+
+cell md::OptionsV1::New(
+    int lzReceiveGas,
+    int lzReceiveValue,
+    int nativeDropAddress,
+    int nativeDropAmount
+) impure inline method_id {
+    return cl::declare(
+        md::OptionsV1::NAME,
+        unsafeTuple([
+            [cl::t::uint256, lzReceiveGas],          ;; md::OptionsV1::lzReceiveGas
+            [cl::t::uint256, lzReceiveValue],        ;; md::OptionsV1::lzReceiveValue
+            [cl::t::address, nativeDropAddress],    ;; md::OptionsV1::nativeDropAddress
+            [cl::t::uint256, nativeDropAmount]       ;; md::OptionsV1::nativeDropAmount
+        ])
+    );
+}
+
+;; ========================== Object Multi-Getters ==========================
+
+const int md::OptionsV1::_lzReceiveGasOffset = _HEADER_WIDTH;
+const int md::OptionsV1::_lzReceiveValueOffset = md::OptionsV1::_lzReceiveGasOffset + 256;
+
+const int md::OptionsV1::_nativeDropAddressOffset = 0;
+const int md::OptionsV1::_nativeDropAmountOffset = md::OptionsV1::_nativeDropAddressOffset + 256;
+
+
+int md::OptionsV1::getLzReceiveGas(cell $self) impure inline {
+    return $self.cellPreloadUint256At(md::OptionsV1::_lzReceiveGasOffset);
+}
+
+;; (lzReceiveGas, lzReceiveValue, nativeDropAmount)
+(int, int, int) md::OptionsV1::decodeCoins(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    slice ref2 = selfSlice.preloadRefSliceAt(2);
+    return (
+        selfSlice.preloadUint256At(md::OptionsV1::_lzReceiveGasOffset),
+        selfSlice.preloadUint256At(md::OptionsV1::_lzReceiveValueOffset),
+        ref2.preloadUint256At(md::OptionsV1::_nativeDropAmountOffset)
+    );
+}

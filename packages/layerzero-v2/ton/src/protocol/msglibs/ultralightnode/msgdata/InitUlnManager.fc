@@ -1,0 +1,18 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required md name
+const int md::InitUlnManager::NAME = "InitUlnMgr"u;
+
+;; field names
+const int md::InitUlnManager::endpointCode = 0;
+const int md::InitUlnManager::channelCode = 1;
+
+cell md::InitUlnManager::New(cell endpointCode, cell channelCode) impure inline method_id {
+    return cl::declare(
+        md::InitUlnManager::NAME,
+        unsafeTuple([
+            [cl::t::cellRef, endpointCode],   ;; md::InitUlnManager::endpointCode
+            [cl::t::cellRef, channelCode]     ;; md::InitUlnManager::channelCode
+        ])
+    );
+}

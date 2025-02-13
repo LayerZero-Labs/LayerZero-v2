@@ -1,0 +1,93 @@
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../funC++/classlib.fc";
+#include "../EpConfig.fc";
+#include "../Path.fc";
+#include "../../../../tests/consts.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "lzClasses"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) epConfig::isValid::success::basic(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::VALID
+    );
+}
+
+(int, slice) epConfig::isValid::revert::invalidTimeoutExpiry(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglibExpiry, (now() - 1));
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::ERROR::invalidTimeoutExpiry
+    );
+}
+
+(int, slice) epConfig::isValid_invalid::revert::timeoutReceiveMsglib(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglib, NULLADDRESS);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::ERROR::invalidTimeoutReceiveMsglib
+    );
+}
+
+(int, slice) epConfig::isValid::revert::sameMsglib(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglib, RECEIVE_MSGLIB_ADDRESS);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::ERROR::sameMsglib
+    );
+}
+
+(int, slice) epConfig::isValid::success::nullAddresses(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglibExpiry, 0)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglib, NULLADDRESS)
+        .cl::set(lz::EpConfig::receiveMsglib, NULLADDRESS);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::VALID
+    );
+}
+
+(int, slice) epConfig::isValid::success::timeoutReceiveMsglibNull(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglibExpiry, 0)
+        .cl::set(lz::EpConfig::timeoutReceiveMsglib, NULLADDRESS);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::VALID
+    );
+}
+
+(int, slice) epConfig::isValid::success::receiveMsglibNull(cell $storage) impure {
+    cell $epConfig = MOCK_EP_CONFIG(true)
+        .cl::set(lz::EpConfig::receiveMsglib, NULLADDRESS);
+
+    return test::shouldBeTrue(
+        lz::EpConfig::isValid($epConfig) == lz::EpConfig::VALID
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([epConfig::isValid::success::basic, "epConfig::isValid::success::basic"])
+        .tpush([epConfig::isValid::revert::invalidTimeoutExpiry, "epConfig::isValid::revert::invalidTimeoutExpiry"])
+        .tpush([epConfig::isValid_invalid::revert::timeoutReceiveMsglib, "epConfig::isValid_invalid::revert::timeoutReceiveMsglib"])
+        .tpush([epConfig::isValid::revert::sameMsglib, "epConfig::isValid::revert::sameMsglib"])
+        .tpush([epConfig::isValid::success::nullAddresses, "epConfig::isValid::success::nullAddresses"])
+        .tpush([epConfig::isValid::success::timeoutReceiveMsglibNull, "epConfig::isValid::success::timeoutReceiveMsglibNull"])
+        .tpush([epConfig::isValid::success::receiveMsglibNull, "epConfig::isValid::success::receiveMsglibNull"])
+    ;
+}

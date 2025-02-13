@@ -1,0 +1,44 @@
+#include "../handler.fc";
+#include "../interface.fc";
+
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/testMain.fc";
+#include "../../../../interfaces.fc";
+#include "../../../../../../tests/mocks.fc";
+#include "../../msgdata/UlnSendConfig.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/stdlib.fc";
+
+slice _testName() { return "ulnUtils"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+const int True = 1;
+
+;; this test doesn't actually mean anything
+(int, slice) helper::success::globvar3Unused(cell $args) impure {
+    return test::shouldBeTrue(_globvarIsNull(3));
+}
+
+(int, slice) UlnWorkerFeelibInfo::sizeInvariant(cell $args) impure {
+    cell $info = UlnWorkerFeelibInfo::New(
+        1,
+        begin_cell().store_uint256(1).end_cell(),
+        begin_cell().store_uint256(2).end_cell(),
+        2,
+        3,
+        4,
+        true
+    );
+    (int numCells, _, _) = compute_data_size($info, MAX_U8);
+    return test::shouldBeTrue(numCells == 4);
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([helper::success::globvar3Unused, "helper::success::globvar3Unused"])
+        .tpush([UlnWorkerFeelibInfo::sizeInvariant, "UlnWorkerFeelibInfo::sizeInvariant"])
+    ;
+}

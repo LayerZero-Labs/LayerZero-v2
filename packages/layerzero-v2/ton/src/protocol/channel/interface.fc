@@ -1,0 +1,61 @@
+#include "callbackOpcodes.fc";
+
+;; Opcodes
+const int Channel::OP::SET_EP_CONFIG_OAPP = "Channel::OP::SET_EP_CONFIG_OAPP"c;
+const int Channel::OP::MSGLIB_SEND_CALLBACK = "Channel::OP::MSGLIB_SEND_CALLBACK"c;
+const int Channel::OP::CHANNEL_SEND = "Channel::OP::CHANNEL_SEND"c;
+const int Channel::OP::CHANNEL_COMMIT_PACKET = "Channel::OP::CHANNEL_COMMIT_PACKET"c;
+const int Channel::OP::LZ_RECEIVE_PREPARE = "Channel::OP::LZ_RECEIVE_PREPARE"c;
+const int Channel::OP::DEPOSIT_ZRO = "Channel::OP::DEPOSIT_ZRO"c;
+const int Channel::OP::NILIFY = "Channel::OP::NILIFY"c;
+const int Channel::OP::BURN = "Channel::OP::BURN"c;
+const int Channel::OP::FORCE_ABORT = "Channel::OP::FORCE_ABORT"c;
+const int Channel::OP::LZ_RECEIVE_LOCK = "Channel::OP::LZ_RECEIVE_LOCK"c;
+const int Channel::OP::SYNC_MSGLIB_CONNECTION = "Channel::OP::SYNC_MSGLIB_CONNECTION"c;
+const int Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK = "Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK"c;
+const int Channel::OP::NOTIFY_PACKET_EXECUTED = "Channel::OP::NOTIFY_PACKET_EXECUTED"c;
+const int Channel::OP::EMIT_LZ_RECEIVE_ALERT = "Channel::OP::EMIT_LZ_RECEIVE_ALERT"c;
+
+;; EVENTS
+const int Channel::event::EP_CFG_OAPP_SET = "Channel::event::EP_CFG_OAPP_SET"u;
+const int Channel::event::PACKET_SENT = "Channel::event::PACKET_SENT"u;
+const int Channel::event::PACKET_COMMITTED = "Channel::event::PACKET_COMMITTED"u;
+const int Channel::event::PACKET_NILIFIED = "Channel::event::PACKET_NILIFIED"u;
+const int Channel::event::PACKET_BURNED = "Channel::event::PACKET_BURNED"u;
+const int Channel::event::DELIVERED = "Channel::event::DELIVERED"u;
+const int Channel::event::LZ_RECEIVE_ALERT = "Channel::event::LZ_RECEIVE_ALERT"u;
+const int Channel::event::NOT_EXECUTABLE = "Channel::event::NOT_EXECUTABLE"u;
+const int Channel::event::ZRO_DEPOSITED = "Channel::event::ZRO_DEPOSITED"u;
+
+;; ERRORS
+const int Channel::ERROR::onlyEndpoint = 129;
+const int Channel::ERROR::onlyOApp = 130;
+const int Channel::ERROR::onlyApprovedSendMsglib = 131;
+const int Channel::ERROR::onlyApprovedReceiveMsglib = 132;
+const int Channel::ERROR::invalidNonce = 133;
+const int Channel::ERROR::cannotAbortSend = 134;
+const int Channel::ERROR::sendAborted = 135;
+const int Channel::ERROR::notEnoughNative = 136;
+const int Channel::ERROR::notEnoughZroToken = 137;
+const int Channel::ERROR::sendQueueCongested = 138;
+const int Channel::ERROR::notEnoughZroTokenBalance = 139;
+const int Channel::ERROR::notCommittable = 140;
+const int Channel::ERROR::notExecutable = 141;
+const int Channel::ERROR::notExecuting = 142;
+const int Channel::ERROR::wrongPath = 143;
+const int Channel::ERROR::MsglibBlocked = 144;
+const int Channel::NO_ERROR = 0;
+
+;; States for view function and packet executability management
+const int ExecutionStatus::uncommitted = 0;
+const int ExecutionStatus::committedNotExecutable = 1;
+const int ExecutionStatus::executable = 2;
+const int ExecutionStatus::executed = 3;
+const int ExecutionStatus::executing = 4; ;; new state
+const int ExecutionStatus::committed = 8; ;; only used internally
+
+const int ExecutionQueue::uncommitted = 0;
+const int ExecutionQueue::executing = 1;
+const int ExecutionQueue::committed = 2;
+
+const int SendRequestQueue::sending = 1;

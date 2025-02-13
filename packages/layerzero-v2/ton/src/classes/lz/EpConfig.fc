@@ -1,0 +1,158 @@
+#include "../../funC++/classlib.fc";
+
+;; ERRORS
+const int lz::EpConfig::ERROR::sameMsglib = 1025;
+const int lz::EpConfig::ERROR::invalidTimeoutExpiry = 1026;
+const int lz::EpConfig::ERROR::invalidTimeoutReceiveMsglib = 1027;
+const int lz::EpConfig::VALID = 42069 & ERRORCODE_MASK;
+
+;; required storage name
+const int lz::EpConfig::NAME = "EpConfig"u;
+
+;; field names
+const int lz::EpConfig::isNull = 0;
+const int lz::EpConfig::sendMsglibManager = 1;
+const int lz::EpConfig::sendMsglib = 2;
+const int lz::EpConfig::sendMsglibConnection = 3;
+const int lz::EpConfig::receiveMsglib = 4;
+const int lz::EpConfig::receiveMsglibConnection = 5;
+const int lz::EpConfig::timeoutReceiveMsglib = 6;
+const int lz::EpConfig::timeoutReceiveMsglibConnection = 7;
+const int lz::EpConfig::timeoutReceiveMsglibExpiry = 8;
+
+cell lz::EpConfig::NewWithConnection(
+    int isNull,
+    int sendMsglibManager,
+    int sendMsglib,
+    int sendMsglibConnection,
+    int receiveMsglib,
+    int receiveMsglibConnection,
+    int timeoutReceiveMsglib,
+    int timeoutReceiveMsglibConnection,
+    int timeoutReceiveMsglibExpiry
+) impure inline method_id {
+    return cl::declare(
+        lz::EpConfig::NAME,
+        unsafeTuple([
+            [cl::t::bool, isNull],                            ;; lz::EpConfig::isNull
+            [cl::t::address, sendMsglibManager],              ;; lz::EpConfig::sendMsglibManager
+            [cl::t::address, sendMsglib],                     ;; lz::EpConfig::sendMsglib
+            [cl::t::address, sendMsglibConnection],           ;; lz::EpConfig::sendMsglibConnection
+            [cl::t::address, receiveMsglib],                  ;; lz::EpConfig::receiveMsglib
+            [cl::t::address, receiveMsglibConnection],        ;; lz::EpConfig::receiveMsglibConnection
+            [cl::t::address, timeoutReceiveMsglib],           ;; lz::EpConfig::timeoutReceiveMsglib
+            [cl::t::address, timeoutReceiveMsglibConnection], ;; lz::EpConfig::timeoutReceiveMsglibConnection
+            [cl::t::uint64, timeoutReceiveMsglibExpiry]       ;; lz::EpConfig::timeoutReceiveMsglibExpiry
+        ])
+    );
+}
+
+cell lz::EpConfig::New(
+    int isNull,
+    int sendMsglibManager,
+    int sendMsglib,
+    int receiveMsglib,
+    int timeoutReceiveMsglib,
+    int timeoutReceiveMsglibExpiry
+) impure inline method_id {
+    return lz::EpConfig::NewWithConnection(
+        isNull,
+        sendMsglibManager,
+        sendMsglib,
+        NULLADDRESS,
+        receiveMsglib,
+        NULLADDRESS,
+        timeoutReceiveMsglib,
+        NULLADDRESS,
+        timeoutReceiveMsglibExpiry
+    );
+}
+
+cell lz::EpConfig::NewWithDefaults() impure inline method_id {
+    return lz::EpConfig::NewWithConnection(
+        true,
+        NULLADDRESS,
+        NULLADDRESS,
+        NULLADDRESS,
+        NULLADDRESS,
+        NULLADDRESS,
+        NULLADDRESS,
+        NULLADDRESS,
+        0
+    );
+}
+
+;; ====================== Object Multi-Getters =====================
+
+;; in root cell
+const int lz::EpConfig::_isNullOffset = _HEADER_WIDTH;
+const int lz::EpConfig::_sendMsglibManagerOffset = lz::EpConfig::_isNullOffset + 1;
+const int lz::EpConfig::_sendMsglibOffset = lz::EpConfig::_sendMsglibManagerOffset + 256;
+
+;; in ref[2]
+const int lz::EpConfig::_sendMsglibConnectionOffset = 0;
+const int lz::EpConfig::_receiveMsglibOffset = lz::EpConfig::_sendMsglibConnectionOffset + 256;
+const int lz::EpConfig::_receiveMsglibConnectionOffset = lz::EpConfig::_receiveMsglibOffset + 256;
+
+;; in ref[3]
+const int lz::EpConfig::_timeoutReceiveMsglibOffset = 0;
+const int lz::EpConfig::_timeoutReceiveMsglibConnectionOffset = lz::EpConfig::_timeoutReceiveMsglibOffset + 256;
+const int lz::EpConfig::_timeoutReceiveMsglibExpiryOffset = lz::EpConfig::_timeoutReceiveMsglibConnectionOffset + 256;
+
+;; (isNull, sendMsglibManager, sendMsglib, sendMsglibConnection)
+(int, int, int, int) lz::EpConfig::deserializeSendConfig(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadBoolAt(lz::EpConfig::_isNullOffset),
+        selfSlice.preloadAddressAt(lz::EpConfig::_sendMsglibManagerOffset),
+        selfSlice.preloadAddressAt(lz::EpConfig::_sendMsglibOffset),
+        selfSlice.preloadRefAt(2).cellPreloadAddressAt(lz::EpConfig::_sendMsglibConnectionOffset)
+    );
+}
+
+;; (isNull, receiveMsglibConnection)
+(int, int) lz::EpConfig::deserializeReceiveConfig(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadBoolAt(lz::EpConfig::_isNullOffset),
+        selfSlice.preloadRefAt(2).cellPreloadAddressAt(lz::EpConfig::_receiveMsglibConnectionOffset)
+    );
+}
+
+;; ====================== Object Validators =====================
+
+int lz::EpConfig::isValid(cell $epConfig) impure inline {
+    int receiveMsglib = $epConfig.cl::get<address>(lz::EpConfig::receiveMsglib);
+    int timeoutReceiveMsglib = $epConfig.cl::get<address>(lz::EpConfig::timeoutReceiveMsglib);
+    int timeoutReceiveMsglibExpiry = $epConfig.cl::get<uint64>(lz::EpConfig::timeoutReceiveMsglibExpiry);
+
+    if ((timeoutReceiveMsglib == NULLADDRESS) & (timeoutReceiveMsglibExpiry != 0)) {
+        ;; If the timeout receive msglib is null, the expiry must be 0
+        return lz::EpConfig::ERROR::invalidTimeoutReceiveMsglib;
+    } elseif ((timeoutReceiveMsglib != NULLADDRESS) & (timeoutReceiveMsglibExpiry <= now())) {
+        ;; if the timeout receive msglib is not null, the expiry must be in the future
+        return lz::EpConfig::ERROR::invalidTimeoutExpiry;
+    } elseif ((receiveMsglib != NULLADDRESS) & (receiveMsglib == timeoutReceiveMsglib)) {
+        ;; the receive msglib and timeout receive msglib must be different
+        return lz::EpConfig::ERROR::sameMsglib;
+    }
+
+    return lz::EpConfig::VALID;
+}
+
+cell lz::EpConfig::sanitize(cell $epConfig) impure {
+    cell $sanitizedEpConfig = lz::EpConfig::NewWithConnection(
+        $epConfig.cl::get<bool>(lz::EpConfig::isNull),
+        $epConfig.cl::get<address>(lz::EpConfig::sendMsglibManager),
+        $epConfig.cl::get<address>(lz::EpConfig::sendMsglib),
+        $epConfig.cl::get<address>(lz::EpConfig::sendMsglibConnection),
+        $epConfig.cl::get<address>(lz::EpConfig::receiveMsglib),
+        $epConfig.cl::get<address>(lz::EpConfig::receiveMsglibConnection),
+        $epConfig.cl::get<address>(lz::EpConfig::timeoutReceiveMsglib),
+        $epConfig.cl::get<address>(lz::EpConfig::timeoutReceiveMsglibConnection),
+        $epConfig.cl::get<uint64>(lz::EpConfig::timeoutReceiveMsglibExpiry)
+    );
+    int validity = lz::EpConfig::isValid($sanitizedEpConfig);
+    throw_if(validity, validity != lz::EpConfig::VALID);
+    return $sanitizedEpConfig;
+}

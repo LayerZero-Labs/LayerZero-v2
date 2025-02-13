@@ -1,0 +1,24 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::NativeDrop::NAME = "NativeDrop"u;
+
+;; field names
+const int md::NativeDrop::payees = 0;
+const int md::NativeDrop::packetId = 1;
+const int md::NativeDrop::msglib = 2;
+
+cell md::NativeDrop::New(cell payees, cell $packetId, int msglib) impure inline method_id {
+    return cl::declare(
+        md::NativeDrop::NAME,
+        unsafeTuple([   
+            [cl::t::cellRef, payees],   ;; md::NativeDrop::payees
+            [cl::t::objRef, $packetId], ;; md::NativeDrop::packetId
+            [cl::t::address, msglib]    ;; md::NativeDrop::msgLib
+        ])
+    );
+}
+
+cell md::NativeDrop::getPayees(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0);
+}

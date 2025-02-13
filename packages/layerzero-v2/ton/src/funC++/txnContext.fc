@@ -1,0 +1,125 @@
+#include "utils.fc";
+
+global tuple txnContext;
+
+const int _IS_BOUNCED = 0;
+const int _CALLER = 1;
+const int _FWD_FEE = 2;
+const int _OPCODE = 3;
+const int _QUERY_ID = 4;
+const int _BALANCE = 5;
+const int _MSG_VALUE = 6;
+const int _BODY = 7;
+const int _RAW_MSG = 8;
+const int _ORIGIN = 9;
+const int _DONATION_NANOS = 10;
+const int _MD = 11;
+
+int getMsgValue() impure inline {
+    return txnContext.int_at(_MSG_VALUE);
+}
+
+int getOpcode() impure inline {
+    return txnContext.int_at(_OPCODE);
+}
+
+int txnIsBounced() impure inline {
+    return txnContext.int_at(_IS_BOUNCED);
+}
+
+int getContractBalance() impure inline {
+    return txnContext.int_at(_BALANCE);
+}
+
+int getInitialContractBalance() impure inline {
+    return getContractBalance() - getMsgValue();
+}
+
+int getCaller() impure inline {
+    return txnContext.int_at(_CALLER);
+}
+
+int getOrigin() impure inline {
+    return txnContext.int_at(_ORIGIN);
+}
+
+slice getOriginStd() impure inline {
+    return hashpartToBasechainAddressStd(getOrigin());
+}
+
+int getDonationNanos() impure inline {
+    return txnContext.int_at(_DONATION_NANOS);
+}
+
+() setDonationNanos(int nanos) impure inline {
+    txnContext~tset(_DONATION_NANOS, nanos);
+}
+
+cell getMsgData() impure inline {
+    return txnContext.cell_at(_MD);
+}
+
+() setOrigin(int newOrigin) impure inline {
+    txnContext~tset(_ORIGIN, newOrigin);
+}
+
+;; returns if slice empty
+;; if empty body, sets opcode=-1 & query_id=-1, so it cannot be faked
+() initTxnContext(int myBalance, int msgValue, cell inMsgFull, slice inMsgBody) impure inline {
+    slice cs = inMsgFull.begin_parse();
+    int flags = cs~load_uint(4);
+
+    int _is_bounced = false;
+    if flags & 1 {
+        _is_bounced = true;
+        inMsgBody~skip_bits(32); ;; 0xFFFFFFFF
+    }
+
+    int opcode = -1;
+    int query_id = -1;
+    int donationNanos = 0;
+    cell md = null();
+
+    slice _sender_address = cs~load_msg_addr();
+    cs~load_msg_addr();
+    cs~load_coins();
+    cs~skip_dict();
+    cs~load_coins();
+    int senderAddress = basechainAddressStdToHashpart(_sender_address);
+
+    ;; by default, the origin is the sender address
+    int origin = senderAddress;
+
+    ;; the inMsgBody parsing is technically compatible with the reference jetton implementation
+    ;; where donationNanos == the amount of tokens received
+    ;; and and the origin will contain garbage data
+    ifnot (inMsgBody.slice_empty?()) {
+        opcode = inMsgBody~load_uint(32);
+        query_id = inMsgBody~load_uint(64);
+        donationNanos = inMsgBody~load_coins();
+        ;; if the origin is explicitly overriden in the body, use that
+        if (inMsgBody.slice_bits() >= 267) {
+            origin = inMsgBody.preload_bits_offset(11, 256).preload_uint(256);
+        }
+        ifnot (inMsgBody.slice_refs_empty?()) {
+            md = inMsgBody.preload_ref();
+        }
+    }
+
+    txnContext = castToTuple([
+        _is_bounced,
+        senderAddress,
+        muldiv(cs~load_coins(), 3, 2),
+        opcode,
+        query_id,
+        myBalance,
+        msgValue,
+        inMsgBody, ;; could be an empty slice
+        inMsgFull,
+        origin,
+        donationNanos,
+        md
+    ]);
+}
+
+(builder) beginTonMessage(int _opcode) asm "txnContext GETGLOB 4 INDEX SWAP NEWC 32 STU 64 STU";

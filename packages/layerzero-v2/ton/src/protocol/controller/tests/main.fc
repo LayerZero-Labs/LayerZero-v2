@@ -1,0 +1,387 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../funC++/baseInterface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/txnContext.fc";
+#include "../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+#include "../../endpoint/storage.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/msgdata/MdEid.fc";
+#include "../../../classes/msgdata/SetAddress.fc";
+#include "../../../classes/msgdata/MessagingReceipt.fc";
+#include "../../../classes/msgdata/MsglibSendCallback.fc";
+#include "../../../classes/msgdata/PacketSent.fc";
+#include "../../../classes/msgdata/LzReceiveStatus.fc";
+#include "../../../classes/msgdata/PacketId.fc";
+#include "../../../classes/msgdata/LzSend.fc";
+#include "../../../classes/msgdata/Nonce.fc";
+#include "../../../workers/msgdata/SignedRequest.fc";
+#include "../../../workers/msgdata/ExecuteParams.fc";
+#include "../../msglibs/ultralightnode/msgdata/DvnFeesPaidEvent.fc";
+#include "../../msglibs/ultralightnode/msgdata/ExecutorFeePaidEvent.fc";
+#include "../../msglibs/ultralightnode/msgdata/UlnEvents.fc";
+#include "../../msglibs/ultralightnode/msgdata/UlnWorkerFeelibInfo.fc";
+#include "../../msglibs/ultralightnode/msgdata/UlnSend.fc";
+#include "../../msglibs/ultralightnode/msgdata/VerificationStatus.fc";
+#include "../../msglibs/ultralightnode/msgdata/UlnWorkerFeelibEvents.fc";
+#include "../../channel/storage.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "controller"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Controller::New(
+            getCaller(),
+            SRC_EID,
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(md::InitEndpoint::New(MOCK_CHANNEL_CODE()));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) deployChannel::success::basic(cell $storage) impure {
+    int owner = getContractAddress();
+
+    ;; corresponds to the path, as it indicates the 'local oApp'
+    spoofCaller(SRC_OAPP);
+
+    ;; generate the endpoint address
+    cell endpointCode = $storage.cl::get<cellRef>(Controller::endpointCode);
+    cell $endpointInitStorage = Endpoint::New(SRC_EID, DST_EID, owner);
+    int endpointAddress = computeContractAddress($endpointInitStorage, endpointCode);
+
+    cell channelCode = $storage.cl::get<cellRef>(Controller::channelCode);
+
+    return test::handler::shouldPass(
+        deployChannel,
+        md::Deploy::New(INITIAL_DEPOSIT, DST_EID, DST_OAPP),
+        unsafeTuple([
+            0,
+            _newAction<deployAndCall>(
+                channelCode,
+                Channel::New(owner, MOCK_SEND_PATH(), endpointAddress),
+                INITIAL_DEPOSIT,
+                BaseInterface::OP::INITIALIZE,
+                cl::nullObject(),
+                0
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) deployChannel::revert::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        deployChannel,
+        md::Deploy::New(INITIAL_DEPOSIT, 0, 1),
+        Controller::ERROR::invalidEid
+    );
+}
+
+(int, slice) deployEndpoint::success::basic(cell $storage) impure {
+    int owner = getContractAddress();
+
+    ;; pull or generate the expected endpoint deployed code
+    cell endpointCode = $storage.cl::get<cellRef>(Controller::endpointCode);
+    cell $endpointInitStorage = Endpoint::New(SRC_EID, DST_EID, owner);
+    cell channelCode = $storage.cl::get<cellRef>(Controller::channelCode);
+
+    return test::handler::shouldPass(
+        deployEndpoint,
+        md::Deploy::New(INITIAL_DEPOSIT, DST_EID, NULLADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<deployAndCall>(
+                endpointCode,
+                $endpointInitStorage,
+                INITIAL_DEPOSIT,
+                BaseInterface::OP::INITIALIZE,
+                md::InitEndpoint::New(channelCode),
+                0
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) deployEndpoint::revert::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        deployEndpoint,
+        md::Deploy::New(INITIAL_DEPOSIT, 0, NULLADDRESS),
+        Controller::ERROR::invalidEid
+    );
+}
+
+(int, slice) setEpConfigDefaults::success::basic(cell $storage) impure {
+    ;; generate the md
+    cell $setEpConfigDefaultsMd = MOCK_SET_EP_CONFIG_MD(true);
+
+    cell $mdEid = md::MdEid::New(
+        $setEpConfigDefaultsMd,
+        DST_EID
+    );
+
+    return test::handler::shouldPass(
+        setEpConfigDefaults,
+        $mdEid,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateEndpointAddress(DST_EID),
+                Endpoint::OP::SET_EP_CONFIG_DEFAULTS,
+                $setEpConfigDefaultsMd
+            )
+        ]),
+        $storage, ;; setEpConfigDefaults does not modify controller state
+        txnContext
+    );
+}
+
+(int, slice) setEpConfigDefaults::revert::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        setEpConfigDefaults,
+        md::MdEid::New(MOCK_SET_EP_CONFIG_MD(true), 0),
+        Controller::ERROR::invalidEid
+    );
+}
+
+(int, slice) setEpConfigOApp::success::basic(cell $storage) impure {
+    int owner = getContractAddress();
+    cell $path = MOCK_SEND_PATH();
+
+    ;; generate the md
+    cell $setEpConfigMd = MOCK_SET_EP_CONFIG_MD(true);
+    cell $mdObj = md::MdObj::New($setEpConfigMd, $path);
+
+    ;; generate the endpoint address
+    cell $endpointInitData = Endpoint::New(SRC_EID, DST_EID, owner);
+    cell endpointCode = $storage.cl::get<cellRef>(Controller::endpointCode);
+    int endpointAddress = computeContractAddress($endpointInitData, endpointCode);
+
+    ;; generate the channel address
+    cell $channelInitData = Channel::New(getContractAddress(), $path, endpointAddress);
+    cell channelCode = $storage.cl::get<cellRef>(Controller::channelCode);
+    int channelAddress = computeContractAddress($channelInitData, channelCode);
+
+    return test::handler::shouldPass(
+        setEpConfigOApp,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                endpointAddress,
+                Endpoint::OP::SET_EP_CONFIG_OAPP,
+                $mdObj
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) setEpConfigOApp::revert::invalidEid(cell $storage) impure {
+    cell $path = MOCK_SEND_PATH().cl::set(lz::Path::dstEid, 0);
+
+    return test::handler::shouldFail(
+        setEpConfigOApp,
+        md::MdObj::New(lz::EpConfig::NewWithDefaults(), $path),
+        Controller::ERROR::invalidEid
+    );
+}
+
+(int, slice) addMsglib::success::basic(cell $storage) impure {
+    cell $mdAddMsgLib = md::AddMsglib::New(MSGLIB_MANAGER_ADDRESS, DST_EID);
+
+    setContractStorage(
+        $storage
+            .cl::set(Controller::eid, SRC_EID)
+            .cl::set(Controller::endpointCode, MOCK_ENDPOINT_CODE())
+    );
+
+    cell $endpointInitData = Endpoint::New(
+        SRC_EID,
+        DST_EID,
+        getContractAddress()
+    );
+
+    int expectedEndpointAddress = computeContractAddress(
+        $endpointInitData,
+        MOCK_ENDPOINT_CODE()
+    );
+
+     return test::handler::shouldPass(
+        addMsglib,
+        $mdAddMsgLib,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                expectedEndpointAddress,
+                Endpoint::OP::ADD_MSGLIB,
+                $mdAddMsgLib
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) addMsglib::revert::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        addMsglib,
+        md::AddMsglib::New(MSGLIB_MANAGER_ADDRESS, 0),
+        Controller::ERROR::invalidEid
+    );
+}
+
+(int, slice) CoinsAmount::success::basic(cell $storage) impure {
+    tuple expectedTxnContext = txnContext.tset(_DONATION_NANOS, 0);
+    setDonationNanos(ZRO_FEE);
+
+    int expectedEndpointAddress = _calculateEndpointAddress(DST_EID);
+
+    int expectedChannelAddress = computeContractAddress(
+        Channel::New(getContractAddress(), MOCK_SEND_PATH(), expectedEndpointAddress),
+        $storage.cl::get<cellRef>(Controller::channelCode)
+    );
+
+    return test::handler::shouldPass(
+        depositZro,
+        MOCK_SEND_PATH(),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                expectedChannelAddress,
+                Channel::OP::DEPOSIT_ZRO,
+                md::CoinsAmount::New(ZRO_FEE)
+            )
+        ]),
+        getContractStorage(),
+        expectedTxnContext
+    );
+}
+
+(int, slice) setZroWallet::success::basic(cell $storage) impure {
+    cell $setAddress = md::SetAddress::New(PROTOCOL_ADMIN_ZRO_WALLET_ADDRESS);
+
+    return test::handler::shouldPass(
+        setZroWallet,
+        $setAddress,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Controller::event::ZRO_WALLET_SET,
+                $setAddress
+            )
+        ]),
+        getContractStorage().cl::set(Controller::zroWallet, PROTOCOL_ADMIN_ZRO_WALLET_ADDRESS),
+        txnContext
+    );
+}
+
+(int, slice) transferOwnership::success::basic(cell $storage) impure {
+    cell $setAddress = md::SetAddress::New(NEW_CONTROLLER_OWNER_ADDRESS);
+
+    return test::handler::shouldPass(
+        transferOwnership,
+        $setAddress,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Controller::event::OWNER_SET_TENTATIVE,
+                $setAddress
+            )
+        ]),
+        getContractStorage().cl::set(Controller::tentativeOwner, NEW_CONTROLLER_OWNER_ADDRESS),
+        txnContext
+    );
+}
+
+(int, slice) claimOwnership::success::basic(cell $storage) impure {
+    cell $setAddress = md::SetAddress::New(NEW_CONTROLLER_OWNER_ADDRESS);
+
+    transferOwnership($setAddress);
+
+    return test::handler::shouldPass(
+        claimOwnership,
+        cl::nullObject(),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                Controller::event::OWNER_SET,
+                $setAddress
+            )
+        ]),
+        getContractStorage()
+            .cl::set(Controller::tentativeOwner, NULLADDRESS)
+            .cl::set(
+                Controller::baseStorage,
+                $storage
+                    .cl::get<objRef>(Controller::baseStorage)
+                    .cl::set(BaseStorage::owner, NEW_CONTROLLER_OWNER_ADDRESS)
+            ),
+        txnContext
+    );
+}
+
+(int, slice) claimOwnership::revert::nullTentativeOwner(cell $storage) impure {
+    return test::handler::shouldFail(
+        claimOwnership,
+        cl::nullObject(),
+        Controller::ERROR::nullTentativeOwner
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            ;; -- deploy channel
+            .tpush([deployChannel::success::basic, "deployChannel::success::basic"])
+            .tpush([deployChannel::revert::invalidEid, "deployChannel::revert::invalidEid"])
+            ;; -- deploy endpoint
+            .tpush([deployEndpoint::success::basic, "deployEndpoint::success::basic"])
+            .tpush([deployEndpoint::revert::invalidEid, "deployEndpoint::revert::invalidEid"])
+            ;; -- set ep config defaults
+            .tpush([setEpConfigDefaults::success::basic, "setEpConfigDefaults::success::basic"])
+            .tpush([setEpConfigDefaults::revert::invalidEid, "setEpConfigDefaults::revert::invalidEid"])
+            ;; -- set ep config oapp
+            .tpush([setEpConfigOApp::success::basic, "setEpConfigOApp::success::basic"])
+            .tpush([setEpConfigOApp::revert::invalidEid, "setEpConfigOApp::revert::invalidEid"])
+            ;; -- add msg lib
+            .tpush([addMsglib::success::basic, "addMsglib::success::basic"])
+            .tpush([addMsglib::revert::invalidEid, "addMsglib::revert::invalidEid"])
+            ;; -- deposit zro
+            .tpush([CoinsAmount::success::basic, "CoinsAmount::success::basic"])
+            ;; -- set zro wallet
+            .tpush([setZroWallet::success::basic, "setZroWallet::success::basic"])
+            ;; -- transfer ownership
+            .tpush([transferOwnership::success::basic, "transferOwnership::success::basic"])
+            ;; -- claim ownership
+            .tpush([claimOwnership::success::basic, "claimOwnership::success::basic"])
+            .tpush([claimOwnership::revert::nullTentativeOwner, "claimOwnership::revert::nullTentativeOwner"])
+    );
+}

@@ -1,0 +1,57 @@
+#include "../../funC++/classlib.fc";
+#include "../../funC++/baseInterface.fc";
+
+;; !!! If you put this storage anywhere other than index 0 of your custom contract storage,
+;; you are gunna have a bad time
+const int BASE_STORAGE_INDEX = 0;
+
+;; required object name
+const int BaseStorage::NAME = "baseStore"u;
+
+;; field names
+const int BaseStorage::owner = 0;
+const int BaseStorage::authenticated = 1;
+const int BaseStorage::initialized = 2;
+const int BaseStorage::initialStorage = 3;
+
+;; In all blockchains with atomic cross-contract call, we can use src/dst/sender/receiver
+;; because the send channel doesn't exist (it's just a nonce).
+;; In TON, we need both send/receive channels, so we use local/remote to provide
+;; a context-free way to refer to the two ends of the channel.
+;; The direction is inferred by the context of the contract (send vs receive).
+;; The srcOApp is the 256-bit hashpart of a standard address.
+cell BaseStorage::New(int owner) impure inline method_id {
+    return cl::declare(
+        BaseStorage::NAME,
+        unsafeTuple([
+            [cl::t::address, owner], ;; BaseStorage::owner
+            [cl::t::bool, false], ;; BaseStorage::authenticated
+            [cl::t::bool, false], ;; BaseStorage::initialized
+            [cl::t::objRef, cl::nullObject()] ;; BaseStorage::initialStorage
+        ])
+    );
+}
+
+const int BaseStorage::_ownerOffset = _HEADER_WIDTH;
+const int BaseStorage::_authenticatedOffset = BaseStorage::_ownerOffset + 256;
+const int BaseStorage::_initializedOffset = BaseStorage::_authenticatedOffset + 1;
+
+int BaseStorage::getOwner(cell $self) impure inline {
+    return $self.cellPreloadAddressAt(BaseStorage::_ownerOffset);
+}
+
+int BaseStorage::getAuthenticated(cell $self) impure inline {
+    return $self.cellPreloadBoolAt(BaseStorage::_authenticatedOffset);
+}
+
+int BaseStorage::getInitialized(cell $self) impure inline {
+    return $self.cellPreloadBoolAt(BaseStorage::_initializedOffset);
+}
+
+cell BaseStorage::getInitialStorage(cell $self) impure inline {
+     return $self.cellPreloadRefAt(0);
+}
+
+cell getBaseStorage() impure inline method_id {
+    return getContractStorage().cellPreloadRefAt(BASE_STORAGE_INDEX);
+}

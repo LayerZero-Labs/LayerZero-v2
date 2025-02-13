@@ -1,0 +1,460 @@
+#include "../../classlib.fc";
+#include "../../constants.fc";
+#include "../../stdlib.fc";
+#include "../../txnContext.fc";
+#include "../../utils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../../tests/testInitTxnContextMain.fc";
+#include "../../../apps/counter/interface.fc";
+#include "../../../classes/msgdata/CounterIncrement.fc";
+
+;; ================== Constants ==================
+
+;; Test values
+const int TEST_TON_AMOUNT = 1000000000;    ;; 1 TON
+const int TEST_IHR_FEE = 50000000;         ;; 0.05 TON
+const int TEST_FWD_FEE = 100000000;        ;; 0.1 TON
+const int TEST_BALANCE = 0;
+const int TEST_MSG_VALUE = 10;
+const int TEST_QUERY_ID = 42;
+const int TEST_DONATION = 100;
+
+;; Test address constants
+const int TEST_ADDR_WORKCHAIN = -1;
+const int TEST_ADDR_PREFIX_VALUE = 2;
+const int TEST_ADDR_PREFIX_NO_BOUNCE = 0;
+
+;; Test name definition
+slice _testName() { return "txnContext"; }
+
+;; Base test preparation
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+;; ================== Helper Functions ==================
+
+;; Creates error message
+slice create_error_message(slice field_name) {
+    return begin_cell()
+        .store_slice("txnContext ")
+        .store_slice(field_name)
+        .store_slice(" mismatch")
+        .end_cell()
+        .begin_parse();
+}
+
+;; Creates random test address with no bounce
+slice create_random_test_address() impure {
+    ;; Generate random value for address
+    randomize_lt();
+    int address = random();
+
+    return begin_cell()
+        .store_uint(TEST_ADDR_PREFIX_VALUE, 2)     ;; Standard address prefix (10)
+        .store_uint(TEST_ADDR_PREFIX_NO_BOUNCE, 1) ;; No bounce
+        .store_int(TEST_ADDR_WORKCHAIN, 8)         ;; Masterchain workchain
+        .store_uint(address, 256)                  ;; Random address value
+        .end_cell()
+        .begin_parse();
+}
+
+;; Creates counter metadata
+cell create_counter_metadata() impure {
+    return md::CounterIncrement::New(
+        DST_EID,
+        Counter::increment::ab,
+        MOCK_EXTRA_OPTIONS_V1(),
+        NATIVE_FEE,
+        ZRO_FEE
+    );
+}
+
+;; ================== Validation Functions ==================
+
+(int, slice) validate_txn_field(int actual, int expected, slice field_name) impure {
+    if (actual != expected) {
+        return (
+            TEST_FAILED,
+            create_error_message(field_name)
+        );
+    }
+    return (TEST_SUCCESS, "");
+}
+
+(int, slice) validate_cell_hash(cell actual, cell expected, slice field_name) impure {
+    ;; Check if both are null; Else check hashes
+    if(actual.is_null()) {
+        ifnot(expected.is_null()) {
+            return (
+                TEST_FAILED,
+                create_error_message(field_name)
+            );
+        }
+    } else {
+        if (actual.cell_hash() != expected.cell_hash()) {
+            return (
+                TEST_FAILED,
+                create_error_message(field_name)
+            );
+        }
+    }
+
+    return (TEST_SUCCESS, "");
+}
+
+(int, slice) validate_slice(slice actual, slice expected, slice field_name) impure {
+    if (actual.slice_hash() != expected.slice_hash()) {
+        return (
+            TEST_FAILED,
+            create_error_message(field_name)
+        );
+    }
+    return (TEST_SUCCESS, "");
+}
+
+
+(int, slice) validate_txn_context(int isBounced, int opcode, int queryId, int donationNanos, slice sender_addr, cell in_msg_full, int origin, cell counter_md, slice msgBody) impure {
+    ;; Validate context length
+    int ctx_len = txnContext.tlen();
+    (int success, slice error) = validate_txn_field(ctx_len, 12, "length");
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate bounce status
+    (success, error) = validate_txn_field(txnIsBounced(), isBounced, "isBounced");
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate caller
+    (success, error) = validate_txn_field(
+        getCaller(),
+        basechainAddressStdToHashpart(sender_addr),
+        "caller"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate forward fee
+    (success, error) = validate_txn_field(
+        txnContext.int_at(_FWD_FEE),
+        TEST_FWD_FEE * 3 / 2,
+        "fwdFee"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate opcode
+    (success, error) = validate_txn_field(
+        getOpcode(),
+        opcode,
+        "opcode"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate query ID
+    (success, error) = validate_txn_field(
+        txnContext.int_at(_QUERY_ID),
+        queryId,
+        "queryId"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate balance
+    (success, error) = validate_txn_field(
+        getContractBalance(),
+        TEST_BALANCE,
+        "balance"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate message value
+    (success, error) = validate_txn_field(
+        getMsgValue(),
+        TEST_MSG_VALUE,
+        "msgValue"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate msgBody
+    (success, error) = validate_slice(
+        txnContext.slice_at(_BODY),
+        msgBody,
+        "msgBody"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate raw message
+    (success, error) = validate_cell_hash(
+        txnContext.cell_at(_RAW_MSG),
+        in_msg_full,
+        "rawMsg"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate origin
+    (success, error) = validate_txn_field(
+        getOrigin(),
+        origin,
+        "origin"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate donation nanos
+    (success, error) = validate_txn_field(
+        getDonationNanos(),
+        donationNanos,
+        "donationNanos"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    ;; Validate message data
+    (success, error) = validate_cell_hash(
+        getMsgData(),
+        counter_md,
+        "md"
+    );
+    if (success != TEST_SUCCESS) { return (success, error); }
+
+    return (TEST_SUCCESS, "");
+}
+
+;; ================== Message Creation Functions ==================
+
+(cell, slice) create_message_base(int isBounced, slice sender, slice dest, cell messageBody) impure {
+    builder msg = begin_cell()
+        .store_uint(0, 1)           ;; tag
+        .store_uint(1, 1)           ;; ihr_disabled
+        .store_uint(1, 1)           ;; allow bounces
+        .store_uint(isBounced, 1)   ;; bounced itself
+        .store_slice(sender)            ;; sender
+        .store_slice(dest)              ;; dest
+        .store_coins(TEST_TON_AMOUNT)   ;; amount
+        .store_uint(0, 1)           ;; extra currencies dict
+        .store_coins(TEST_IHR_FEE)      ;; ihr_fee
+        .store_coins(TEST_FWD_FEE)      ;; fwd_fee
+        .store_uint(cur_lt(), 64)   ;; lt of transaction
+        .store_uint(now(), 32)      ;; unixtime of transaction
+        .store_uint(0, 1)           ;; no init
+        .store_uint(1, 1)           ;; body_in_reference
+        .store_ref(messageBody);
+
+    cell final_msg = msg.end_cell();
+    return (final_msg, messageBody.begin_parse());
+}
+
+(cell, slice) create_message(int isBounced, slice sender, slice dest, cell body, slice origin_addr) impure {
+    ;; Creates standard message w/ empty body
+    if (cell_null?(body)) {
+        return create_message_base(isBounced, sender, dest, empty_cell());
+    }
+
+    ;; Creates message body
+    builder messageBody = begin_cell();
+
+    ;; Add bounce code only if bounced
+    if (isBounced == 1) {
+        messageBody = messageBody.store_uint(0xFFFFFFFF, 32);
+    }
+
+    ;; Creates message body
+    messageBody = messageBody
+        .store_uint(Counter::OP::INCREMENT, 32)
+        .store_uint(TEST_QUERY_ID, 64)
+        .store_coins(TEST_DONATION);
+
+    ;; Override the origin in the body
+    if (~ slice_empty?(origin_addr)) {
+        messageBody = messageBody
+            .store_uint(TEST_ADDR_PREFIX_NO_BOUNCE, 11)
+            .store_slice(origin_addr);
+    }
+
+    ;; Store the body ref in the message
+    cell finalMessageBody = messageBody.store_ref(body).end_cell();
+
+    return create_message_base(
+        isBounced,
+        sender,
+        dest,
+        finalMessageBody
+    );
+}
+
+;; ================== Test Cases ==================
+
+(int, slice) initTxnContext::success::basic(cell $storage) impure {
+    int isBounced = 0; ;; Non-bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+    cell counterMd = create_counter_metadata();
+
+    (cell inMsgFull, slice inMsgBody) = create_message(isBounced, sender, dest, counterMd, empty_slice());
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, inMsgBody);
+
+    ;; remove opcode, query_id, and donationNanos from the body
+    int opcode = inMsgBody~load_uint(32);
+    int queryId = inMsgBody~load_uint(64);
+    int donationNanos = inMsgBody~load_coins();
+
+    return validate_txn_context(
+        FALSE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        basechainAddressStdToHashpart(sender),
+        counterMd,
+        inMsgBody
+    );
+}
+
+(int, slice) initTxnContext::success::origin::overridden(cell $storage) impure {
+    int isBounced = 0; ;; Non-bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+    cell counterMd = create_counter_metadata();
+    slice overrrideOriginAddr = create_random_test_address();
+
+    (cell inMsgFull, slice inMsgBody) = create_message(isBounced, sender, dest, counterMd, overrrideOriginAddr);
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, inMsgBody);
+
+    ;; remove opcode, query_id, and donationNanos from the body
+    int opcode = inMsgBody~load_uint(32);
+    int queryId = inMsgBody~load_uint(64);
+    int donationNanos = inMsgBody~load_coins();
+
+    return validate_txn_context(
+        FALSE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        sliceToUint256(overrrideOriginAddr),
+        counterMd,
+        inMsgBody
+    );
+}
+
+(int, slice) initTxnContext::success::inMsgBody::empty(cell $storage) impure {
+    int isBounced = 0; ;; Non-bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+
+    (cell inMsgFull, _) = create_message(isBounced, sender, dest, empty_cell(), empty_slice());
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, empty_slice());
+
+    int opcode = -1;
+    int queryId = -1;
+    int donationNanos = 0;
+    cell md = null();
+
+    return validate_txn_context(
+        FALSE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        basechainAddressStdToHashpart(sender),
+        md,
+        empty_slice()
+    );
+}
+
+(int, slice) initTxnContext::bounced::basic(cell $storage) impure {
+    int isBounced = 1; ;; Bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+    cell counterMd = create_counter_metadata();
+
+    (cell inMsgFull, slice inMsgBody) = create_message(isBounced, sender, dest, counterMd, empty_slice());
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, inMsgBody);
+
+    inMsgBody~skip_bits(32); ;; 0xFFFFFFFF
+    int opcode = inMsgBody~load_uint(32);
+    int queryId = inMsgBody~load_uint(64);
+    int donationNanos = inMsgBody~load_coins();
+
+    return validate_txn_context(
+        TRUE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        basechainAddressStdToHashpart(sender),
+        counterMd,
+        inMsgBody
+    );
+}
+
+(int, slice) initTxnContext::bounced::origin::overridden(cell $storage) impure {
+    int isBounced = 1; ;; Bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+    cell counterMd = create_counter_metadata();
+    slice overrrideOriginAddr = create_random_test_address();
+
+    (cell inMsgFull, slice inMsgBody) = create_message(isBounced, sender, dest, counterMd, overrrideOriginAddr);
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, inMsgBody);
+
+    inMsgBody~skip_bits(32); ;; 0xFFFFFFFF
+    int opcode = inMsgBody~load_uint(32);
+    int queryId = inMsgBody~load_uint(64);
+    int donationNanos = inMsgBody~load_coins();
+
+    return validate_txn_context(
+        TRUE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        sliceToUint256(overrrideOriginAddr),
+        counterMd,
+        inMsgBody
+    );
+}
+
+(int, slice) initTxnContext::bounced::inMsgBody::empty(cell $storage) impure {
+    int isBounced = 1; ;; Bounced message
+    slice sender = my_address();
+    slice dest = create_random_test_address();
+
+    (cell inMsgFull, _) = create_message(isBounced, sender, dest, empty_cell(), empty_slice());
+
+    ;; Create message body with only bounced flag and no other data
+    slice messageBody = begin_cell().store_uint(0xFFFFFFFF, 32).end_cell().begin_parse();
+
+    initTxnContext(TEST_BALANCE, TEST_MSG_VALUE, inMsgFull, messageBody);
+
+    int opcode = -1;
+    int queryId = -1;
+    int donationNanos = 0;
+    cell md = null();
+
+    return validate_txn_context(
+        TRUE,
+        opcode,
+        queryId,
+        donationNanos,
+        sender,
+        inMsgFull,
+        basechainAddressStdToHashpart(sender),
+        md,
+        empty_slice()
+    );
+}
+
+;; Test collection
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initTxnContext::success::basic, "initTxnContext::success::basic"])
+            .tpush([initTxnContext::success::origin::overridden, "initTxnContext::success::origin::overridden"])
+            .tpush([initTxnContext::success::inMsgBody::empty, "initTxnContext::success::inMsgBody::empty"])
+            .tpush([initTxnContext::bounced::basic, "initTxnContext::bounced::basic"])
+            .tpush([initTxnContext::bounced::origin::overridden, "initTxnContext::bounced::origin::overridden"])
+            .tpush([initTxnContext::bounced::inMsgBody::empty, "initTxnContext::bounced::inMsgBody::empty"])
+    );
+}

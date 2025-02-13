@@ -1,0 +1,125 @@
+#include "../../../core/abstract/protocolHandler.fc";
+
+#include "../../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../../classes/msgdata/InitSmlConnection.fc";
+#include "../../../../classes/msgdata/MdAddress.fc";
+#include "../../../../classes/msgdata/MdObj.fc";
+
+
+#include "../../../endpoint/interface.fc";
+#include "../../interface.fc";
+#include "../smlManager/interface.fc";
+#include "interface.fc";
+#include "../../../../funC++/classlib.fc";
+
+;;; ================HELPER FUNCTIONS========================
+
+int getChannelAddress() impure inline {
+    return getContractStorage().cl::get<address>(SmlConnection::channelAddress);
+}
+
+() assertChannel() impure inline {
+    throw_unless(
+        Msglib::ERROR::onlyChannel,
+        getCaller() == getChannelAddress()
+    );
+}
+
+;;; ================INTERFACE FUNCTIONS=====================
+
+(cell, tuple) _initialize(cell $initSmlConnection) impure inline {
+    (cell $storage, tuple actions) = preamble();
+    int channelAddress = $initSmlConnection
+        .cl::get<address>(md::InitSmlConnection::channelAddress);
+    return (
+        $storage.cl::set(SmlConnection::channelAddress, channelAddress),
+        actions
+    );
+}
+
+int _getEventSink() inline {
+    return getContractAddress();
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _checkPermissions(int op, cell $md) impure inline method_id {
+    if (op == MsglibConnection::OP::MSGLIB_CONNECTION_SEND) {
+        return assertChannel();
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK) {
+        return assertChannel();
+    } elseif (op == SmlConnection::OP::SML_CONNECTION_COMMIT_PACKET) {
+        return assertOwner();
+    } elseif (op == MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE) {
+        return assertChannel();
+    } else {
+        ;; we must put a check for all opcodes to make sure we don't
+        ;; mistakenly miss an opp code's permissions
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+}
+
+;;; =================HANDLERS================================
+
+;; @in channel/handler.fc/send
+;; @in_md LzSend
+;; @out smlManager/handler.fc/msglibSend
+;; @out_md ExtendedMd(LzSend, initialStorage, channelAddress)
+tuple msglibConnectionSend(cell $lzSend) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        getOwner(), ;; smlManager
+        SmlManager::OP::SML_MANAGER_SEND,
+        md::ExtendedMd::New(
+            $lzSend,
+            getInitialStorage(),
+            $storage.cl::get<address>(SmlConnection::channelAddress)
+        )
+    );
+
+    return actions;
+}
+
+;; @in smlManager/handler.fc/smlManagerCommitPacket
+;; @in_md msglibCommitPacket
+;; @out endpoint/handler.fc/commitPacket
+;; @out_md MdObj { packet, initialStorage }
+tuple smlConnectionCommitPacket(cell $mdAddress) impure inline method_id {
+    (_, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        $mdAddress.cl::get<address>(md::MdAddress::address),
+        Endpoint::OP::ENDPOINT_COMMIT_PACKET,
+        $mdAddress.cl::get<objRef>(md::MdAddress::md)
+    );
+
+    return actions;
+}
+
+;; @in channel/handler.fc/commitPacket
+;; @in_md msglibCommitPacketCallback
+;; @out smlManager/handler.fc/smlManagerCommitPacketCallback
+tuple msglibConnectionCommitPacketCallback(cell $mdObj) impure inline method_id {
+    (_, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        getOwner(),
+        SmlManager::OP::SML_MANAGER_COMMIT_PACKET_CALLBACK,
+        $mdObj
+    );
+
+    return actions;
+}
+
+tuple syncChannelState(cell $mdObj) impure inline method_id {
+    (_, tuple actions) = preamble();
+
+    actions~pushAction<call>(
+        getChannelAddress(),
+        MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE,
+        $mdObj
+    );
+
+    return actions;
+}

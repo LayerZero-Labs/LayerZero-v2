@@ -1,0 +1,22 @@
+;; All msglibs must have the path in their storage as field 1
+const int MsglibConnection::PathFieldIdx = 1;
+
+;; All msglibs are required to have a connection and a manager
+const int MsglibManager::OP::GET_MSGLIB_INFO = "MsglibManager::OP::GET_MSGLIB_INFO"c;
+
+const int MsglibManager::OP::DEPLOY_CONNECTION = "MsglibManager::OP::DEPLOY_CONNECTION"c;
+
+const int MsglibManager::OP::SET_OAPP_MSGLIB_SEND_CONFIG = "MsglibManager::OP::SET_OAPP_MSGLIB_SEND_CONFIG"c;
+
+;; Set the connection MSGLIB config
+;; called by OApp, seeded by SENDER
+const int MsglibManager::OP::SET_OAPP_MSGLIB_RECEIVE_CONFIG = "MsglibManager::OP::SET_OAPP_MSGLIB_RECEIVE_CONFIG"c;
+
+const int Msglib::OP::RETURN_QUOTE = "Msglib::OP::RETURN_QUOTE"c;
+
+const int MsglibConnection::OP::MSGLIB_CONNECTION_QUOTE = "MsglibConnection::OP::MSGLIB_CONNECTION_QUOTE"c;
+const int MsglibConnection::OP::MSGLIB_CONNECTION_SEND = "MsglibConnection::OP::MSGLIB_CONNECTION_SEND"c;
+const int MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK = "MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK"c;
+const int MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE = "MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE"c;
+
+const int Msglib::ERROR::onlyChannel = 288;

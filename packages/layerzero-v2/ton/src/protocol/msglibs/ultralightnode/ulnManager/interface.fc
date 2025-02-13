@@ -1,0 +1,53 @@
+#include "storage.fc";
+
+;; Deploy a new ULN (eid-shard)
+;; only-owner
+const int UlnManager::OP::DEPLOY_ULN = "UlnManager::OP::DEPLOY_ULN"c;
+;; Deploy a new connection (oApp path shard)
+;; called by OApp, seeded by SENDER
+const int MsglibManager::OP::DEPLOY_CONNECTION = "MsglibManager::OP::DEPLOY_CONNECTION"c;
+;; Set the default ULN config
+;; only-owner
+const int UlnManager::OP::SET_DEFAULT_ULN_RECEIVE_CONFIG = "UlnManager::OP::SET_DEFAULT_ULN_RECEIVE_CONFIG"c;
+
+const int UlnManager::OP::SET_DEFAULT_ULN_SEND_CONFIG = "UlnManager::OP::SET_DEFAULT_ULN_SEND_CONFIG"c;
+
+;; Note: this is called withdraw treasury fees but really it's just withdraw anything you want
+const int UlnManager::OP::CLAIM_TREASURY_FEES = "UlnManager::OP::CLAIM_TREASURY_FEES"c;
+
+;; Register a new approved bytecode
+;; only-owner
+const int UlnManager::OP::REGISTER_WORKER_FEELIB_BYTECODE = "UlnManager::OP::REGISTER_WORKER_FEELIB_INFO"c;
+
+;; Add a new worker to the ULN
+;; only-owner
+const int UlnManager::OP::ADD_ULN_WORKER = "UlnManager::OP::ADD_ULN_WORKER"c;
+
+;; Set/Remove an admin worker
+;; only-owner
+const int UlnManager::OP::SET_ADMIN_WORKERS = "UlnManager::OP::SET_ADMIN_WORKERS"c;
+const int UlnManager::OP::SET_ULN_TREASURY_FEE_BPS = "UlnManager::OP::SET_ULN_TREASURY_FEE_BPS"c;
+
+const int UlnManager::OP::TRANSFER_OWNERSHIP = "UlnManager::OP::TRANSFER_OWNERSHIP"c;
+const int UlnManager::OP::CLAIM_OWNERSHIP = "UlnManager::OP::CLAIM_OWNERSHIP"c;
+
+const int UlnManager::ERROR::insufficientBalance = 161;
+const int UlnManager::ERROR::invalidEid = 162;
+const int UlnManager::ERROR::invalidWorkerInfo = 163;
+const int UlnManager::ERROR::workerIsNotAdmin = 164;
+const int UlnManager::ERROR::feelibBytecodesExceeded = 166;
+const int UlnManager::ERROR::invalidPath = 167;
+const int UlnManager::ERROR::invalidAdminWorkerList = 168;
+const int UlnManager::ERROR::onlyTentativeOwner = 169;
+const int UlnManager::ERROR::nullTentativeOwner = 170;
+
+const int UlnManager::event::ADMIN_WORKERS_SET = "UlnMgr::event::ADMIN_WORKERS_SET"u;
+const int UlnManager::event::OWNER_SET_TENTATIVE = "UlnMgr::event::OWNER_SET_TNTV"u;
+const int UlnManager::event::OWNER_SET = "UlnMgr::event::OWNER_SET"u;
+
+;; each additional cell seems to add about 110 gas
+;; so 7000 cells is about 770,000 gas.
+;; Workers based on the existing base worker each cost about 20-30 cells
+;; so 7000 cells is about 350-500 workers
+const int UlnManager::CONST::MAX_CUMULATIVE_BYTECODE_CELLS = 7000;
+const int UlnManager::CONST::MAX_ADMIN_WORKERS = 256;

@@ -1,0 +1,215 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "channelReceiveUtils.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../msglibs/interface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/dataStructures/DeterministicInsertionCircularQueue.fc";
+#include "../../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../funC++/stringlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/lz/Packet.fc";
+#include "../../../classes/lz/Path.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+#include "../../../classes/msgdata/MdObj.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::msglib"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+    setEpConfigOApp(MOCK_RESOLVED_EP_CONFIG(false));
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) syncMsglibConnection::success::initial(cell $storage) impure {
+    cell $mdAddress = md::MdAddress::New(
+        cl::nullObject(),
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS
+    );
+    return test::handler::shouldPass(
+        syncMsglibConnection,
+        $mdAddress,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE,
+                md::MdObj::New(
+                    md::ChannelNonceInfo::New(1, 1), ;; first unexecuted and committed are == 1
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) syncMsglibConnection::success::nonce1Committed(cell $storage) impure {
+    commitNonce(1);
+    cell $mdAddress = md::MdAddress::New(
+        cl::nullObject(),
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS
+    );
+    return test::handler::shouldPass(
+        syncMsglibConnection,
+        $mdAddress,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE,
+                md::MdObj::New(
+                    md::ChannelNonceInfo::New(2, 1),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) syncMsglibConnection::success::nonce1Executed(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+    executeNonce(1);
+    cell $mdAddress = md::MdAddress::New(
+        cl::nullObject(),
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS
+    );
+    return test::handler::shouldPass(
+        syncMsglibConnection,
+        $mdAddress,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE,
+                md::MdObj::New(
+                    md::ChannelNonceInfo::New(2, 2),
+                    getInitialStorage()
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) notifyPacketExecuted::success::basic(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+    executeNonce(incomingNonce);
+    $storage = getContractStorage();
+
+    cell $nonceMd = md::Nonce::New(incomingNonce);
+    return test::handler::shouldPass(
+        notifyPacketExecuted,
+        md::MdAddress::New($nonceMd, RECEIVE_MSGLIB_CONNECTION_ADDRESS),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+                MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK,
+                md::ChannelNonceInfo::New(
+                    incomingNonce,
+                    $storage.cl::get<objRef>(Channel::executePOOO).cl::get<uint64>(POOO::nextEmpty)
+                )
+            )
+        ]),
+        $storage,
+        txnContext
+    );
+}
+
+(int, slice) notifyPacketExecuted::success::executing(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+    lockNonce(incomingNonce);
+
+    cell $nonceMd = md::Nonce::New(incomingNonce);
+    return test::handler::shouldPass(
+        notifyPacketExecuted,
+        md::MdAddress::New($nonceMd, RECEIVE_MSGLIB_CONNECTION_ADDRESS),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) notifyPacketExecuted::success::committed(cell $storage) impure {
+    int incomingNonce = 1;
+    commitNonce(incomingNonce);
+
+    cell $nonceMd = md::Nonce::New(incomingNonce);
+    return test::handler::shouldPass(
+        notifyPacketExecuted,
+        md::MdAddress::New($nonceMd, RECEIVE_MSGLIB_CONNECTION_ADDRESS),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) notifyPacketExecuted::success::uncommitted(cell $storage) impure {
+    int incomingNonce = 1;
+
+    cell $nonceMd = md::Nonce::New(incomingNonce);
+    return test::handler::shouldPass(
+        notifyPacketExecuted,
+        md::MdAddress::New($nonceMd, RECEIVE_MSGLIB_CONNECTION_ADDRESS),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            ;; -- initialize
+            .tpush([initializeTestStorage, "initializeTestStorage"])
+            ;; -- syncMsglibConnection
+            .tpush([syncMsglibConnection::success::initial, "syncMsglibConnection::success::initial"])
+            .tpush([syncMsglibConnection::success::nonce1Executed, "syncMsglibConnection::success::nonce1Executed"])
+            .tpush([syncMsglibConnection::success::nonce1Committed, "syncMsglibConnection::success::nonce1Committed"])
+            ;; -- notifyPacketExecuted
+            .tpush([notifyPacketExecuted::success::basic, "notifyPacketExecuted::success::basic"])
+            .tpush([notifyPacketExecuted::success::executing, "notifyPacketExecuted::success::executing"])
+            .tpush([notifyPacketExecuted::success::committed, "notifyPacketExecuted::success::committed"])
+            .tpush([notifyPacketExecuted::success::uncommitted, "notifyPacketExecuted::success::uncommitted"])
+    );
+}

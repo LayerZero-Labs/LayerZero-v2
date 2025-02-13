@@ -1,0 +1,175 @@
+#include "../../../../../classes/lz/Path.fc";
+#include "../../../../../classes/msgdata/OptionsV1.fc";
+#include "../../../../../classes/msgdata/OptionsV2.fc";
+
+#include "../../feeLibInterface.fc";
+#include "../priceFeedFeeLib/interface.fc";
+#include "../priceFeedFeeLib/storage.fc";
+#include "../../msgdata/UlnWorkerFeelibInfo.fc";
+
+#include "../common.fc";
+#include "storage.fc";
+#include "../../feeLibUtils.fc";
+#include "../../../../../funC++/utils.fc";
+
+int isV1Eid(int eid) impure inline {
+    return (eid < 30000);
+}
+
+(int, int) _decodeOption(int lzComposeBaseGas, cell $options, cell $path) impure inline {
+    int totalGas = 0;
+    int totalDstAmount = 0;
+
+    int optionsType = cl::typeof($options);
+
+    if (optionsType == md::OptionsV1::NAME) {
+        (
+            int lzReceiveGas,
+            int lzReceiveValue,
+            int nativeDropAmount
+        ) = $options.md::OptionsV1::decodeCoins();
+
+        ;; LayerZero V1 does not support value on lzReceive
+        throw_if(
+            UlnWorkerInterface::ERROR::INVALID_OPTIONS,
+            (lzReceiveValue > 0) & isV1Eid($path.lz::Path::getDstEid())
+        );
+
+        totalGas += lzReceiveGas;
+
+        totalDstAmount += lzReceiveValue + nativeDropAmount;
+
+    } elseif (optionsType == md::OptionsV2::NAME) {
+        (
+            int lzComposeGas,
+            int lzComposeValue,
+            int lzReceiveGas,
+            int lzReceiveValue,
+            int nativeDropAmount
+        ) = $options.md::OptionsV2::decodeCoins();
+
+        throw_if(
+            UlnWorkerInterface::ERROR::ZERO_LZ_COMPOSE_GAS_PROVIDED,
+            (lzComposeGas == 0) & (lzComposeValue > 0)
+        );
+
+        totalGas += lzReceiveGas;
+
+        totalDstAmount += lzReceiveValue + nativeDropAmount;
+
+        if (lzComposeGas > 0) {
+            totalGas += lzComposeGas + lzComposeBaseGas;
+            totalDstAmount += lzComposeValue;
+        }
+        
+    } elseif (optionsType == cl::NULL_CLASS_NAME) {
+        return (0, 0);
+    } else {
+        throw(UlnWorkerInterface::ERROR::UNKNOWN_OPTIONS);
+    }
+
+    return (totalGas, totalDstAmount);
+}
+
+(int, int) _decodeOptions(
+    int lzReceiveBaseGas,
+    int lzComposeBaseGas,
+    cell $extraOptions,
+    cell $enforcedOptions,
+    cell $path
+) impure inline {
+    int totalGas = 0;
+    int totalDstAmount = 0;
+
+    ifnot ($extraOptions.cl::isNullObject()) {
+        (int _totalGas, int _totalDstAmount) = _decodeOption(
+            lzComposeBaseGas,
+            $extraOptions,
+            $path
+        );
+
+        totalGas += _totalGas;
+        totalDstAmount += _totalDstAmount;
+    }
+
+    ifnot ($enforcedOptions.cl::isNullObject()) {
+        (int _totalGas, int _totalDstAmount) = _decodeOption(
+            lzComposeBaseGas,
+            $enforcedOptions,
+            $path
+        );
+        totalGas += _totalGas;
+        totalDstAmount += _totalDstAmount;
+    }
+
+    return (totalGas + lzReceiveBaseGas, totalDstAmount);
+}
+
+;; current gas consumed: 16276
+tuple ulnWorker::quote(tuple inputs) impure method_id {
+    cell $myStorage = inputs.cell_at(0);
+    cell $priceFeedInfo = inputs.cell_at(1);
+    cell $path = inputs.cell_at(2);
+    ;; int confirmations = inputs.int_at(3);
+    int packetBytes = inputs.int_at(4);
+    cell $extraOptions = inputs.cell_at(5);
+    cell $enforcedOptions = inputs.cell_at(6);
+
+     cell $priceFeedStorage = $priceFeedInfo.UlnWorkerFeelibInfo::getWorkerFeeLibStorage();
+
+    (
+        int lzReceiveBaseGas,
+        int multiplierBps,
+        int floorMarginUSD,
+        int nativeCap,
+        int lzComposeBaseGas
+    ) = ExecutorFeelib::deserializeStorage($myStorage);
+
+    (
+        int totalRemoteGas,
+        int totalRemoteValue
+    ) = _decodeOptions(lzReceiveBaseGas, lzComposeBaseGas, $extraOptions, $enforcedOptions, $path);
+
+    throw_if(UlnWorkerInterface::ERROR::NATIVE_CAP_EXCEEDED, totalRemoteValue > nativeCap);
+
+    tuple returnStack = safePackedInputsRunVm(
+        unsafeTuple([
+            $priceFeedStorage,
+            packetBytes,
+            totalRemoteGas
+        ]),
+        PriceFeedFeeLib::method_id::estimateFee,
+        1,
+        $priceFeedInfo.cl::get<cellRef>(UlnWorkerFeelibInfo::workerFeelibBytecode).begin_parse(),
+        1000000 ;; gas limit does not matter here
+    );
+
+    tuple retVal = returnStack.tuple_at(0);
+    ;; if it's not a tuple, then the worker returned an error or went OOG
+    ifnot (retVal.is_tuple()) {
+        return unsafeTuple(
+            [-1, -1, null()]
+        ); ;; failure case so it will fail inside the _quoteWorker runVM call
+    }
+
+    int totalGasFeeInRemoteUnit = retVal.int_at(0);
+    int priceRatio = retVal.int_at(1);
+    int nativePriceUsd = retVal.int_at(2);
+
+    int totalGasFeeInNanoton = _applyPremiumAndFloor(
+        _remoteToNanoton(totalGasFeeInRemoteUnit, priceRatio),
+        multiplierBps,
+        floorMarginUSD,
+        nativePriceUsd
+    );
+
+    ;; match order of operations of EVM at some loss of precision
+    int totalValueFeeInNanoton = _applyPremiumToValue(
+        _remoteToNanoton(totalRemoteValue, priceRatio),
+        multiplierBps
+    );
+
+    return unsafeTuple(
+        [totalGasFeeInNanoton + totalValueFeeInNanoton, null()]
+    );
+}

@@ -1,0 +1,169 @@
+#include "../../../../funC++/classlib.fc";
+
+#include "../../../../funC++/dataStructures/AddressList.fc";
+
+const int MAX_DVN_COUNT = 255; ;; uint8
+const int lz::UlnSendConfig::CONST::NIL_ADDRESS = MAX_U256;
+
+const int UlnSendConfig::ERROR::DVN_CONFIG_ERROR = 353;
+
+;; required storage name
+const int lz::UlnSendConfig::NAME = "UlnSendCfg"u;
+
+;; field names
+
+;; EVM struct ExecutorConfig
+;; uint32 maxMessageSize;
+;; address executor;
+
+;; Both side configs
+const int UlnSendConfig::workerQuoteGasLimit = 0;          ;; uint64, set to 0 for using default
+const int UlnSendConfig::maxMessageBytes = 1;              ;; uint32, set to 0 for using default
+const int UlnSendConfig::executorNull = 2;                 ;; bool
+const int UlnSendConfig::executor = 3;                     ;; address (set to NIL for using default)
+const int UlnSendConfig::requiredDVNsNull = 4;             ;; bool
+const int UlnSendConfig::requiredDVNs = 5;                 ;; address[] will be stored as a dictionary
+const int UlnSendConfig::optionalDVNsNull = 6;             ;; bool
+const int UlnSendConfig::optionalDVNs = 7;                 ;; address[] will be stored as a dictionary
+const int UlnSendConfig::confirmationsNull = 8;
+const int UlnSendConfig::confirmations = 9;
+
+;; these null flags above mean "try to resolve this field from the other config" if they're set to true.
+
+cell UlnSendConfig::New(
+    int workerQuoteGasLimit,
+    int maxMessageBytes,
+    int executorNull,
+    int executor,
+    int requiredDVNsNull,
+    cell requiredDVNs,
+    int optionalDVNsNull,
+    cell optionalDVNs,
+    int confirmationsNull,
+    int confirmations
+) impure method_id {
+    return cl::declare(
+        lz::UlnSendConfig::NAME,
+        unsafeTuple([
+            [cl::t::uint32, workerQuoteGasLimit], ;; lz::UlnSendConfig::workerQuoteGasLimit
+            [cl::t::uint32, maxMessageBytes],     ;; lz::UlnSendConfig::maxMessageBytes
+            [cl::t::bool, executorNull],          ;; lz::UlnSendConfig::executorNull
+            [cl::t::address, executor],           ;; lz::UlnSendConfig::executor
+            [cl::t::bool, requiredDVNsNull],      ;; lz::UlnSendConfig::requiredDVNsNull
+            [cl::t::addressList, requiredDVNs],   ;; lz::UlnSendConfig::requiredDVNs
+            [cl::t::bool, optionalDVNsNull],      ;; lz::UlnSendConfig::optionalDVNsNull
+            [cl::t::addressList, optionalDVNs],   ;; lz::UlnSendConfig::optionalDVNs
+            [cl::t::bool, confirmationsNull],     ;; lz::UlnSendConfig::confirmationsNull
+            [cl::t::uint64, confirmations]        ;; lz::UlnSendConfig::confirmations
+        ])
+    );
+}
+
+cell UlnSendConfig::NewWithDefaults() impure method_id {
+    return UlnSendConfig::New(
+        0, ;; Default worker quote gas limit
+        0, ;; Default max message bytes
+        true,
+        NULLADDRESS,
+        true,
+        empty_cell(),
+        true,
+        empty_cell(),
+        true,
+        0 ;; Default confirmations
+    );
+}
+
+;; quoteGasLimit, maxMsgBytes, executor, requiredDVNs, optionalDVNs, confirmations, isValid
+(int, int, int, cell, cell, int, int) lz::UlnSendConfig::resolveUlnSendConfig(
+    cell $customUlnSendConfig,
+    cell $defaultUlnSendConfig
+) impure inline {
+    int isValid = true;
+
+    ;; low-level destructuring of customUlnSendConfig for efficiency
+    ;; 1. skip the header
+    slice customUlnSendConfigSlice = $customUlnSendConfig
+        .begin_parse()
+        .sskipfirst(_HEADER_WIDTH, 0);
+
+    ;; read all fields
+    ;; 32 + 32 + 1 + 256 + 1 + 1 + 1 + 64 = 388 bits of data + 2 refs
+    ;; all fit in the root cell with +350 bits for header (388 + 350 = 738 < 1023)
+    int quoteGasLimit = customUlnSendConfigSlice~load_uint32();
+    int maxMsgBytes = customUlnSendConfigSlice~load_uint32();
+    int executorNull = customUlnSendConfigSlice~load_bool();
+    int executor = customUlnSendConfigSlice~load_uint256();
+    int requiredDVNsNull = customUlnSendConfigSlice~load_bool();
+    cell requiredDVNs = customUlnSendConfigSlice~load_ref();
+    int optionalDVNsNull = customUlnSendConfigSlice~load_bool();
+    cell optionalDVNs = customUlnSendConfigSlice~load_ref();
+    int confirmationsNull = customUlnSendConfigSlice~load_bool();
+    int confirmations = customUlnSendConfigSlice~load_uint64();
+
+    if (quoteGasLimit == 0) {
+        quoteGasLimit = $defaultUlnSendConfig
+            .cl::get<uint32>(UlnSendConfig::workerQuoteGasLimit);
+    }
+
+    if (maxMsgBytes == 0) {
+        maxMsgBytes = $defaultUlnSendConfig
+            .cl::get<uint32>(UlnSendConfig::maxMessageBytes);
+    }
+
+    if (executorNull) {
+        isValid &= ($defaultUlnSendConfig.cl::get<bool>(UlnSendConfig::executorNull) == false);
+        executor = $defaultUlnSendConfig.cl::get<address>(UlnSendConfig::executor);
+    }
+
+    if (requiredDVNsNull) {
+        isValid &= ($defaultUlnSendConfig.cl::get<bool>(UlnSendConfig::requiredDVNsNull) == false);
+        requiredDVNs = $defaultUlnSendConfig.cl::get<cellRef>(UlnSendConfig::requiredDVNs);
+    }
+
+    if (optionalDVNsNull) {
+        isValid &= ($defaultUlnSendConfig.cl::get<bool>(UlnSendConfig::optionalDVNsNull) == false);
+        optionalDVNs = $defaultUlnSendConfig.cl::get<cellRef>(UlnSendConfig::optionalDVNs);
+    }
+
+    if (confirmationsNull) {
+        isValid &= ($defaultUlnSendConfig.cl::get<bool>(UlnSendConfig::confirmationsNull) == false);
+        confirmations = $defaultUlnSendConfig.cl::get<uint64>(UlnSendConfig::confirmations);
+    }
+
+    return (quoteGasLimit, maxMsgBytes, executor, requiredDVNs, optionalDVNs, confirmations, isValid);
+}
+
+;; Ensure the Uln send config does not contain garbage bits etc. that would cause
+;; undefined behaviors in the protocol
+cell UlnSendConfig::sanitize(cell $ulnSendConfig) impure {
+    int workerQuoteGasLimit = $ulnSendConfig.cl::get<uint32>(UlnSendConfig::workerQuoteGasLimit);
+    int maxMessageBytes = $ulnSendConfig.cl::get<uint32>(UlnSendConfig::maxMessageBytes);
+    int useDefaultExecutor = $ulnSendConfig.cl::get<bool>(UlnSendConfig::executorNull);
+    int executor = $ulnSendConfig.cl::get<address>(UlnSendConfig::executor);
+    int useDefaultRequiredDVNs = $ulnSendConfig.cl::get<bool>(UlnSendConfig::requiredDVNsNull);
+    cell requiredDVNs = $ulnSendConfig.cl::get<cellRef>(UlnSendConfig::requiredDVNs);
+    int useDefaultOptionalDVNs = $ulnSendConfig.cl::get<bool>(UlnSendConfig::optionalDVNsNull);
+    cell optionalDVNs = $ulnSendConfig.cl::get<cellRef>(UlnSendConfig::optionalDVNs);
+    int useDefaultConfirmations = $ulnSendConfig.cl::get<bool>(UlnSendConfig::confirmationsNull);
+    int confirmations = $ulnSendConfig.cl::get<uint64>(UlnSendConfig::confirmations);
+
+    throw_unless(
+        UlnSendConfig::ERROR::DVN_CONFIG_ERROR,
+        AddressList::isValid(requiredDVNs, MAX_DVN_COUNT)
+        & AddressList::isValid(optionalDVNs, MAX_DVN_COUNT)
+    );
+
+    return UlnSendConfig::New(
+        workerQuoteGasLimit,
+        maxMessageBytes,
+        useDefaultExecutor,
+        executor,
+        useDefaultRequiredDVNs,
+        requiredDVNs,
+        useDefaultOptionalDVNs,
+        optionalDVNs,
+        useDefaultConfirmations,
+        confirmations
+    );
+}

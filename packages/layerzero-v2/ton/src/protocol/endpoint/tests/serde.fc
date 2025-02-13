@@ -1,0 +1,167 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/utils.fc";
+#include "../../../funC++/testutils.fc";
+
+#include "../../../../tests/baseSerdeTest.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../../tests/mocks.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Endpoint::Serde"; }
+
+;; Endpoint: Has 7 getters,
+;;           Has 2 multi-getter (deserializer),
+(int, slice) Serde::Endpoint::getBaseStorage(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getBaseStorage, 
+        Endpoint::baseStorage
+    );
+}
+
+(int, slice) Serde::Endpoint::getMsglibs(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getMsglibs, 
+        Endpoint::msglibs
+    );
+}
+
+(int, slice) Serde::Endpoint::getChannelCode(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getChannelCode, 
+        Endpoint::channelCode
+    );
+}
+
+(int, slice) Serde::Endpoint::getChannelStorageInit(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getChannelStorageInit, 
+        Endpoint::channelStorageInit
+    );
+}
+
+(int, slice) Serde::Endpoint::getDefaultSendLibInfo(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getDefaultSendLibInfo, 
+        Endpoint::defaultSendLibInfo
+    );
+}
+
+(int, slice) Serde::Endpoint::getDefaultReceiveLibInfo(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getDefaultReceiveLibInfo, 
+        Endpoint::defaultReceiveLibInfo
+    );
+}
+
+(int, slice) Serde::Endpoint::getDefaultTimeoutReceiveLibInfo(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    return test::getRef::equal(
+        $endpoint, 
+        Endpoint::getDefaultTimeoutReceiveLibInfo, 
+        Endpoint::defaultTimeoutReceiveLibInfo
+    );
+}
+
+(int, slice) Serde::Endpoint::getSendInformation(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+
+    (
+        cell $channelStorageInit,
+        cell $channelCode,
+        int defaultSendMsglibManager,
+        cell $defaultSendLibInfo
+    ) = Endpoint::getSendConfiguration($endpoint);
+
+    return test::multiget::equal(
+        $endpoint,
+        unsafeTuple([
+            Endpoint::channelStorageInit,
+            Endpoint::channelCode,
+            Endpoint::defaultSendMsglibManager,
+            Endpoint::defaultSendLibInfo
+        ]),
+        unsafeTuple([$channelStorageInit, $channelCode, defaultSendMsglibManager, $defaultSendLibInfo])
+    );
+}
+
+(int, slice) Serde::Endpoint::getCommitPacketInformation(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS)
+        .cl::set(Endpoint::defaultReceiveLibInfo,
+            lz::MsglibInfo::New(
+                RECEIVE_MSGLIB_MANAGER_ADDRESS,
+                MOCK_MSGLIB_CONNECTION_CODE(),
+                mockMsglibConnectionStorage(RECEIVE_MSGLIB_MANAGER_ADDRESS, MOCK_RECEIVE_PATH()
+                )
+            )
+        );
+
+    (
+        int $eid,
+        int $dstEid,
+        int $defaultExpiry,
+        cell $defaultReceiveLibInfo,
+        cell $timeoutReceiveLibInfo
+    ) = Endpoint::getCommitPacketInformation($endpoint);
+
+    return test::multiget::equal(
+        $endpoint,
+        unsafeTuple([
+            Endpoint::eid,
+            Endpoint::dstEid,
+            Endpoint::defaultExpiry,
+            Endpoint::defaultReceiveLibInfo,
+            Endpoint::defaultTimeoutReceiveLibInfo
+        ]),
+        unsafeTuple([$eid, $dstEid, $defaultExpiry, $defaultReceiveLibInfo, $timeoutReceiveLibInfo])
+    );
+}
+
+(int, slice) Serde::Endpoint::setDstEid(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+
+    return test::set::equal(
+        $endpoint.cl::set(Endpoint::dstEid, DST_EID + 1),
+        $endpoint.Endpoint::setDstEid(DST_EID + 1)
+    );
+}
+
+(int, slice) Serde::Endpoint::sanitize(cell $unused) impure {
+    cell $endpoint = Endpoint::New(SRC_EID, DST_EID, CONTROLLER_ADDRESS);
+    
+    return test::build::equal(
+        $endpoint,
+        Endpoint::sanitize(_dupWithGarbage($endpoint))
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::Endpoint::getBaseStorage, "Serde::Endpoint::getBaseStorage"])
+        .tpush([Serde::Endpoint::getMsglibs, "Serde::Endpoint::getMsglibs"])
+        .tpush([Serde::Endpoint::getChannelCode, "Serde::Endpoint::getChannelCode"])
+        .tpush([Serde::Endpoint::getChannelStorageInit, "Serde::Endpoint::getChannelStorageInit"])
+        .tpush([Serde::Endpoint::getDefaultSendLibInfo, "Serde::Endpoint::getDefaultSendLibInfo"])
+        .tpush([Serde::Endpoint::getDefaultReceiveLibInfo, "Serde::Endpoint::getDefaultReceiveLibInfo"])
+        .tpush([Serde::Endpoint::getDefaultTimeoutReceiveLibInfo, "Serde::Endpoint::getDefaultTimeoutReceiveLibInfo"])
+        .tpush([Serde::Endpoint::getSendInformation, "Serde::Endpoint::getSendInformation"])
+        .tpush([Serde::Endpoint::getCommitPacketInformation, "Serde::Endpoint::getCommitPacketInformation"])
+        .tpush([Serde::Endpoint::setDstEid, "Serde::Endpoint::setDstEid"])
+        .tpush([Serde::Endpoint::sanitize, "Serde::Endpoint::sanitize"])
+    ;
+}

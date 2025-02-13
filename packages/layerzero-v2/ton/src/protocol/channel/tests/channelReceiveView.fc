@@ -1,0 +1,121 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "channelReceiveUtils.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/testMain.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::receive::view"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        Channel::New(
+            getCaller(),
+            MOCK_SEND_PATH(),
+            ENDPOINT_ADDRESS
+        )
+    );
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) getExecutionStatus::nonce1Verifying(cell $storage) impure {
+    return test::shouldBeTrue(
+        _viewExecutionStatus(1) == ExecutionStatus::uncommitted
+    );
+}
+
+(int, slice) getExecutionStatus::nonceVerifying(cell $storage) impure {
+    return test::shouldBeTrue(
+        _viewExecutionStatus(NONCE) == ExecutionStatus::uncommitted
+    );
+}
+
+(int, slice) getExecutionStatus::nonce1executable(cell $storage) impure {
+    commitNonce(1);
+    return test::shouldBeTrue(
+        _viewExecutionStatus(1) == ExecutionStatus::executable
+    );
+}
+
+(int, slice) getExecutionStatus::nonce3executable(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(2);
+    commitNonce(3);
+    return test::shouldBeTrue(
+        _viewExecutionStatus(3) == ExecutionStatus::executable
+    );
+}
+
+(int, slice) getExecutionStatus::nonce1executing(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+    return test::shouldBeTrue(
+        _viewExecutionStatus(1) == ExecutionStatus::executing
+    );
+}
+
+(int, slice) getExecutionStatus::nonce3executing(cell $storage) impure {
+    commitNonce(1);
+    commitNonce(2);
+    lockNonce(2);
+    executeNonce(2);
+    commitNonce(3);
+    lockNonce(3);
+    return test::shouldBeTrue(
+        (_viewExecutionStatus(1) == ExecutionStatus::executable)
+        & (_viewExecutionStatus(2) == ExecutionStatus::executed)
+        & (_viewExecutionStatus(3) == ExecutionStatus::executing)
+    );
+}
+
+(int, slice) getExecutionStatus::nonce1executed(cell $storage) impure {
+    commitNonce(1);
+    lockNonce(1);
+    executeNonce(1);
+    return test::shouldBeTrue(
+        _viewExecutionStatus(1) == ExecutionStatus::executed
+    );
+}
+
+(int, slice) getExecutionStatus::nonceVerifiedButNotExecutable(cell $storage) impure {
+    commitNonce(NONCE);
+    return test::shouldBeTrue(
+        _viewExecutionStatus(NONCE) == ExecutionStatus::committedNotExecutable
+    );
+}
+
+(int, slice) getExecutionStatus::nonce1024Verifying(cell $storage) impure {
+    return test::shouldBeTrue(
+        _viewExecutionStatus(MAX_CELL_BITS + 1) == ExecutionStatus::uncommitted
+    );
+}
+
+;; --------------------------------------------------
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([getExecutionStatus::nonce1Verifying, "getExecutionStatus::nonce1Verifying"])
+            .tpush([getExecutionStatus::nonceVerifying, "getExecutionStatus::nonceVerifying"])
+            .tpush([getExecutionStatus::nonce1executable, "getExecutionStatus::nonce1executable"])
+            .tpush([getExecutionStatus::nonce3executable, "getExecutionStatus::nonce3executable"])
+            .tpush([getExecutionStatus::nonce1executing, "getExecutionStatus::nonce1executing"])
+            .tpush([getExecutionStatus::nonce3executing, "getExecutionStatus::nonce3executing"])
+            .tpush([getExecutionStatus::nonce1executed, "getExecutionStatus::nonce1executed"])
+            .tpush([getExecutionStatus::nonceVerifiedButNotExecutable, "getExecutionStatus::nonceVerifiedButNotExecutable"])
+            .tpush([getExecutionStatus::nonce1024Verifying, "getExecutionStatus::nonce1024Verifying"])
+    );
+}

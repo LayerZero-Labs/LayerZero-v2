@@ -1,0 +1,45 @@
+#include "../storage.fc";
+
+const int OP_L1_OVERHEAD = 3188; ;; 2100 + 68 * 16
+
+;; Optimism model
+tuple priceFeedFeeLib::estimateFee(tuple inputs) impure method_id(11111) {
+    cell $priceFeedStorage = inputs.cell_at(0);
+    int callDataSize = inputs.int_at(1);
+    int remoteGas = inputs.int_at(2);
+
+    ;; ETH (L1) values
+    (
+        int ethPriceRatio,
+        int ethGasPriceInRemoteUnit,
+        int ethGasPerByte,
+        _, _,
+        cell $optimismExtension
+    ) = PriceFeedFeelib::deserialize($priceFeedStorage);
+
+    ;; OP (L2) values
+    (
+        int opPriceRatio,
+        int opGasPriceInRemoteUnit,
+        int opGasPerByte,
+        int opNativePriceUsd, _, _
+    ) = PriceFeedFeelib::deserialize($optimismExtension);
+
+    int gasForL1CallData = (callDataSize * ethGasPerByte) + OP_L1_OVERHEAD;
+    int l1FeeInEthUnit = gasForL1CallData * ethGasPriceInRemoteUnit;
+    ;; (fee/eth) * (eth/ton) / (op/ton) = fee/op
+    int l1FeeInOpUnit = ((l1FeeInEthUnit * ethPriceRatio) / opPriceRatio); ;; convert from ETH units to TON units and back to OP units
+
+    int gasForL2CallData = callDataSize * opGasPerByte;
+    int l2FeeInOpUnit = (gasForL2CallData + remoteGas) * opGasPriceInRemoteUnit;
+
+    int gasFeeInOpUnit = l1FeeInOpUnit + l2FeeInOpUnit;
+
+    return unsafeTuple(
+        [
+            gasFeeInOpUnit,     ;; gasFee in Remote Unit, (e.g., WEI for ETH)
+            opPriceRatio,           ;; priceRatio
+            opNativePriceUsd        ;; Op Native price in USD
+        ]
+    );
+}

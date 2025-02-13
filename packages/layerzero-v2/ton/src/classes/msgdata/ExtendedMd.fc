@@ -1,0 +1,71 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::ExtendedMd::NAME = "extendedMd"u;
+
+;; field names
+const int md::ExtendedMd::md = 0;
+const int md::ExtendedMd::obj = 1;
+const int md::ExtendedMd::forwardingAddress = 2;
+
+cell md::ExtendedMd::New(cell $md, cell $obj, int forwardingAddress) impure inline method_id {
+    return cl::declare(
+        md::ExtendedMd::NAME,
+        unsafeTuple([
+            [cl::t::objRef, $md],                ;; md::ExtendedMd::md
+            [cl::t::objRef, $obj],               ;; md::ExtendedMd::obj
+            [cl::t::address, forwardingAddress]  ;; md::ExtendedMd::forwardingAddress
+        ])
+    );
+}
+
+const int md::ExtendedMd::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 3);
+const int md::ExtendedMd::_headerFillerBits = _HEADER_WIDTH - md::ExtendedMd::_headerInfoBits;
+const int md::ExtendedMd::_headerInfo = 8632157695553525919024050567799415113083;
+
+cell md::ExtendedMd::build(cell $md, cell $obj, int forwardingAddress) impure inline {
+    return begin_cell()
+        .store_uint(md::ExtendedMd::_headerInfo, md::ExtendedMd::_headerInfoBits)     ;; header info
+        .store_ones(md::ExtendedMd::_headerFillerBits)                                ;; header filler
+        .store_ref($md)                                                                ;; md::ExtendedMd::md
+        .store_ref($obj)                                                               ;; md::ExtendedMd::obj
+        .store_uint256(forwardingAddress)                                              ;; md::ExtendedMd::forwardingAddress
+        .end_cell();
+}   
+
+;; ====================== Object Getters =====================
+
+const int md::ExtendedMd::_forwardingAddressOffset = _HEADER_WIDTH;
+
+cell md::ExtendedMd::getObj(cell $self) impure inline {
+    return $self.cellPreloadRefAt(1);
+}
+
+;; ====================== Object Multi-Getters =====================
+
+(cell, int) md::ExtendedMd::getMdAndForwardingAddress(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadRefAt(0),
+        selfSlice.preloadAddressAt(md::ExtendedMd::_forwardingAddressOffset)
+    );
+}
+
+(cell, cell, int) md::ExtendedMd::deserialize(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadRefAt(0),
+        selfSlice.preloadRefAt(1),
+        selfSlice.preloadAddressAt(md::ExtendedMd::_forwardingAddressOffset)
+    );
+}
+
+;; ====================== Sanitize =====================
+
+cell md::ExtendedMd::sanitize(cell $extendedMd) impure {
+    cell $md = $extendedMd.cl::get<objRef>(md::ExtendedMd::md);
+    cell $obj = $extendedMd.cl::get<objRef>(md::ExtendedMd::obj);
+    int forwardingAddress = $extendedMd.cl::get<address>(md::ExtendedMd::forwardingAddress);
+
+    return md::ExtendedMd::New($md, $obj, forwardingAddress);
+}

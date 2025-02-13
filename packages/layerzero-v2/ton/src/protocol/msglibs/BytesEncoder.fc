@@ -1,0 +1,151 @@
+#include "../../classes/lz/Path.fc";
+#include "../../classes/lz/Packet.fc";
+
+const int BytesEncoder::ERROR::malformed_subtree = 1217;
+const int BytesEncoder::ERROR::malformed_data = 1218;
+;; these are calculated relative to their position in the BytesEncoder::build<PacketV1> function
+const int PacketV1::nonceOffsetBytes = 1;
+const int PacketV1::nonceBytes = 8;
+const int PacketV1::guidOffsetBytes = 81;
+const int PacketV1::guidBytes = 32;
+
+;; keeps a stack of builders on a tuple
+tuple BytesEncoder::New() inline {
+    return unsafeTuple([begin_cell()]);
+}
+
+;; appends a slice to the bytes encoder
+tuple BytesEncoder::feed(tuple self, slice data) impure inline {
+    while (~ data.is_null()) {
+        ;; verifies it is a linked list and only has one reference
+        throw_if(BytesEncoder::ERROR::malformed_subtree, data.slice_refs() > 1);
+
+        ;; grabs the last builder on the tuple stack
+        int curBuilderIdx = self.tlen() - 1;
+        builder curBuilder = self.at(curBuilderIdx);
+
+        ;; calculates the size in bytes of the current builder and the data
+        int curBuilderBytes = curBuilder.builder_bits() / 8;
+        int dataWidthBytes = data.slice_bits() / 8;
+        int fillsCurrentBuilder = (curBuilderBytes + dataWidthBytes) == 127;
+
+        ;; if there is a partail byte at the end the check below makes it throw if it is
+        throw_if(BytesEncoder::ERROR::malformed_data, (data.slice_bits() % 8) != 0);
+
+        ;; if the current builder + the size of data are greater
+        ;; than 127 bytes, we need to break it up into multiple builders
+        if ((curBuilderBytes + dataWidthBytes) > 127) {
+            ;; calculate the first X bytes to add to the current builder to fill it
+            int partialDataWidth = 127 - curBuilderBytes;
+
+            ;; the remaining bytes length inside data after we move the reference to
+            ;; where the partialDataWidth left off
+            dataWidthBytes = dataWidthBytes - partialDataWidth;
+
+            ;; store the leading X bytes and saves to the tuple stack
+            self = self.tset(
+                curBuilderIdx,
+                curBuilder
+                    .store_slice(data.preload_bits(partialDataWidth * 8))
+            );
+
+            ;; moves the pointer
+            data = data.skip_bits(partialDataWidth * 8);
+            curBuilderIdx += 1;
+
+            ;; adds a new builder to the tuple stack
+            curBuilder = begin_cell();
+            self~tpush(curBuilder);
+        }
+        ;; If we entered the previous if statement, we have a fresh builder and less than
+        ;; 127 bytes remaining at this slice in the data linked list. This will take the remaining
+        ;; data inside the data slice and store in the builder.
+        ;; If we didn't enter the previous if statement it will append the remaining bytes
+        ;; of the data slice to the builder.
+        ;; THhen updates the tuple stack with the updated writes
+        self = self.tset(curBuilderIdx, curBuilder.store_slice(data.sdskipfirst(0)));
+
+        ;; if data linked list has more data extend the data stack and move the pointer of
+        ;; data to the next item in the list.
+        ifnot (data.slice_refs_empty?()) {
+
+            ;; if the current builder is full add a new builer on the tuple stack
+            if (fillsCurrentBuilder) {
+                self = self.tpush(begin_cell());
+            }
+            ;; move the pointer
+            data = data.preload_first_ref().begin_parse();
+        } else {
+            ;; cue to end the while loop, the data has been stored in the bytes encoded tuple stack
+            data = null();
+        }
+    }
+
+    return self;
+}
+
+;; builds from the bottom up (of the stack) since data is built from the leaf node of a tree
+cell BytesEncoder::serialize(tuple self) impure inline {
+    int idx = self.tlen() - 1;
+    ;; if we're at the head
+    if (idx == 0) {
+        return self.at(idx).end_cell();
+    }
+    ;; if second to last
+    if (idx == 1) {
+        return self.at(0).store_ref(self.at(1).end_cell()).end_cell();
+    }
+    builder last = self.at(idx);
+    builder secondLast = self.at(idx - 1);
+    while (idx > 1) {
+        idx -= 1;
+        last = secondLast.store_ref(last.end_cell());
+        secondLast = self.at(idx);
+    }
+    return secondLast.store_ref(last.end_cell()).end_cell();
+}
+
+tuple BytesEncoder::feed<uint8>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint8(data).as_slice());
+}
+
+tuple BytesEncoder::feed<uint16>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint16(data).as_slice());
+}
+
+tuple BytesEncoder::feed<uint32>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint32(data).as_slice());
+}
+
+tuple BytesEncoder::feed<uint64>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint64(data).as_slice());
+}
+
+tuple BytesEncoder::feed<coins>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint128(data).as_slice());
+}
+
+tuple BytesEncoder::feed<uint256>(tuple self, int data) impure inline {
+    return self.BytesEncoder::feed(begin_cell().store_uint256(data).as_slice());
+}
+
+tuple BytesEncoder::feed<cellRef>(tuple self, cell data) impure inline {
+    return self.BytesEncoder::feed(data.begin_parse());
+}
+
+tuple BytesEncoder::build<PacketV1>(cell $packet) impure inline {
+    (cell $path, cell $message, int nonce, int guid) = $packet.lz::Packet::deserialize();
+    (int srcEid, int srcOApp, int dstEid, int dstOApp) = $path.lz::Path::deserialize();
+    return unsafeTuple([
+        begin_cell()    ;; 113 bytes of the 127
+            .store_uint8(1) ;; packetVersion uint8
+            .store_uint64(nonce) ;; nonce uint64
+            .store_uint32(srcEid) ;; srcEid uint32
+            .store_uint256(srcOApp) ;; sender bytes32
+            .store_uint32(dstEid) ;; dstEid uint32
+            .store_uint256(dstOApp)  ;; receiver bytes32
+            .store_uint256(guid)  ;; guid bytes32
+    ]).BytesEncoder::feed<cellRef>(
+        $message ;; message []bytes
+    );
+}

@@ -1,0 +1,280 @@
+#include "../../funC++/classlib.fc";
+#include "../../funC++/constants.fc";
+
+#include "Path.fc";
+
+;; required storage name
+const int lz::Packet::NAME = "Packet"u;
+
+;; field names
+const int lz::Packet::path = 0;
+const int lz::Packet::message = 1;
+const int lz::Packet::nonce = 2;
+const int lz::Packet::guid = 3;
+
+const int lz::Packet::ERROR::INVALID_MESSAGE = 1089;
+const int lz::Packet::ERROR::INVALID_NONCE = 1090;
+const int lz::Packet::ERROR::INVALID_PACKET_FIELD = 1091;
+
+const int lz::Packet::MAX_RECEIVE_MESSAGE_CELLS = 32;
+const int lz::Packet::MAX_SEND_MESSAGE_CELLS = 255;
+
+cell lz::Packet::New(cell $path, cell message, int nonce) impure inline method_id {
+    return cl::declare(
+        lz::Packet::NAME,
+        unsafeTuple([
+            [cl::t::objRef, $path],             ;; lz::Packet::path
+            [cl::t::cellRef, message],          ;; lz::Packet::message
+            [cl::t::uint64, nonce],             ;; lz::Packet::nonce
+            [cl::t::uint256, 0]                 ;; lz::Packet::guid
+        ])
+    );
+}
+
+const int lz::Packet::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 4);
+const int lz::Packet::_headerFillerBits = _HEADER_WIDTH - lz::Packet::_headerInfoBits;
+const int lz::Packet::_headerInfo = 417359019239977417716476838698419835;
+
+;; this function is unused by the protocol but will be used by OApps
+cell lz::Packet::build(cell $path, cell message, int nonce) impure inline method_id {
+    return begin_cell()
+        .store_uint(lz::Packet::_headerInfo, lz::Packet::_headerInfoBits) ;; header info
+        .store_ones(lz::Packet::_headerFillerBits)                        ;; header filler
+        .store_ref($path)                                                  ;; path
+        .store_ref(message)                                                ;; message
+        .store_uint64(nonce)                                               ;; nonce
+        .store_uint256(0)                                                  ;; guid (default = 0)
+        .end_cell();
+}
+
+;; this function is unused by the protocol but will be used by OApps
+cell lz::Packet::nonceless(cell $path, cell message) impure inline method_id {
+    return lz::Packet::build($path, message, 0);
+}
+
+;; ====================== Object Accessors =====================
+
+const int lz::Packet::_nonceOffset = _HEADER_WIDTH;
+const int lz::Packet::_guidOffset = lz::Packet::_nonceOffset + 64;
+
+cell lz::Packet::getPath(cell $self) impure inline {
+    return $self.cellPreloadRefAt(0);
+}
+
+;; this function is unused by the protocol but will be used by OApps
+cell lz::Packet::getMessage(cell $self) impure inline {
+    return $self.cellPreloadRefAt(1);
+}
+
+int lz::Packet::getNonce(cell $self) impure inline {
+    return $self.cellPreloadUint64At(lz::Packet::_nonceOffset);
+}
+
+int lz::Packet::getGuid(cell $self) impure inline {
+    return $self.cellPreloadUint256At(lz::Packet::_guidOffset);
+}
+
+;; returns (path, message, nonce, guid)
+(cell, cell, int, int) lz::Packet::deserialize(cell $self) impure inline {
+    slice $selfSlice = $self.begin_parse();
+    return (
+        $selfSlice.preloadRefAt(0),
+        $selfSlice.preloadRefAt(1),
+        $selfSlice.preloadUint64At(lz::Packet::_nonceOffset),
+        $selfSlice.preloadUint256At(lz::Packet::_guidOffset)
+    );
+}
+
+;; ====================== Object Composite Modifiers =====================
+
+;; NOTE: this assumes that the placement of the first field is before the second field
+cell lz::Packet::replaceTwoFieldsAtOffsets(
+    cell encodedPacket,
+    int replacementValue1,
+    int replacementOffsetBytes1,
+    int field1Bytes,
+    int replacementValue2,
+    int replacementOffsetBytes2,
+    int field2Bytes
+) impure inline method_id {
+    int field1PosBits = (replacementOffsetBytes1 % MAX_CELL_BYTES) * 8;
+    int cell1Idx = replacementOffsetBytes1 / MAX_CELL_BYTES;
+    int field2PosBits = (replacementOffsetBytes2 % MAX_CELL_BYTES) * 8;
+    int cell2Idx = replacementOffsetBytes2 / MAX_CELL_BYTES;
+    slice itr = encodedPacket.begin_parse();
+    int field1Bits = field1Bytes * 8;
+    int field2Bits = field2Bytes * 8;
+    int field1EndPosBits = field1PosBits + field1Bits;
+    int field2EndPosBits = field2PosBits + field2Bits;
+
+    throw_if(
+        lz::Packet::ERROR::INVALID_PACKET_FIELD,
+        (max(field1Bytes, field2Bytes) > MAX_CELL_BYTES)
+        | (max(field1EndPosBits, field2EndPosBits) > MAX_CELL_WHOLE_BYTE_BITS)
+    );
+
+    ;; short-circuit the common case to save gas
+    if (cell2Idx == 0) {
+        return begin_cell()
+            .store_slice(scutfirst(itr, field1PosBits, 0))
+            .store_uint(replacementValue1, field1Bits)
+            .store_slice(subslice(
+                itr,
+                field1EndPosBits,
+                0,
+                field2PosBits - field1EndPosBits,
+                0
+            ))
+            .store_uint(replacementValue2, field2Bits)
+            .store_slice(scutlast(
+                itr,
+                itr.slice_bits() - field2EndPosBits,
+                itr.slice_refs()
+            ))
+            .end_cell();
+    }
+
+    tuple encodedPacketBuilders = empty_tuple();
+
+    int idx = 0;
+
+    do {
+        if ((idx == cell1Idx) & (cell1Idx == cell2Idx)) {
+            slice beforeFirstField = scutfirst(itr, field1PosBits, 0);
+
+            slice betweenFields = subslice(
+                itr,
+                (field1PosBits + field1Bits),
+                0,
+                (field2PosBits - field1PosBits - field1Bits),
+                0
+            );
+
+            slice afterSecondField = scutlast(
+                itr,
+                itr.slice_bits() - (field2Bits + field2PosBits),
+                itr.slice_refs()
+            );
+
+            encodedPacketBuilders~tpush(
+                begin_cell()
+                    .store_slice(beforeFirstField)
+                    .store_uint(replacementValue1, field1Bits)
+                    .store_slice(betweenFields)
+                    .store_uint(replacementValue2, field2Bits)
+                    .store_slice(afterSecondField)
+            );
+        } elseif (idx == cell1Idx) {
+            encodedPacketBuilders~tpush(
+                begin_cell()
+                .store_slice(scutfirst(itr, field1PosBits, 0))
+                .store_uint(replacementValue1, field1Bits)
+                .store_slice(
+                    scutlast(
+                        itr,
+                        itr.slice_bits() - (field1Bits + field1PosBits),
+                        itr.slice_refs()
+                    )
+                )
+            );
+        } elseif (idx == cell2Idx) {
+            encodedPacketBuilders~tpush(
+                begin_cell()
+                .store_slice(scutfirst(itr, field2PosBits, 0))
+                .store_uint(replacementValue2, field2Bits)
+                .store_slice(
+                    scutlast(
+                        itr,
+                        itr.slice_bits() - (field2Bits + field2PosBits),
+                        itr.slice_refs()
+                    )
+                )
+            );
+        } else {
+            encodedPacketBuilders~tpush(begin_cell().store_slice(itr));
+        }
+
+        if (itr.slice_refs() > 0) {
+            itr = itr.preload_first_ref().begin_parse();
+        }
+        idx += 1;
+    } until (idx >= cell2Idx);
+
+    cell curCell = encodedPacketBuilders.at(cell2Idx).end_cell();
+
+    while (cell2Idx > 0) {
+        cell2Idx -= 1;
+        curCell = encodedPacketBuilders.at(cell2Idx).store_ref(curCell).end_cell();
+    }
+
+    return curCell;
+}
+
+cell lz::Packet::setNonceAndGuid(cell $self, int nonce, int guid) impure inline {
+    return begin_cell()
+            .store_slice($self.begin_parse().scutfirst(lz::Packet::_nonceOffset, 2))  ;; keep the header and the first two refs
+            .store_uint64(nonce)
+            .store_uint256(guid)
+            .end_cell();
+}
+
+;; ====================== Object Utilities =====================
+
+int lz::Packet::calculateGuid(cell $path, int nonce) inline method_id {
+    (int srcEid, int srcOApp, int dstEid, int dstOApp) = $path.lz::Path::deserialize();
+    return keccak256Builder(
+        begin_cell()
+            .store_uint64(nonce)
+            .store_uint32(srcEid)
+            .store_uint256(srcOApp)
+            .store_uint32(dstEid)
+            .store_uint256(dstOApp)
+    );
+}
+
+;; ====================== Object Validators =====================
+
+;; assumes that the message is a valid single-linked list
+int lz::Packet::_messageBytes(cell $self) impure inline {
+    slice messageSlice = $self.lz::Packet::getMessage().begin_parse();
+    (int sliceBits, int sliceRefs) = messageSlice.slice_bits_refs();
+    int messageBytes = sliceBits / 8;
+    while (sliceRefs > 0) {
+        messageSlice = messageSlice.preload_first_ref().begin_parse();
+        (sliceBits, sliceRefs) = messageSlice.slice_bits_refs();
+        messageBytes += (sliceBits / 8);
+    }
+    return messageBytes;
+}
+
+() lz::Packet::_assertValidLinkedList(cell head, int maxLen) impure inline {
+    slice messageSlice = head.begin_parse();
+    repeat (maxLen) {
+        (int sliceBits, int sliceRefs) = messageSlice.slice_bits_refs();
+        if (sliceRefs == 0) {
+            throw_if(lz::Packet::ERROR::INVALID_MESSAGE, sliceBits % 8 != 0);
+            return ();
+        } else {
+            throw_if(
+                lz::Packet::ERROR::INVALID_MESSAGE,
+                (sliceRefs != 1) | (sliceBits != MAX_CELL_WHOLE_BYTE_BITS)
+            );
+        }
+        messageSlice = messageSlice.preload_first_ref().begin_parse();
+    }
+    throw(lz::Packet::ERROR::INVALID_MESSAGE);
+}
+
+() lz::Packet::assertValidSendMessage(cell $self) impure inline {
+    lz::Packet::_assertValidLinkedList(
+        $self.lz::Packet::getMessage(),
+        lz::Packet::MAX_SEND_MESSAGE_CELLS
+    );
+}
+
+() lz::Packet::assertValidReceiveMessage(cell $self) impure inline {
+    lz::Packet::_assertValidLinkedList(
+        $self.lz::Packet::getMessage(),
+        lz::Packet::MAX_RECEIVE_MESSAGE_CELLS
+    );
+}

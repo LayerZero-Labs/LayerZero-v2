@@ -1,0 +1,230 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../funC++/handlerCore.fc";
+#include "../../interfaces.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../../tests/consts.fc";
+#include "../../../classes/msgdata/MdAddress.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "Channel::permissions"; }
+
+cell createContractStorage() impure {
+    cell $storage = Channel::New(
+        getCaller(),
+        MOCK_SEND_PATH(),
+        ENDPOINT_ADDRESS
+    );
+
+    ;; set the default send lib address to allow testing send lib etc.
+    cell $epConfigOApp = $storage.cl::get<objRef>(Channel::epConfigOApp);
+    $epConfigOApp = $epConfigOApp.cl::set(lz::EpConfig::sendMsglib, SEND_MSGLIB_ADDRESS);
+
+    setContractStorage($storage.cl::set(Channel::epConfigOApp, $epConfigOApp));
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure {
+    initialize(cl::nullObject());
+}
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS===============================
+
+(int, slice) checkPermissions::lzReceivePrepare::success::basic(cell $storage) impure {
+    ;; Permissionless, can be called by anyone
+    spoofCaller(ARBITRARY_ADDRESS);
+    return test::permissions::shouldPass(Channel::OP::LZ_RECEIVE_PREPARE, cl::nullObject());
+}
+
+(int, slice) checkPermissions::lzReceiveLock::success::basic(cell $storage) impure {
+    ;; SRC_OAPP of the channel is the DST_OAPP of the packet in this receive context
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(Channel::OP::LZ_RECEIVE_LOCK, cl::nullObject());
+}
+
+(int, slice) checkPermissions::lzReceiveLock::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::LZ_RECEIVE_LOCK, cl::nullObject());
+}
+
+(int, slice) checkPermissions::lzReceiveExecuteCallback::success::basic(cell $storage) impure {
+    ;; SRC_OAPP of the channel is the DST_OAPP of the packet in this receive context
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK, cl::nullObject());
+}
+
+(int, slice) checkPermissions::lzReceiveExecuteCallback::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK, cl::nullObject());
+}
+
+(int, slice) checkPermissions::CoinsAmount::success::basic(cell $storage) impure {
+    return test::permissions::shouldPass(Channel::OP::DEPOSIT_ZRO, cl::nullObject());
+}
+
+(int, slice) checkPermissions::CoinsAmount::revert::notOwner(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::DEPOSIT_ZRO, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEpConfigOApp::success::basic(cell $storage) impure {
+    spoofCaller(ENDPOINT_ADDRESS);
+    return test::permissions::shouldPass(Channel::OP::SET_EP_CONFIG_OAPP, cl::nullObject());
+}
+
+(int, slice) checkPermissions::setEpConfigOApp::revert::notEndpoint(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::SET_EP_CONFIG_OAPP, cl::nullObject());
+}
+
+(int, slice) checkPermissions::channelSend::success::basic(cell $storage) impure {
+    spoofCaller(ENDPOINT_ADDRESS);
+    return test::permissions::shouldPass(Channel::OP::CHANNEL_SEND, cl::nullObject());
+}
+
+(int, slice) checkPermissions::channelSend::revert::notEndpoint(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::CHANNEL_SEND, cl::nullObject());
+}
+
+(int, slice) checkPermissions::channelCommitPacket::success::nonce1(cell $storage) impure {
+    spoofCaller(ENDPOINT_ADDRESS);
+    return test::permissions::shouldPass(Channel::OP::CHANNEL_COMMIT_PACKET, cl::nullObject());
+}
+
+(int, slice) checkPermissions::channelCommitPacket::revert::notEndpoint(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::CHANNEL_COMMIT_PACKET, cl::nullObject());
+}
+
+(int, slice) checkPermissions::msglibSendCallback::success::basic(cell $storage) impure {
+    spoofCaller(SEND_MSGLIB_ADDRESS);
+    return test::permissions::shouldPass(
+        Channel::OP::MSGLIB_SEND_CALLBACK,
+        MOCK_MSGLIB_SEND_CALLBACK()
+    );
+}
+
+(int, slice) checkPermissions::msglibSendCallback::revert::notSendMsglib(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Channel::OP::MSGLIB_SEND_CALLBACK,
+        MOCK_MSGLIB_SEND_CALLBACK()
+    );
+}
+
+(int, slice) checkPermissions::nilify::success::basic(cell $storage) impure {
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(Channel::OP::NILIFY, cl::nullObject());
+}
+
+(int, slice) checkPermissions::nilify::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::NILIFY, cl::nullObject());
+}
+
+(int, slice) checkPermissions::burn::success::basic(cell $storage) impure {
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(Channel::OP::NILIFY, cl::nullObject());
+}
+
+(int, slice) checkPermissions::burn::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::NILIFY, cl::nullObject());
+}
+
+(int, slice) checkPermissions::forceAbort::success::basic(cell $storage) impure {
+    spoofCaller(SRC_OAPP);
+    return test::permissions::shouldPass(Channel::OP::FORCE_ABORT, cl::nullObject());
+}
+
+(int, slice) checkPermissions::forceAbort::revert::notOApp(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(Channel::OP::FORCE_ABORT, cl::nullObject());
+}
+
+(int, slice) checkPermissions::syncMsglibConnection::success::basic(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldPass(
+        Channel::OP::SYNC_MSGLIB_CONNECTION,
+        md::MdAddress::New(MOCK_SEND_PATH(), MSGLIB_CONNECTION_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::notifyPacketExecuted::success::basic(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldPass(
+        Channel::OP::NOTIFY_PACKET_EXECUTED,
+        md::MdAddress::New(md::Nonce::New(NONCE), MSGLIB_CONNECTION_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::emitPacketStatus::success::basic(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldPass(
+        Channel::OP::EMIT_LZ_RECEIVE_ALERT,
+        cl::nullObject()
+    );
+}
+
+(int, slice) checkPermissions::default::revert::invalidOpCode(cell $storage) impure {
+    ;; this is a generic opcode that we should NOT allow
+    return test::permissions::shouldFail(OP::RANDOM, cl::nullObject());
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            ;; -- Lz Receive Prepare
+            .tpush([checkPermissions::lzReceivePrepare::success::basic, "checkPermissions::lzReceivePrepare::success::basic"])
+            ;; -- Lz Receive Lock
+            .tpush([checkPermissions::lzReceiveLock::success::basic, "checkPermissions::lzReceiveLock::success::basic"])
+            .tpush([checkPermissions::lzReceiveLock::revert::notOApp, "checkPermissions::lzReceiveLock::revert::notOApp"])
+            ;; -- Lz Receive Execute Callback
+            .tpush([checkPermissions::lzReceiveExecuteCallback::success::basic, "checkPermissions::lzReceiveExecuteCallback::success::basic"])
+            .tpush([checkPermissions::lzReceiveExecuteCallback::revert::notOApp, "checkPermissions::lzReceiveExecuteCallback::revert::notOApp"])
+            ;; -- Lz Receive deposit Zro
+            .tpush([checkPermissions::CoinsAmount::success::basic, "checkPermissions::CoinsAmount::success::basic"])
+            .tpush([checkPermissions::CoinsAmount::revert::notOwner, "checkPermissions::CoinsAmount::revert::notOwner"])
+            ;; -- set ep config oapp
+            .tpush([checkPermissions::setEpConfigOApp::success::basic, "checkPermissions::setEpConfigOApp::success::basic"])
+            .tpush([checkPermissions::setEpConfigOApp::revert::notEndpoint, "checkPermissions::setEpConfigOApp::revert::notEndpoint"])
+            ;; -- Channel Send
+            .tpush([checkPermissions::channelSend::success::basic, "checkPermissions::channelSend::success::basic"])
+            .tpush([checkPermissions::channelSend::revert::notEndpoint, "checkPermissions::channelSend::revert::notEndpoint"])
+            ;; -- Channel Commit Packet
+            .tpush([checkPermissions::channelCommitPacket::success::nonce1, "checkPermissions::channelCommitPacket::success::nonce1"])
+            .tpush([checkPermissions::channelCommitPacket::revert::notEndpoint, "checkPermissions::channelCommitPacket::revert::notEndpoint"])
+            ;; -- Msglib send callback
+            .tpush([checkPermissions::msglibSendCallback::success::basic, "checkPermissions::msglibSendCallback::success::basic"])
+            .tpush([checkPermissions::msglibSendCallback::revert::notSendMsglib, "checkPermissions::msglibSendCallback::revert::notSendMsglib"])
+            ;; -- Nilify
+            .tpush([checkPermissions::nilify::success::basic, "checkPermissions::nilify::success::basic"])
+            .tpush([checkPermissions::nilify::revert::notOApp, "checkPermissions::nilify::revert::notOApp"])
+            ;; -- Burn
+            .tpush([checkPermissions::burn::success::basic, "checkPermissions::burn::success::basic"])
+            .tpush([checkPermissions::burn::revert::notOApp, "checkPermissions::burn::revert::notOApp"])
+            ;; -- Force abort
+            .tpush([checkPermissions::forceAbort::success::basic, "checkPermissions::forceAbort::success::basic"])
+            .tpush([checkPermissions::forceAbort::revert::notOApp, "checkPermissions::forceAbort::revert::notOApp"])
+            ;; -- Msglib Sync connection
+            .tpush([checkPermissions::syncMsglibConnection::success::basic, "checkPermissions::syncMsglibConnection::success::basic"])
+            ;; -- Notify packet Executed
+            .tpush([checkPermissions::notifyPacketExecuted::success::basic, "checkPermissions::notifyPacketExecuted::success::basic"])
+            ;; -- emitPacketStatus
+            .tpush([checkPermissions::emitPacketStatus::success::basic, "checkPermissions::emitPacketStatus::success::basic"])
+            ;; -- invalid opcode
+            .tpush([checkPermissions::default::revert::invalidOpCode, "checkPermissions::default::revert::invalidOpCode"])
+    );
+}

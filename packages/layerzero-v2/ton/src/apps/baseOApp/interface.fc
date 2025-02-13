@@ -1,0 +1,38 @@
+#include "./storage.fc";
+
+const int OP::SetOwner = "OP::SetOwner"c;
+
+const int OP::DeployChannel = "OP::DeployChannel"c;
+const int OP::DeployConnection = "OP::DeployConnection"c;
+const int OP::ForceAbort = "OP::ForceAbort"c;
+const int OP::Burn = "OP::Burn"c;
+const int OP::Nilify = "OP::Nilify"c;
+const int OP::SetPeer = "OP::SetPeer"c;
+const int OP::SetEnforcedOptions = "OP::SetEnforcedOptions"c;
+const int OP::SetLzConfig = "OP::SetLzConfig"c;
+const int OP::TransferOwnership = "OP::TransferOwnership"c;
+const int OP::ClaimOwnership = "OP::ClaimOwnership"c;
+
+;; event topics
+const int EVENT::PeerSet = "EVENT::PeerSet"u;
+const int EVENT::OwnerSet = "EVENT::OwnerSet"u;
+const int EVENT::TentativeOwnerSet = "EVENT::TentativeOwnerSet"u;
+const int EVENT::EnforcedOptionsSet = "EVENT::EnforcedOptionsSet"u;
+const int EVENT::LzReceiveExecuteFailed = "EVENT::LzReceiveExecuteFailed"u;
+
+;; error codes
+const int ERROR::PeerNotSet = "ERROR::PeerNotSet"c & ERRORCODE_MASK;
+const int ERROR::WrongPeer = "ERROR::WrongPeer"c & ERRORCODE_MASK;
+const int ERROR::WrongSrcEid = "ERROR::WrongSrcEid"c & ERRORCODE_MASK;
+const int ERROR::WrongSrcOApp = "ERROR::WrongSrcOApp"c & ERRORCODE_MASK;
+const int ERROR::WrongChannel = "ERROR::WrongChannel"c & ERRORCODE_MASK;
+const int ERROR::WrongChannelOwner = "ERROR::WrongChannelOwner"c & ERRORCODE_MASK;
+const int ERROR::InsufficientGas = "ERROR::InsufficientGas"c & ERRORCODE_MASK;
+const int ERROR::InvalidExtraOptions = "ERROR::InvalidExtraOptions"c & ERRORCODE_MASK;
+const int ERROR::InvalidEnforcedOptions = "ERROR::InvalidEnforcedOptions"c & ERRORCODE_MASK;
+const int ERROR::InvalidExtraOptionsVersion = "ERROR::InvalidExtraOptionsVersion"c & ERRORCODE_MASK;
+const int ERROR::NullTentativeOwner = "ERROR::NullTentativeOwner"c & ERRORCODE_MASK;
+const int ERROR::OnlyTentativeOwner = "ERROR::OnlyTentativeOwner"c & ERRORCODE_MASK;
+const int ERROR::OnlyOwner = "ERROR::OnlyOwner"c & ERRORCODE_MASK;
+const int ERROR::NotAuthenticated = "ERROR::NotAuthenticated"c & ERRORCODE_MASK;
+const int ERROR::NotInitialized = "ERROR::NotInitialized"c & ERRORCODE_MASK;

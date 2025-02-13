@@ -1,0 +1,132 @@
+;;; ==============================================================================
+;; Pipelined Out-of-Order data structure
+;; this data structure defines a bitmap that is used to track a stream of
+;; commands that are executed out-of-order in a bounded-depth pipeline
+#include "../classlib.fc";
+
+const int POOO::NAME = "POOO"u;
+
+const int POOO::nextEmpty = 0;
+const int POOO::bitmap = 1;
+
+const int POOO::ERROR::negativeIndex = 1153;
+
+cell POOO::New() impure inline method_id {
+    return cl::declare(
+        POOO::NAME,
+        unsafeTuple([
+            [cl::t::uint64, 1], ;; nextEmpty
+            [cl::t::cellRef, begin_cell().store_zeroes(MAX_CELL_BITS).end_cell()] ;; bitmap
+        ])
+    );
+}
+
+const int POOO::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 2);
+const int POOO::_headerFillerBits = _HEADER_WIDTH - POOO::_headerInfoBits;
+const int POOO::_headerInfo = 92590899976783941628;
+
+cell POOO::buildFull(int nextEmpty, cell bitmap) impure inline {
+    return begin_cell()
+        .store_uint(POOO::_headerInfo, POOO::_headerInfoBits)       ;; header info
+        .store_ones(POOO::_headerFillerBits)                        ;; header filler
+        .store_uint64(nextEmpty)                                    ;; nextEmpty
+        .store_ref(bitmap)                                          ;; bitmap
+        .end_cell();
+}
+
+;; ========================== Object Getters ==========================
+
+const int POOO::_nextEmptyOffset = _HEADER_WIDTH;
+
+int POOO::getNextEmpty(cell $self) impure inline {
+    return $self.cellPreloadUint64At(POOO::_nextEmptyOffset);
+}
+
+int POOO::maxSettableBit(cell $self) impure inline {
+    return $self.POOO::getNextEmpty() + MAX_CELL_BIT_INDEX;
+}
+
+;; ========================== Object Multi-Getters ==========================
+
+;; returns (nextEmpty, bitmap.slice)
+(int, slice) POOO::deserialize(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadUint64At(POOO::_nextEmptyOffset),
+        selfSlice.preloadRefSliceAt(0)
+    );
+}
+
+;; ========================== Object Utils ==========================
+
+int POOO::isBitSet(cell $self, int absoluteIdx) impure inline {
+    (int nextEmpty, slice bitmap) = POOO::deserialize($self);
+    int relativeIdx = absoluteIdx - nextEmpty;
+    return bitmap.preloadBoolAt(relativeIdx);
+}
+
+;; ========================== Object Setters ==========================
+
+;; Algorithm:
+;; 1. Extract the first `index` bits from the original bitmap.
+;; 2. Append a '1' bit to the extracted bits.
+;; 3. Append the remaining bits from the original bitmap after the first `index` bits to form a new bitmap.
+
+;; Returns:
+;; 1. The number of leading ones (`leadingOnes`).
+;; 2. A new cell that contains:
+;;    - The remaining bits after the leading ones from the original bitmap.
+;;    - A number of trailing zero bits equal to `leadingOnes`.
+
+;; Parameters:
+;; - `bitmapCell`: The original bitmap in the form of a cell.
+;; - `index`: The position up to which the first part of the bitmap is extracted.
+cell POOO::set(cell $self, int absoluteIndex) impure inline method_id {
+    throw_if(POOO::ERROR::negativeIndex, absoluteIndex < 0);
+
+    (int nextEmpty, slice bitmapSlice) = POOO::deserialize($self);
+    if (absoluteIndex < nextEmpty) {
+        return $self;
+    }
+
+    int index = absoluteIndex - nextEmpty;
+
+    (int leadingOnes, slice remainingBitmap) = ldones(
+        begin_cell()
+            .store_slice(scutfirst(bitmapSlice, index, 0))
+            .store_uint(1, 1)
+            .store_slice(scutlast(bitmapSlice, MAX_CELL_BITS - index - 1, 0))
+            .as_slice()
+    );
+    
+    return POOO::buildFull(
+        nextEmpty + leadingOnes,
+        begin_cell()
+            .store_slice(remainingBitmap)
+            .store_zeroes(leadingOnes)
+        .end_cell()
+    );
+}
+
+cell POOO::unsafeSetBits(cell $self, int start, int end) impure inline method_id {
+    (int nextEmpty, slice bitmapSlice) = POOO::deserialize($self);
+
+    int startIndex = start - nextEmpty;
+    int endIndex = end - nextEmpty;
+
+    (int leadingOnes, slice remainingBitmap) = ldones(
+        begin_cell()
+            .store_slice(scutfirst(bitmapSlice, startIndex, 0))
+            .store_ones(endIndex - startIndex)
+            .store_slice(scutlast(bitmapSlice, MAX_CELL_BITS - endIndex, 0))
+            .as_slice()
+    );
+    
+    return POOO::buildFull(
+        nextEmpty + leadingOnes,
+        begin_cell()
+            .store_slice(remainingBitmap)
+            .store_zeroes(leadingOnes)
+        .end_cell()
+    );
+}

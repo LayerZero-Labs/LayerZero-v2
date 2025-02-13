@@ -1,0 +1,980 @@
+#include "../src/classes/lz/Path.fc";
+#include "../src/classes/lz/Config.fc";
+#include "../src/classes/lz/Packet.fc";
+#include "../src/classes/lz/EpConfig.fc";
+#include "../src/classes/msgdata/SetSmlManagerConfig.fc";
+
+#include "consts.fc";
+#include "../src/funC++/classlib.fc";
+#include "../src/funC++/txnContext.fc";
+#include "../src/classes/lz/MsglibInfo.fc";
+#include "../src/classes/lz/ReceiveEpConfig.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnWorkerFeelibInfo.fc";
+#include "../src/classes/lz/SendEpConfig.fc";
+#include "../src/classes/lz/SmlJobAssigned.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnReceiveConfig.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnSendConfig.fc";
+#include "../src/classes/msgdata/OptionsExtended.fc";
+#include "../src/classes/msgdata/LzSend.fc";
+#include "../src/classes/msgdata/CoinsAmount.fc";
+#include "../src/classes/msgdata/MsglibSendCallback.fc";
+#include "../src/classes/msgdata/OptionsV1.fc";
+#include "../src/classes/msgdata/OptionsV2.fc";
+#include "../src/classes/msgdata/PacketId.fc";
+#include "../src/classes/msgdata/SetEpConfig.fc";
+#include "../src/classes/msgdata/SetAddress.fc";
+#include "../src/protocol/channel/interface.fc";
+#include "../src/protocol/msglibs/BytesEncoder.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/Attestation.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnSend.fc";
+#include "../src/protocol/msglibs/ultralightnode/workerFeeLibs/executorFeeLib/storage.fc";
+#include "../src/protocol/msglibs/ultralightnode/workerFeeLibs/dvnFeeLib/storage.fc";
+#include "../src/protocol/msglibs/ultralightnode/workerFeeLibs/priceFeedFeeLib/storage.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnVerification.fc";
+#include "../src/protocol/msglibs/ultralightnode/msgdata/UlnWorkerFeelibBytecode.fc";
+#include "../src/protocol/msglibs/ultralightnode/ulnConnection/storage.fc";
+#include "../src/workers/msgdata/ExecuteParams.fc";
+#include "../src/protocol/msglibs/ultralightnode/workerFeeLibs/priceFeedFeeLib/extensions/ArbitrumPriceFeedExtension.fc";
+
+;; fake messagelib storage
+cell mockMsglibConnectionStorage(int managerAddress, cell $path) {
+    return cl::declare(
+        "mockStore"u,
+        unsafeTuple([
+            [cl::t::objRef, BaseStorage::New(managerAddress)], ;; Unused
+            [cl::t::objRef, $path]  ;; path
+        ])
+    );
+}
+
+;;; =====================helpers to generate constants for tests====================
+cell MOCK_SEND_PATH() impure {
+    return lz::Path::New(
+        SRC_EID,
+        SRC_OAPP,
+        DST_EID,
+        DST_OAPP
+    );
+}
+
+cell MOCK_RECEIVE_PATH() impure {
+    return lz::Path::New(
+        DST_EID,
+        DST_OAPP,
+        SRC_EID,
+        SRC_OAPP
+    );
+}
+
+;; this is the actual message sent by the OApp
+;; does not include any headers/protocol overheads
+cell MOCK_MESSAGE() inline {
+    return begin_cell()
+        .store_uint256("Message"u)
+        .store_uint64(124)
+        .end_cell();
+}
+
+cell MOCK_MESSAGE_MAX_BYTES() inline {
+    return begin_cell()
+        .store_uint256("Message greater than maxMsgBytes"u)
+        .store_uint64(124)
+        .store_uint64(124)
+        .end_cell();
+}
+
+cell MOCK_NONCELESS_PACKET() {
+    return lz::Packet::nonceless(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE()
+    );
+}
+
+cell MOCK_NONCELESS_PACKET_WITH_MAX_MSG() {
+    return lz::Packet::nonceless(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE_MAX_BYTES()
+    );
+}
+
+cell MOCK_SEND_PACKET() {
+    return lz::Packet::New(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE(),
+        NONCE
+    );
+}
+
+cell MOCK_RECEIVE_PACKET_WITH_NONCE(int nonce) {
+    return lz::Packet::New(
+        MOCK_RECEIVE_PATH(),
+        MOCK_MESSAGE(),
+        nonce
+    );
+}
+
+cell MOCK_RECEIVE_PACKET() {
+    return MOCK_RECEIVE_PACKET_WITH_NONCE(NONCE);
+}
+
+cell MOCK_RECEIVE_PACKET_WITH_MESSAGE(cell message) {
+    return lz::Packet::New(
+        MOCK_RECEIVE_PATH(),
+        message,
+        NONCE
+    );
+}
+
+cell MOCK_SEND_PACKET_WITH_NONCE(int nonce) {
+    return lz::Packet::New(
+        MOCK_SEND_PATH(),
+        MOCK_MESSAGE(),
+        nonce
+    );
+}
+
+cell MOCK_PACKET_WITH_MESSAGE(cell message) {
+    return lz::Packet::New(
+        MOCK_SEND_PATH(),
+        message,
+        NONCE
+    );
+}
+
+builder _getRandomCodeBuilder(int seed) inline {
+    return begin_cell().store_uint256(seed);
+}
+
+cell _getRandomCode(int seed) inline {
+    return _getRandomCodeBuilder(seed).end_cell();
+}
+
+cell MOCK_CHANNEL_CODE() inline {
+    return _getRandomCode(1);
+}
+
+cell MOCK_ENDPOINT_CODE() inline {
+    return _getRandomCode(4);
+}
+
+cell MOCK_MSGLIB_CONNECTION_CODE() inline {
+    return _getRandomCode(5);
+}
+
+cell MOCK_ZRO_WALLET_CODE() inline {
+    return _getRandomCode(6);
+}
+
+cell MOCK_ULN_CODE() inline {
+    return _getRandomCode(7);
+}
+
+cell MOCK_ULN_CONNECTION_CODE() inline {
+    return _getRandomCode(8);
+}
+
+cell MOCK_EXECUTOR_CODE() inline {
+    return _getRandomCode(9);
+}
+
+int MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY() inline {
+    return now() + 60;
+}
+
+cell MOCK_WORKER_FEELIB_BYTECODE(int seed) {
+    return _getRandomCode(seed);
+}
+
+cell MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE() {
+    return _getRandomCode(10);
+}
+
+cell MOCK_DOUBLE_LEVEL_WORKER_FEELIB_STORAGE() {
+    return _getRandomCodeBuilder(11).store_ref(_getRandomCode(12)).end_cell();
+}
+
+cell MOCK_EXTRA_OPTIONS_V1() inline {
+    return md::OptionsV1::New(
+        1,
+        2,
+        DST_OAPP,
+        3
+    );
+}
+
+cell MOCK_EXTRA_OPTIONS_V2() inline {
+    return md::OptionsV2::New(
+        4,
+        5,
+        6,
+        7,
+        DST_OAPP,
+        8
+    );
+}
+
+cell MOCK_ENFORCED_OPTIONS_V1() inline {
+    return md::OptionsV1::New(
+        9,
+        10,
+        DST_OAPP,
+        11
+    );
+}
+
+cell MOCK_OPTIONS_EXTENDED() inline {
+    return md::OptionsExtended::New(
+        DST_EID,
+        MSG_TYPE,
+        MOCK_ENFORCED_OPTIONS_V1()
+    );
+}
+
+cell MOCK_CALLBACK_DATA() inline {
+    return begin_cell().store_uint256(200).end_cell();
+}
+
+cell MOCK_LZ_SEND_WITH_ID(int nonce) {
+    return md::LzSend::New(
+        NATIVE_FEE,
+        ZRO_FEE,
+        MOCK_EXTRA_OPTIONS_V1(),
+        MOCK_ENFORCED_OPTIONS_V1(),
+        MOCK_NONCELESS_PACKET(),
+        MOCK_CALLBACK_DATA()
+    )
+        .cl::set(md::LzSend::sendRequestId, nonce)
+        .cl::set(md::LzSend::sendMsglibManager, SEND_MSGLIB_MANAGER_ADDRESS)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+}
+
+cell MOCK_LZ_SEND_WITH_MAX_PACKET_AND_ID(int nonce) {
+    return md::LzSend::New(
+        NATIVE_FEE,
+        ZRO_FEE,
+        MOCK_EXTRA_OPTIONS_V1(),
+        MOCK_ENFORCED_OPTIONS_V1(),
+        MOCK_NONCELESS_PACKET_WITH_MAX_MSG(),
+        MOCK_CALLBACK_DATA()
+    )
+        .cl::set(md::LzSend::sendRequestId, nonce)
+        .cl::set(md::LzSend::sendMsglibManager, SEND_MSGLIB_MANAGER_ADDRESS)
+        .cl::set(md::LzSend::sendMsglib, SEND_MSGLIB_ADDRESS)
+        .cl::set(md::LzSend::sendMsglibConnection, SEND_MSGLIB_CONNECTION_ADDRESS);
+}
+
+cell MOCK_LZ_SEND() {
+    return MOCK_LZ_SEND_WITH_ID(0);
+}
+
+cell MOCK_LZ_SEND_WITH_MAX_PACKET() {
+    return MOCK_LZ_SEND_WITH_MAX_PACKET_AND_ID(0);
+}
+
+cell MOCK_EP_CONFIG(int useDefaults) {
+    return lz::EpConfig::New(
+        useDefaults,
+        SEND_MSGLIB_MANAGER_ADDRESS,
+        SEND_MSGLIB_ADDRESS,
+        RECEIVE_MSGLIB_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_ADDRESS,
+        MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+    );
+}
+
+cell MOCK_RESOLVED_EP_CONFIG(int useDefaults) method_id {
+    return lz::EpConfig::NewWithConnection(
+        useDefaults,
+        SEND_MSGLIB_MANAGER_ADDRESS,
+        SEND_MSGLIB_ADDRESS,
+        SEND_MSGLIB_CONNECTION_ADDRESS,
+        RECEIVE_MSGLIB_ADDRESS,
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+    );
+}
+
+cell MOCK_MSG_LIB_INFO(int msgLibAddress) {
+    return lz::MsglibInfo::New(
+        msgLibAddress,
+        MOCK_MSGLIB_CONNECTION_CODE(),
+        mockMsglibConnectionStorage(
+            msgLibAddress,
+            MOCK_SEND_PATH()
+        )
+    );
+}
+
+cell CALCULATED_MOCK_RESOLVED_EP_CONFIG(int useDefaults) method_id {
+    return lz::EpConfig::NewWithConnection(
+        useDefaults,
+        SEND_MSGLIB_MANAGER_ADDRESS,
+        SEND_MSGLIB_ADDRESS,
+        lz::MsglibInfo::getMsglibConnectionAddress(
+            lz::MsglibInfo::New(
+                SEND_MSGLIB_ADDRESS,
+                MOCK_MSGLIB_CONNECTION_CODE(),
+                mockMsglibConnectionStorage(
+                    SEND_MSGLIB_MANAGER_ADDRESS,
+                    MOCK_SEND_PATH()
+                )
+            ),
+            MOCK_SEND_PATH()
+        ),
+        RECEIVE_MSGLIB_ADDRESS,
+        lz::MsglibInfo::getMsglibConnectionAddress(
+            lz::MsglibInfo::New(
+                RECEIVE_MSGLIB_ADDRESS,
+                MOCK_MSGLIB_CONNECTION_CODE(),
+                mockMsglibConnectionStorage(
+                    RECEIVE_MSGLIB_MANAGER_ADDRESS,
+                    MOCK_SEND_PATH()
+                )
+            ),
+            MOCK_SEND_PATH()
+        ),
+        TIMEOUT_RECEIVE_MSGLIB_ADDRESS,
+        lz::MsglibInfo::getMsglibConnectionAddress(
+            lz::MsglibInfo::New(
+                TIMEOUT_RECEIVE_MSGLIB_ADDRESS,
+                MOCK_MSGLIB_CONNECTION_CODE(),
+                mockMsglibConnectionStorage(
+                    TIMEOUT_RECEIVE_MSGLIB_MANAGER_ADDRESS,
+                    MOCK_SEND_PATH()
+                )
+            ),
+            MOCK_SEND_PATH()
+        ),
+        now() + 60
+    );
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES_AND_PAYEES(cell $lzSend, int nativeFee, int zroFee, tuple payees) {
+    return md::MsglibSendCallback::New(
+        nativeFee,
+        zroFee,
+        $lzSend,
+        BytesEncoder::build<PacketV1>(MOCK_SEND_PACKET()).BytesEncoder::serialize(),
+        serializePayees(
+            payees
+        ),
+        NONCE_BYTE_OFFSET,
+        NONCE_BYTES,
+        GUID_BYTE_OFFSET,
+        GUID_BYTES,
+        lz::SmlJobAssigned::New(MOCK_FEE),
+        Channel::NO_ERROR
+    );
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES(cell $lzSend, int nativeFee, int zroFee) {
+    return md::MsglibSendCallback::New(
+        nativeFee,
+        zroFee,
+        $lzSend,
+        BytesEncoder::build<PacketV1>(MOCK_SEND_PACKET()).BytesEncoder::serialize(),
+        serializePayees(unsafeTuple([[WORKER_ADDRESS, nativeFee]])),
+        NONCE_BYTE_OFFSET,
+        NONCE_BYTES,
+        GUID_BYTE_OFFSET,
+        GUID_BYTES,
+        lz::SmlJobAssigned::New(MOCK_FEE),
+        Channel::NO_ERROR
+    );
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_PAYEES(cell $lzSend, tuple payees) {
+    return md::MsglibSendCallback::New(
+        NATIVE_FEE,
+        ZRO_FEE,
+        $lzSend,
+        BytesEncoder::build<PacketV1>(MOCK_SEND_PACKET()).BytesEncoder::serialize(),
+        serializePayees(payees),
+        NONCE_BYTE_OFFSET,
+        NONCE_BYTES,
+        GUID_BYTE_OFFSET,
+        GUID_BYTES,
+        lz::SmlJobAssigned::New(MOCK_FEE),
+        Channel::NO_ERROR
+    );
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK_QUOTE_FAILED_WITH_LZSEND(cell $lzSend) {
+    return md::MsglibSendCallback::New(
+        0,
+        0,
+        $lzSend,
+        empty_cell(),
+        empty_cell(),
+        0,
+        0,
+        0,
+        0,
+        cl::nullObject(),
+        Uln::ErrorCode::WORKER_QUOTE_FAILED
+    );
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK_WITH_FEES(int nativeFee, int zroFee) {
+    return MOCK_MSGLIB_SEND_CALLBACK_WITH_LZSEND_AND_FEES_AND_PAYEES(
+        MOCK_LZ_SEND(),
+        nativeFee, 
+        zroFee,
+        unsafeTuple([[WORKER_ADDRESS, nativeFee]])     
+    );
+}
+
+tuple MOCK_PAYEES(int numPayees) {
+    int idx = 0;
+    tuple payees = empty_tuple();
+    repeat (numPayees) {
+        payees = payees.tpush(
+            [WORKER_ADDRESS, NATIVE_FEE + idx]
+        );
+        idx += 1;
+    }
+    return payees;
+}
+
+cell MOCK_MSGLIB_SEND_CALLBACK() {
+    return MOCK_MSGLIB_SEND_CALLBACK_WITH_FEES(NATIVE_FEE, ZRO_FEE);
+}
+
+cell MOCK_SET_EP_CONFIG_MD(int useDefaults) {
+    return md::SetEpConfig::New(
+        useDefaults,
+        SEND_MSGLIB_MANAGER_ADDRESS,
+        RECEIVE_MSGLIB_MANAGER_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_MANAGER_ADDRESS,
+        MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+    );
+}
+
+cell MOCK_SML_SEND_EP_CONFIG() {
+    return lz::SendEpConfig::New(
+        SEND_MSGLIB_MANAGER_ADDRESS,
+        SEND_MSGLIB_ADDRESS,
+        SEND_MSGLIB_CONNECTION_ADDRESS
+    );
+}
+
+cell MOCK_SML_RECEIVE_EP_CONFIG() {
+    return lz::ReceiveEpConfig::New(
+        RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        TIMEOUT_RECEIVE_MSGLIB_CONNECTION_ADDRESS,
+        MOCK_TIMEOUT_RECEIVE_LIB_EXPIRY()
+    );
+}
+
+cell _buildSendDvnListCell(int dvnCount, int dvnAddressSeed, int isAdmin) {
+    ;; Initialize first builder
+    tuple dvnListBuilder = empty_tuple();
+    dvnListBuilder~tpush(begin_cell());
+
+    ;; Build the list directly
+    repeat(dvnCount) {
+        dvnCount -= 1;
+        ;; Check if we need a new builder (1023 is max bits per cell)
+        if ((dvnListBuilder.at(dvnListBuilder.tlen() - 1).builder_bits() + 256) > 1023) {
+            dvnListBuilder~tpush(begin_cell());
+        }
+
+        ;; Get current builder and store value
+        builder curBuilder = dvnListBuilder.at(dvnListBuilder.tlen() - 1);
+        curBuilder = curBuilder.store_uint256(dvnAddressSeed + dvnCount);
+        dvnListBuilder = dvnListBuilder.tset(dvnListBuilder.tlen() - 1, curBuilder);
+    }
+
+    ;; Chain the references
+    builder ret = dvnListBuilder~tpop();
+    while (dvnListBuilder.tlen() > 0) {
+        builder head = dvnListBuilder~tpop();
+        ret = head.store_ref(ret.end_cell());
+    }
+
+    return ret.end_cell();
+}
+
+tuple _buildSendDvnListTuple(int dvnCount, int dvnAddressSeed) {
+    tuple dvnList = empty_tuple();
+    int idx = 0;
+    repeat(dvnCount) {
+        dvnList~tpush(dvnAddressSeed + idx);
+        idx += 1;
+    }
+    return dvnList;
+}
+
+cell _buildSendDvnCellWithMultipleRef(int dvnCount, int dvnAddressSeed) {
+    builder b = begin_cell();
+    cell ref1 = begin_cell().store_uint(1234, 256).end_cell();
+
+    while (dvnCount > 0) {
+        b = b.store_uint(dvnAddressSeed + dvnCount, 256);
+        if (dvnCount == 1) {  ;; Add ref for testing
+            b = b.store_ref(ref1).store_ref(ref1);
+        }
+        dvnCount -= 1;
+    }
+    return b.end_cell();
+}
+
+cell _buildReceiveDvnList(int dvnCount, int dvnAddressSeed) {
+    return _buildSendDvnListCell(dvnCount, dvnAddressSeed, false);
+}
+
+tuple _receiveDvnListToTuple(cell dvnListCell) {
+    tuple dvnList = empty_tuple();
+    slice dvnListSlice = dvnListCell.begin_parse();
+    int dvnAddress = dvnListSlice~AddressList::next();
+    throw_unless(1, dvnAddress > NULLADDRESS); 
+    while (dvnAddress > NULLADDRESS) {
+        dvnList = dvnList.tpush(dvnAddress);
+        dvnAddress = dvnListSlice~AddressList::next();
+    }
+    return dvnList;
+}
+
+cell MOCK_CUSTOM_ULN_RECEIVE_CONFIG(int requiredDvnCount, int optionalDvnCount, int optionalDvnThreshold) {
+    return UlnReceiveConfig::New(
+        false,
+        CUSTOM_MIN_COMMIT_PACKET_GAS,
+        false,
+        CUSTOM_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(requiredDvnCount, CUSTOM_REQUIRED_DVN0_ADDRESS),
+        false,
+        _buildReceiveDvnList(optionalDvnCount, CUSTOM_OPTIONAL_DVN0_ADDRESS),
+        optionalDvnThreshold
+    );
+}
+
+cell MOCK_DEFAULT_ULN_RECEIVE_CONFIG() {
+    return UlnReceiveConfig::New(
+        false,
+        DEFAULT_MIN_COMMIT_PACKET_GAS,
+        false,
+        DEFAULT_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(DEFAULT_REQUIRED_DVNS, DEFAULT_REQUIRED_DVN0_ADDRESS),
+        false,
+        _buildReceiveDvnList(DEFAULT_OPTIONAL_DVNS, DEFAULT_OPTIONAL_DVN0_ADDRESS),
+        DEFAULT_OPTIONAL_DVN_THRESHOLD
+    );
+}
+
+cell MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_COMMIT_GAS(int commitPacketGas) {
+    return UlnReceiveConfig::New(
+        false,
+        commitPacketGas,
+        false,
+        DEFAULT_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(DEFAULT_REQUIRED_DVNS, DEFAULT_REQUIRED_DVN0_ADDRESS),
+        false,
+        _buildReceiveDvnList(DEFAULT_OPTIONAL_DVNS, DEFAULT_OPTIONAL_DVN0_ADDRESS),
+        DEFAULT_OPTIONAL_DVN_THRESHOLD
+    );
+}
+
+cell MOCK_DEFAULT_ULN_RECEIVE_CONFIG_WITH_OPTIONAL_DVNS(int optionalDvnCount, int optionalDvnThreshold) {
+    return UlnReceiveConfig::New(
+        false,
+        DEFAULT_MIN_COMMIT_PACKET_GAS,
+        false,
+        DEFAULT_CONFIRMATIONS,
+        false,
+        _buildReceiveDvnList(DEFAULT_REQUIRED_DVNS, DEFAULT_REQUIRED_DVN0_ADDRESS),
+        false,
+        _buildReceiveDvnList(optionalDvnCount, DEFAULT_OPTIONAL_DVN0_ADDRESS),
+        optionalDvnThreshold
+    );
+}
+
+
+cell MOCK_ULN_WORKER_FEELIB_INFO(int workerAddress, int rentNanos) {
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE(),
+        NULLADDRESS,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_ADMIN_ULN_WORKER_FEELIB_INFO(int workerAddress) {
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE(),
+        NULLADDRESS,
+        DST_EID,
+        0,
+        true
+    );
+}
+
+cell MOCK_ULN_WORKER_FEELIB_INFO_WITH_FRIEND(int workerAddress, int friendAddress, int rentNanos) {
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE(),
+        friendAddress,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_ULN_DVN_FEELIB_INFO_WITH_FRIEND(int workerAddress, int friendAddress, int rentNanos) {
+    cell workerStorage = DvnFeelib::New(
+        1,
+        1,
+        1,
+        1
+    );
+
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        workerStorage,
+        friendAddress,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_ULN_EXECUTOR_FEELIB_INFO_WITH_FRIEND(int workerAddress, int friendAddress, int rentNanos) {
+    cell workerStorage = ExecutorFeelib::New(
+        EXECUTOR_FEELIB_LZ_RECEIVE_BASE_GAS,
+        EXECUTOR_FEELIB_MULTIPLIER_BPS,
+        EXECUTOR_FEELIB_FLOOR_MARGIN_USD,
+        EXECUTOR_FEELIB_NATIVE_CAP,
+        EXECUTOR_FEELIB_LZ_COMPOSE_BASE_GAS
+    );
+
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        workerStorage,
+        friendAddress,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE() {
+    return MOCK_WORKER_FEELIB_BYTECODE(53291);
+}
+
+cell MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD() {
+    return md::UlnWorkerFeelibBytecode::New(
+        MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE()
+    );
+}
+
+cell MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE() {
+    return UlnWorkerFeelibInfo::New(
+        getCaller(),
+        MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE(),
+        MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE(),
+        NULLADDRESS,
+        DST_EID,
+        RENT_NANOS,
+        false
+    );
+}
+
+cell MOCK_PRICE_FEED_WORKER_INFO(cell $ulnPriceFeedStorage, int workerAddress, int rentNanos) {
+    return UlnWorkerFeelibInfo::New(
+        workerAddress,
+        my_code(),
+        $ulnPriceFeedStorage,
+        NULLADDRESS,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_EXECUTOR_WORKER_WITH_FRIEND(int workerAddress, int friendAddress, int rentNanos) {
+    return UlnWorkerFeelibInfo::New(
+        DEFAULT_EXECUTOR,
+        my_code(),
+        MOCK_SINGLE_LEVEL_WORKER_FEELIB_STORAGE(),
+        DEFAULT_PRICE_FEED_ADDRESS,
+        DST_EID,
+        rentNanos,
+        false
+    );
+}
+
+cell MOCK_DEFAULT_PRICE_FEED_STORAGE() {
+    return PriceFeedFeelib::New(
+        DEFAULT_PRICE_RATIO,
+        DEFAULT_GAS_PRICE_IN_UNIT,
+        DEFAULT_GAS_PER_BYTE,
+        DEFAULT_NATIVE_PRICE_USD,
+        cl::nullObject(),
+        cl::nullObject()
+    );
+}
+
+cell MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT() {
+    return PriceFeedFeelib::New(
+        CUSTOM_PRICE_RATIO,
+        CUSTOM_GAS_PRICE_IN_UNIT,
+        CUSTOM_GAS_PER_BYTE,
+        CUSTOM_NATIVE_PRICE_USD,
+        cl::nullObject(),
+        cl::nullObject()
+    );
+}
+
+cell MOCK_DEFAULT_PRICE_FEED_STORAGE_ARB() {
+    return PriceFeedFeelib::New(
+        DEFAULT_PRICE_RATIO,
+        DEFAULT_GAS_PRICE_IN_UNIT,
+        DEFAULT_GAS_PER_BYTE,
+        DEFAULT_NATIVE_PRICE_USD,
+        ArbitrumPriceFeedExtension::New(
+            DEFAULT_ARB_GAS_PER_L2_TX,
+            DEFAULT_ARB_GAS_PER_L1_CALL_DATA_BYTE
+        ),
+        cl::nullObject()
+    );
+}
+
+cell MOCK_CUSTOM_PRICE_FEED_STORAGE_ARB() {
+    return PriceFeedFeelib::New(
+        CUSTOM_PRICE_RATIO,
+        CUSTOM_GAS_PRICE_IN_UNIT,
+        CUSTOM_GAS_PER_BYTE,
+        CUSTOM_NATIVE_PRICE_USD,
+        ArbitrumPriceFeedExtension::New(
+            CUSTOM_ARB_GAS_PER_L2_TX,
+            CUSTOM_ARB_GAS_PER_L1_CALL_DATA_BYTE
+        ),
+        cl::nullObject()
+    );
+}
+
+cell MOCK_DEFAULT_PRICE_FEED_STORAGE_OP() {
+    return PriceFeedFeelib::New(
+        DEFAULT_PRICE_RATIO,
+        DEFAULT_GAS_PRICE_IN_UNIT,
+        DEFAULT_GAS_PER_BYTE,
+        DEFAULT_NATIVE_PRICE_USD,
+        cl::nullObject(),
+        PriceFeedFeelib::New(
+            DEFAULT_OP_PRICE_RATIO,
+            DEFAULT_OP_GAS_PRICE_IN_UNIT,
+            DEFAULT_OP_GAS_PER_BYTE,
+            DEFAULT_OP_NATIVE_PRICE_USD,
+            cl::nullObject(),
+            cl::nullObject()
+        )
+    );
+}
+
+
+cell MOCK_CUSTOM_PRICE_FEED_STORAGE_OP() {
+    return PriceFeedFeelib::New(
+        CUSTOM_PRICE_RATIO,
+        CUSTOM_GAS_PRICE_IN_UNIT,
+        CUSTOM_GAS_PER_BYTE,
+        CUSTOM_NATIVE_PRICE_USD,
+        cl::nullObject(),
+        PriceFeedFeelib::New(
+            CUSTOM_OP_PRICE_RATIO,
+            CUSTOM_OP_GAS_PRICE_IN_UNIT,
+            CUSTOM_OP_GAS_PER_BYTE,
+            CUSTOM_OP_NATIVE_PRICE_USD,
+            cl::nullObject(),
+            cl::nullObject()
+        )
+    );
+}
+
+cell MOCK_EXTRA_DATA() {
+    return begin_cell().store_uint256(123456).end_cell();
+}
+
+cell MOCK_REASON() {
+    return begin_cell().store_slice("bug in your code!").end_cell();
+}
+
+cell MOCK_DVN_LIST_WITH_REF(int numDvns) {
+    return _buildSendDvnCellWithMultipleRef(numDvns, CUSTOM_OPTIONAL_DVN0_ADDRESS);
+}
+
+cell MOCK_DVN_CELL_WITH_NULL(int numDvns) {
+    return _buildSendDvnListCell(numDvns, NULL_DVN0_ADDRESS, false);
+}
+
+cell MOCK_DEFAULT_REQUIRED_DVN_CELL(int numDvns, int isAdmin) {
+    return _buildSendDvnListCell(numDvns, DEFAULT_REQUIRED_DVN0_ADDRESS, isAdmin);
+}
+
+cell MOCK_CUSTOM_REQUIRED_DVN_CELL(int numDvns, int isAdmin) {
+    return _buildSendDvnListCell(numDvns, CUSTOM_REQUIRED_DVN0_ADDRESS, isAdmin);
+}
+
+cell MOCK_DEFAULT_OPTIONAL_DVN_CELL(int numDvns, int isAdmin) {
+    return _buildSendDvnListCell(numDvns, DEFAULT_OPTIONAL_DVN0_ADDRESS, isAdmin);
+}
+
+cell MOCK_CUSTOM_OPTIONAL_DVN_CELL(int numDvns, int isAdmin) {
+    return _buildSendDvnListCell(numDvns, CUSTOM_OPTIONAL_DVN0_ADDRESS, isAdmin);
+}
+
+tuple MOCK_DEFAULT_REQUIRED_DVN_LIST(int numDvns, int isAdmin) {
+    return _buildSendDvnListTuple(numDvns, DEFAULT_REQUIRED_DVN0_ADDRESS);
+}
+
+tuple MOCK_SEND_DVN_LIST(int numDvns, int address) {
+    return _buildSendDvnListTuple(numDvns, address);
+}
+
+cell MOCK_CUSTOM_ULN_SEND_CONFIG() {
+    return UlnSendConfig::New(
+        CUSTOM_WORKER_QUOTE_GAS_LIMIT,
+        CUSTOM_MAX_MESSAGE_BYTES,
+        false,
+        CUSTOM_EXECUTOR,
+        false,
+        MOCK_CUSTOM_REQUIRED_DVN_CELL(2, 0),
+        false,
+        MOCK_CUSTOM_OPTIONAL_DVN_CELL(2, 0),
+        false,
+        CUSTOM_CONFIRMATIONS
+    );
+}
+
+cell MOCK_DEFAULT_ULN_SEND_CONFIG() {
+    return UlnSendConfig::New(
+        DEFAULT_WORKER_QUOTE_GAS_LIMIT,
+        DEFAULT_MAX_MESSAGE_BYTES,
+        false,
+        DEFAULT_EXECUTOR,
+        false,
+        MOCK_DEFAULT_REQUIRED_DVN_CELL(2, 0),
+        false,
+        MOCK_DEFAULT_OPTIONAL_DVN_CELL(2, 0),
+        false,
+        DEFAULT_CONFIRMATIONS
+    );
+}
+
+cell MOCK_ULN_SEND() {
+    return md::UlnSend::New(
+        MOCK_LZ_SEND(),
+        MOCK_CUSTOM_ULN_SEND_CONFIG(),
+        UlnConnection::New(ULN_MANAGER_ADDRESS, MOCK_SEND_PATH(), ULN_ADDRESS),
+        CHANNEL_ADDRESS
+    );
+}
+
+cell MOCK_ULN_WORKER_EVENT() {
+    return begin_cell().store_uint256("JOB_ASSIGNED"u).end_cell();
+}
+
+cell MOCK_ATTESTATION(int confirmations) {
+    return lz::Attestation::New(
+        PACKET_HASH,
+        confirmations
+    );
+}
+
+cell MOCK_ULN_VERIFICATION_FULL(int nonce, int confirmations, int packetHash) inline_ref {
+    return md::UlnVerification::New(
+        nonce,
+        packetHash,
+        confirmations
+    );
+}
+cell MOCK_ULN_VERIFICATION(int confirmations) {
+    return MOCK_ULN_VERIFICATION_FULL(NONCE, confirmations, MOCK_RECEIVE_PACKET().cl::hash());
+}
+
+cell MOCK_ADMIN_WORKER_LIST() {
+    return AddressList::serialize(
+        unsafeTuple([ADMIN_WORKER_ADDRESS])
+    );
+}
+
+int MOCK_DEFAULT_REQUIRED_DVN_ADDRESS(int i) {
+    return DEFAULT_REQUIRED_DVN0_ADDRESS + i;
+}
+
+int MOCK_DEFAULT_OPTIONAL_DVN_ADDRESS(int i) {
+    return DEFAULT_OPTIONAL_DVN0_ADDRESS + i;
+}
+
+int MOCK_CUSTOM_REQUIRED_DVN_ADDRESS(int i) {
+    return CUSTOM_REQUIRED_DVN0_ADDRESS + i;
+}
+
+int MOCK_CUSTOM_OPTIONAL_DVN_ADDRESS(int i) {
+    return CUSTOM_OPTIONAL_DVN0_ADDRESS + i;
+}
+
+cell MOCK_EXECUTE_PARAMS(int targetAddress, cell calldata, int expiration, int op, int forwardingAddress) {
+    return md::ExecuteParams::New(
+        targetAddress,
+        calldata,
+        expiration,
+        op,
+        forwardingAddress
+    );
+}
+
+cell MOCK_RANDOM_EXECUTE_PARAMS() {
+    return MOCK_EXECUTE_PARAMS(
+        ARBITRARY_ADDRESS,
+        MOCK_EXTRA_DATA(),
+        now(),
+        OP::RANDOM,
+        NULLADDRESS
+    );
+}
+
+cell MOCK_COINS_AMOUNT() {
+    return md::CoinsAmount::New(1234567);
+}
+
+cell MOCK_SET_ADDRESS() {
+    return md::SetAddress::New(ARBITRARY_ADDRESS);
+}
+
+cell MOCK_V1_SEND_PATH() {
+    return lz::Path::New(
+        SRC_EID,
+        SRC_OAPP,
+        DST_V1_EID,
+        DST_OAPP
+    );
+}
+
+cell MOCK_RESOLVED_CONFIG() {
+    return lz::Config::New(
+        MOCK_SEND_PATH(),
+        ARBITRARY_ADDRESS,
+        OP::RANDOM,
+        MOCK_EP_CONFIG(true)
+    );
+}
+
+cell MOCK_PACKET_ID() {
+    return md::PacketId::New(
+        MOCK_RECEIVE_PATH(),
+        NONCE
+    );
+}

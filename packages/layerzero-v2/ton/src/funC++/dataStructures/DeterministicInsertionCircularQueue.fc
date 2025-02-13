@@ -1,0 +1,154 @@
+;;; =================== DeterministicInsertionCircularQueue.fc ===================
+;; the DeterministicInsertionCircularQueue is a deterministic-gas circular buffer
+;; that stores key-value pairs along with one piece of metadata (8-bits) per entry.
+#include "../utils.fc";
+
+const int DeterministicInsertionCircularQueue::statusBits = 8;
+const int DeterministicInsertionCircularQueue::keyBits = 64;
+
+const int DeterministicInsertionCircularQueue::invalidKey = -1;
+const int DeterministicInsertionCircularQueue::invalidStatus = -1;
+const int DeterministicInsertionCircularQueue::ERROR::invalidObject = 1185;
+
+cell DeterministicInsertionCircularQueue::_buildLevel(int level, cell initialContents) impure inline {
+    if (level == 0) {
+        return begin_cell()
+            .store_ref(initialContents)
+            .store_ref(initialContents)
+            .store_ref(initialContents)
+            .store_ref(initialContents)
+            .end_cell();
+    } else {
+        int nextLevel = level - 1;
+        return begin_cell()
+            .store_ref(DeterministicInsertionCircularQueue::_buildLevel(nextLevel, initialContents))
+            .store_ref(DeterministicInsertionCircularQueue::_buildLevel(nextLevel, initialContents))
+            .store_ref(DeterministicInsertionCircularQueue::_buildLevel(nextLevel, initialContents))
+            .store_ref(DeterministicInsertionCircularQueue::_buildLevel(nextLevel, initialContents))
+            .end_cell();
+    }
+}
+
+;; Given a well-formed commit_verification_queue
+;; get the content of the queue at a given relative nonce
+;; (actual key, entry, status, exists)
+(int, cell, int, int) DeterministicInsertionCircularQueue::get(cell self, int key) impure inline {
+    int position = key % MAX_CELL_BITS;
+
+    slice commitSlice = self
+        .begin_parse()
+        .preload_ref_at(position / 256)
+        .begin_parse()
+        .preload_ref_at((position % 256) / 64)
+        .begin_parse()
+        .preload_ref_at((position % 64) / 16)
+        .begin_parse()
+        .preload_ref_at((position % 16) / 4)
+        .begin_parse()
+        .preload_ref_at(position % 4)
+        .begin_parse();
+
+    ;; guaranteed to always have state stored
+    int exists = commitSlice~load_bool();
+    int state = commitSlice~load_uint(DeterministicInsertionCircularQueue::statusBits);
+    if (exists) {
+        return (
+            commitSlice.preload_uint(DeterministicInsertionCircularQueue::keyBits),
+            commitSlice.preload_first_ref(),
+            state,
+            exists
+        );
+    }
+    return (
+        DeterministicInsertionCircularQueue::invalidKey,
+        empty_cell(),
+        DeterministicInsertionCircularQueue::invalidStatus,
+        exists
+    );
+}
+
+cell DeterministicInsertionCircularQueue::_setRaw(cell self, int key, cell newLeaf) impure inline {
+    int slot = key % MAX_CELL_BITS;
+    slice queueSlice = self.begin_parse();
+    int l0_idx = slot / 256;
+    int l1_idx = (slot % 256) / 64;
+    int l2_idx = (slot % 64) / 16;
+    int l3_idx = (slot % 16) / 4;
+    int leaf_idx = slot % 4;
+
+    slice l0Slice = queueSlice.preload_ref_at(l0_idx).begin_parse();
+    slice l1Slice = l0Slice.preload_ref_at(l1_idx).begin_parse();
+    slice l2Slice = l1Slice.preload_ref_at(l2_idx).begin_parse();
+    slice l3Slice = l2Slice.preload_ref_at(l3_idx).begin_parse();
+
+    cell new_l3 = begin_cell()
+        .store_slice(scutfirst(l3Slice, 0, leaf_idx))
+        .store_ref(newLeaf)
+        .store_slice(scutlast(l3Slice, 0, 3 - leaf_idx))
+        .end_cell();
+
+    cell new_l2 = begin_cell()
+        .store_slice(scutfirst(l2Slice, 0, l3_idx))
+        .store_ref(new_l3)
+        .store_slice(scutlast(l2Slice, 0, 3 - l3_idx))
+        .end_cell();
+
+    cell new_l1 = begin_cell()
+        .store_slice(scutfirst(l1Slice, 0, l2_idx))
+        .store_ref(new_l2)
+        .store_slice(scutlast(l1Slice, 0, 3 - l2_idx))
+        .end_cell();
+
+    cell new_l0 = begin_cell()
+        .store_slice(scutfirst(l0Slice, 0, l1_idx))
+        .store_ref(new_l1)
+        .store_slice(scutlast(l0Slice, 0, 3 - l1_idx))
+        .end_cell();
+
+    return (
+        begin_cell()
+            .store_slice(scutfirst(queueSlice, 0, l0_idx))
+            .store_ref(new_l0)
+            .store_slice(scutlast(queueSlice, 0, 3 - l0_idx))
+            .end_cell()
+    );
+}
+
+;; self
+cell DeterministicInsertionCircularQueue::set(cell self, int key, cell $obj, int newState) impure inline {
+    return DeterministicInsertionCircularQueue::_setRaw(
+        self,
+        key,
+        begin_cell()
+            .store_bool(true) ;; occupied
+            .store_uint(newState, DeterministicInsertionCircularQueue::statusBits)
+            .store_uint(key, DeterministicInsertionCircularQueue::keyBits)
+            .store_ref($obj)
+            .end_cell()
+    );
+}
+
+cell DeterministicInsertionCircularQueue::delete(cell self, int key) impure inline {
+    return DeterministicInsertionCircularQueue::_setRaw(
+        self,
+        key,
+        begin_cell()
+            .store_bool(false) ;; occupied
+            .store_uint(0, DeterministicInsertionCircularQueue::statusBits)
+            .store_uint(0, DeterministicInsertionCircularQueue::keyBits)
+            .store_ref(empty_cell())
+            .end_cell()
+    );
+}
+
+cell DeterministicInsertionCircularQueue::create() impure method_id {
+    ;; ceil(log4(MAX_CELL_BITS)) == 4
+    ;; build the initial contents of each leaf in the outer scope to save gas
+    cell initialContents = begin_cell()
+        .store_bool(false) ;; unoccupied
+        .store_uint(0, DeterministicInsertionCircularQueue::statusBits) ;; value not used until set
+        .store_uint(0, DeterministicInsertionCircularQueue::keyBits) ;; value not used until set
+        .store_ref(empty_cell()) ;; value not used until set
+        .end_cell();
+    return DeterministicInsertionCircularQueue::_buildLevel(4, initialContents);
+}

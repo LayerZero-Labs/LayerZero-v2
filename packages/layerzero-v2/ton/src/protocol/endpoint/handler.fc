@@ -1,0 +1,484 @@
+#include "../core/abstract/protocolHandler.fc";
+
+#include "../../classes/lz/SendEpConfig.fc";
+#include "../../classes/lz/MsglibInfo.fc";
+#include "../../classes/lz/ReceiveEpConfig.fc";
+#include "../../classes/lz/Packet.fc";
+#include "../../classes/lz/Path.fc";
+#include "../../classes/lz/EpConfig.fc";
+
+#include "../../classes/msgdata/ExtendedMd.fc";
+#include "../../classes/msgdata/MdAddress.fc";
+#include "../../classes/msgdata/MdObj.fc";
+#include "../../classes/msgdata/AddMsglib.fc";
+#include "../../classes/msgdata/InitEndpoint.fc";
+#include "../../classes/msgdata/LzSend.fc";
+#include "../../classes/msgdata/SetEpConfig.fc";
+
+#include "../../funC++/txnContext.fc";
+
+#include "../channel/storage.fc";
+#include "../interfaces.fc";
+#include "interface.fc";
+#include "storage.fc";
+
+;;; ==========================HELPER FUNCTIONS=====================================
+
+;; In LayerZero-TON, the msglib manager address is the outward facing alias for the messagelib
+;; that all users and admins specify in configurations etc.
+;; Within the protocol scope, the channel directly communicates `to` the Messagelib Connection
+;; shard and receives communication `from` some other arbitrary messagelib shard (for efficiency).
+;; shard addresses, this is where the validity of the messagelib is checked (i.e., that no
+;; unauthorized messagelib can be chosen in a configuration).
+;; @return (msglibAddress: address, msglibConnectionAddress: address)
+(int, int) _msglibManagerToShards(int msglibManagerAddress, cell $path) impure inline method_id {
+    if (msglibManagerAddress == NULLADDRESS) {
+        return (NULLADDRESS, NULLADDRESS);
+    }
+
+    (cell $msglibInfo, int exists) = getContractStorage()
+        .cl::nestedDict256::get<cellRef>(Endpoint::msglibs, msglibManagerAddress);
+
+    throw_unless(
+        Endpoint::ERROR::unauthorizedMsglib,
+        exists
+    );
+
+    throw_if(
+        Endpoint::ERROR::unresolvedMsglib,
+        cl::isNullObject($msglibInfo) 
+    );
+
+    return (
+        $msglibInfo.cl::get<address>(lz::MsglibInfo::msglibAddress),
+        lz::MsglibInfo::getMsglibConnectionAddress($msglibInfo, $path)
+    );
+}
+
+;; Derive the channel address for a given path
+int _getChannelAddress(cell $storage, cell $path) impure inline method_id {
+    return computeContractAddress(
+        $storage
+            .Endpoint::getChannelStorageInit()
+            .Channel::setPath($path),
+        $storage.Endpoint::getChannelCode()
+    );
+}
+
+int _getChannelAddressUnpacked(cell $channelStorage, cell channelCode, cell $path) impure inline {
+    return computeContractAddress(
+        $channelStorage.Channel::setPath($path),
+        channelCode
+    );
+}
+
+;; resolve manager addresses into msglib addresses
+;; throws if the msglib manager is not registered or resolved
+cell _getEpConfigFromManagerAddresses(cell $setEpConfigMd, cell $path) impure inline method_id {
+    int sendMsglibManager = $setEpConfigMd.cl::get<address>(md::SetEpConfig::sendMsglibManager);
+    (int sendMsglib, int sendMsglibConnection) = _msglibManagerToShards(
+        sendMsglibManager,
+        $path
+    );
+
+    int receiveMsglibManager = $setEpConfigMd.cl::get<address>(md::SetEpConfig::receiveMsglibManager);
+    (int receiveMsglib, int receiveMsglibConnection) = _msglibManagerToShards(
+        receiveMsglibManager,
+        $path
+    );
+
+    int timeoutReceiveMsglibManager = $setEpConfigMd.cl::get<address>(md::SetEpConfig::timeoutReceiveMsglibManager);
+    (int timeoutReceiveMsglib, int timeoutReceiveMsglibConnection) = _msglibManagerToShards(
+        timeoutReceiveMsglibManager,
+        $path
+    );
+
+    throw_if(
+        Endpoint::ERROR::sameTimeoutAndReceive,
+        (receiveMsglibManager == timeoutReceiveMsglibManager) & (receiveMsglibManager != NULLADDRESS)
+    );
+
+    return lz::EpConfig::NewWithConnection(
+        $setEpConfigMd.cl::get<bool>(md::SetEpConfig::useDefaults),
+        sendMsglibManager,
+        sendMsglib,
+        sendMsglibConnection,
+        receiveMsglib,
+        receiveMsglibConnection,
+        timeoutReceiveMsglib,
+        timeoutReceiveMsglibConnection,
+        $setEpConfigMd.cl::get<uint64>(md::SetEpConfig::timeoutReceiveMsglibExpiry)
+    );
+}
+
+(int, int) _getMsglibAndConnectionDefaults(cell $msglibInfo, cell $path) impure inline method_id {
+    if (cl::isNullObject($msglibInfo)) {
+        return (NULLADDRESS, NULLADDRESS);
+    }
+
+    return (
+        lz::MsglibInfo::getMsglibAddress($msglibInfo),
+        lz::MsglibInfo::getMsglibConnectionAddress($msglibInfo, $path)
+    );
+}
+
+(int, int) getSendMsglibAndConnectionDefaults(cell $storage, cell $path) impure inline method_id {
+    return _getMsglibAndConnectionDefaults(
+        $storage.Endpoint::getDefaultSendLibInfo(), 
+        $path
+    );
+}
+
+(int, int) getReceiveMsglibAndConnectionDefaults(cell $storage, cell $path) inline method_id {
+    return _getMsglibAndConnectionDefaults(
+        $storage.Endpoint::getDefaultReceiveLibInfo(), 
+        $path
+    );
+}
+
+(int, int) getTimeoutReceiveMsglibAndConnectionDefaults(cell $storage, cell $path) impure inline method_id {
+    return _getMsglibAndConnectionDefaults(
+        $storage.Endpoint::getDefaultTimeoutReceiveLibInfo(), 
+        $path
+    );
+}
+
+() _assertAuthorizedMsglib() impure inline method_id {
+    (_, int exists) = getContractStorage()
+        .Endpoint::getMsglibs()
+        .cl::dict256::get<cellRef>(getCaller());
+
+    throw_unless(Endpoint::ERROR::unauthorizedMsglib, exists);
+}
+
+;;; ================INTERFACE FUNCTIONS=====================
+
+(cell, tuple) _initialize(cell $initEndpoint) impure inline {
+    (cell $storage, tuple actions) = preamble();
+    return (
+        $storage
+            .cl::set(
+                Endpoint::channelCode,
+                $initEndpoint.cl::get<cellRef>(md::InitEndpoint::channelCode)
+            )
+            .cl::set(
+                Endpoint::channelStorageInit,
+                Channel::New(
+                    getOwner(),
+                    lz::Path::endpointPath(
+                        $storage.cl::get<uint32>(Endpoint::eid),
+                        $storage.cl::get<uint32>(Endpoint::dstEid)
+                    ),
+                    getContractAddress()
+                )
+            ),
+        actions
+    );
+}
+
+int _getEventSink() impure inline {
+    return getContractStorage()
+        .Endpoint::getBaseStorage()
+        .BaseStorage::getOwner();
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _checkPermissions(int op, cell $md) impure inline {
+    if (op == Endpoint::OP::ENDPOINT_SEND) {
+        throw_unless(Endpoint::ERROR::notOApp,
+            getCaller() == $md
+                .md::LzSend::getPath()
+                .lz::Path::getSrcOApp()
+        );
+    } elseif (op == Endpoint::OP::ENDPOINT_COMMIT_PACKET) {
+        ;; open and public calls
+        return ();
+    } elseif (
+        (op == Endpoint::OP::SET_EP_CONFIG_OAPP)
+        | (op == Endpoint::OP::SET_EP_CONFIG_DEFAULTS)
+        | (op == Endpoint::OP::ADD_MSGLIB)
+    ) {
+        return assertOwner(); ;; controller
+    } elseif (op == Endpoint::OP::GET_MSGLIB_INFO_CALLBACK) {
+        return _assertAuthorizedMsglib();
+    } else {
+        ;; we must put a check for all opcodes to make sure we don't
+        ;; mistakenly miss an opp code's permissions
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+}
+
+;;; ==========================HANDLERS=====================================
+;; @in controller/handler.fc/setEpConfigDefaults
+;; @in_md setEpConfig
+;; @out controller/handler.fc/emit_event
+;; @permissions owner
+;; We MIGHT not support defaults for certain connections/dstEids
+tuple setEpConfigDefaults(cell $setEpConfigMd) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedSetEpConfig = $setEpConfigMd.md::SetEpConfig::sanitize();
+
+    cell $path = lz::Path::endpointPath(
+        $storage.cl::get<uint32>(Endpoint::eid),
+        $storage.cl::get<uint32>(Endpoint::dstEid)
+    );
+
+    int sendLibManager = $sanitizedSetEpConfig
+        .cl::get<address>(md::SetEpConfig::sendMsglibManager);
+
+    int receiveLibManager = $sanitizedSetEpConfig
+        .cl::get<address>(md::SetEpConfig::receiveMsglibManager);
+    
+    int timeoutReceiveLibManager = $sanitizedSetEpConfig
+        .cl::get<address>(md::SetEpConfig::timeoutReceiveMsglibManager);
+
+    (cell $sendLibInfo, int sendLibExists) = getContractStorage()
+        .cl::nestedDict256::get<cellRef>(Endpoint::msglibs, sendLibManager);
+
+    (cell $receiveLibInfo, int receiveLibExists) = getContractStorage()
+        .cl::nestedDict256::get<cellRef>(Endpoint::msglibs, receiveLibManager);
+
+    (cell $timeoutReceiveLibInfo, int timeoutReceiveLibExists) = getContractStorage()
+        .cl::nestedDict256::get<cellRef>(Endpoint::msglibs, timeoutReceiveLibManager);
+
+    int expiry = $sanitizedSetEpConfig.cl::get<uint64>(md::SetEpConfig::timeoutReceiveMsglibExpiry);
+    throw_unless(
+        Endpoint::ERROR::unauthorizedMsglib,
+          (sendLibExists | (sendLibManager == NULLADDRESS))
+        & (receiveLibExists | (receiveLibManager == NULLADDRESS))
+        & (timeoutReceiveLibExists | (timeoutReceiveLibManager == NULLADDRESS))
+    );
+    throw_if(
+        Endpoint::ERROR::sameTimeoutAndReceive,
+        (timeoutReceiveLibManager != NULLADDRESS) & (timeoutReceiveLibManager == receiveLibManager)
+    );
+    throw_unless(
+        Endpoint::ERROR::invalidExpiry,
+          ((timeoutReceiveLibManager == NULLADDRESS) & (expiry == 0))
+        | ((timeoutReceiveLibManager != NULLADDRESS) & (expiry > now()))
+    );
+
+    ;; make sure the manager addresses can be resolved
+    int validity = _getEpConfigFromManagerAddresses($sanitizedSetEpConfig, $path).lz::EpConfig::isValid();
+    ;; The above block validates *all* the inputs, meaning this throw_if will actually never
+    ;; throw. We leave it in because it doesn't hurt, might as well keep it.
+    ;; The extra gas cost is inconsequential because this is a configuration flow.
+    throw_if(validity, validity != lz::EpConfig::VALID);
+
+    if ($sendLibInfo.is_null()) {
+        $sendLibInfo = cl::nullObject();
+    }
+    if ($receiveLibInfo.is_null()) {
+        $receiveLibInfo = cl::nullObject();
+    }
+    if ($timeoutReceiveLibInfo.is_null()) {
+        $timeoutReceiveLibInfo = cl::nullObject();
+    }
+
+    setContractStorage(
+        $storage
+            .cl::set(Endpoint::defaultSendMsglibManager, sendLibManager)
+            .cl::set(Endpoint::defaultSendLibInfo, $sendLibInfo)
+            .cl::set(Endpoint::defaultReceiveLibInfo, $receiveLibInfo)
+            .cl::set(Endpoint::defaultTimeoutReceiveLibInfo, $timeoutReceiveLibInfo)
+            .cl::set(Endpoint::defaultExpiry, expiry)
+    );
+
+    ;; push the event
+    actions~pushAction<event>(Endpoint::event::EP_CONFIG_DEFAULTS_SET, $sanitizedSetEpConfig);
+
+    return actions;
+}
+
+;; @in controller/handler.fc/setEpConfig
+;; @in_md ExtendedMd(channelAddress, setEpConfig)
+;; @out channel/handler.fc/setEpConfig
+;; @out_md ExtendedMd(defaultEpConfig, setEpConfig)
+;; @permissions owner
+tuple setEpConfigOApp(cell $mdObj) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    ;; extract the md params
+    cell $sanitizedSetEpConfigOApp = $mdObj.cl::get<objRef>(md::MdObj::md).md::SetEpConfig::sanitize();
+    cell $sanitizedPath = $mdObj.cl::get<objRef>(md::MdObj::obj).lz::Path::sanitize();
+    cell $resolvedEpConfigOApp = _getEpConfigFromManagerAddresses($sanitizedSetEpConfigOApp, $sanitizedPath);
+
+    ;; send message to channel and forward the ep config defaults
+    actions~pushAction<call>(
+        _getChannelAddress($storage, $sanitizedPath),
+        Channel::OP::SET_EP_CONFIG_OAPP,
+        $resolvedEpConfigOApp
+    );
+
+    return actions;
+}
+
+;; @in oApp/handler.fc/send
+;; @in_md lzSend
+;; @out channel/handler.fc/send
+;; @out_md MdObj(lzSend, defaultSendConfig)
+;; @permissions OApp
+tuple endpointSend(cell $lzSend) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+    ;; already asserted caller identity matches the request contents in checkPermissions()
+    cell $path = $lzSend.md::LzSend::getPath();
+
+    (
+        cell $channelStorageInit,
+        cell channelCode,
+        int defaultSendMsglibManager,
+        cell $defaultSendLibInfo
+    ) = $storage.Endpoint::getSendConfiguration();
+
+    ;; Invariant: if a msglib is set as a default msglib, it must be resolved
+    ;; thus, getSendMsglibAndConnectionDefaults should never revert
+    (
+        int sendMsglib, 
+        int sendMsglibConnection
+    ) = _getMsglibAndConnectionDefaults($defaultSendLibInfo, $path);
+
+    actions~pushAction<call>(
+        _getChannelAddressUnpacked($channelStorageInit, channelCode, $path),
+        Channel::OP::CHANNEL_SEND,
+        md::MdObj::build(
+            $lzSend, 
+            lz::SendEpConfig::build(defaultSendMsglibManager, sendMsglib, sendMsglibConnection)
+        )
+    );
+
+    return actions;
+}
+
+;; @in msglib/handler.fc/commitVerification
+;; @in_md ExtendedMd(msglib_addr, _, endpointCommitPacket)
+;; @out channel/handler.fc/endpointCommitPacket
+;; @out_md ExtendedMd(msglib_addr, defaultEpConfig, endpointCommitPacket)
+tuple endpointCommitPacket(cell $packet) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $receivePath = $packet.lz::Packet::getPath();
+    (int recvPathSrcEid, int recvPathDstEid) = $receivePath.lz::Path::getEidAndDstEid();
+    (
+        int storageEid, 
+        int storageDstEid, 
+        int defaultExpiry,
+        cell $defaultReceiveLibInfo,
+        cell $timeoutReceiveLibInfo
+    ) = $storage.Endpoint::getCommitPacketInformation();
+
+    ;; Assert we are the correct endpoint for this commit request
+    ;; the srcEid of the packet should match the dstEid of the endpoint contract
+    throw_if(
+        Endpoint::ERROR::wrongPath,
+        (recvPathSrcEid != storageDstEid) | (recvPathDstEid != storageEid)
+    );
+
+    cell $sendPath = $receivePath.lz::Path::optimizedReverse();
+    int channelAddress = _getChannelAddress($storage, $sendPath);
+
+    (_, int receiveMsglibConnection) = _getMsglibAndConnectionDefaults(
+        $defaultReceiveLibInfo,
+        $sendPath
+    );
+
+    (_, int timeoutReceiveMsglibConnection) = _getMsglibAndConnectionDefaults(
+        $timeoutReceiveLibInfo,
+        $sendPath
+    );
+
+    actions~pushAction<call>(
+        channelAddress,
+        Channel::OP::CHANNEL_COMMIT_PACKET,
+        md::ExtendedMd::build(
+            $packet,
+            lz::ReceiveEpConfig::build(
+                receiveMsglibConnection,
+                timeoutReceiveMsglibConnection,
+                defaultExpiry
+            ),
+            getCaller()
+        )
+    );
+
+    return actions;
+}
+
+;; @permissions controller
+;; @in controller/handler.fc/addMsglib
+;; @in_md resolve_msglib (msglib manager address)
+;; @out msglib controller/handler.fc/resolve_msglib
+;; @out_md resolve_msglib (msglib manager address, eid)
+tuple addMsglib(cell $addMsglib) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedAddMsglibMd = $addMsglib.md::AddMsglib::sanitize();
+
+    ;; Not necessary to check dstEid in $addMsglib is correct, because
+    ;; the controller derives our address based on dstEid, so it cannot be wrong.
+
+    int msglibManagerAddress = $sanitizedAddMsglibMd.cl::get<address>(md::AddMsglib::msglibManagerAddress);
+    (cell $msglibInfo, int exists) = $storage.cl::nestedDict256::get<cellRef>(
+        Endpoint::msglibs,
+        msglibManagerAddress
+    );
+
+    ifnot (exists) {
+        ;; Check that we havent exceeded the max number of msglibs
+        int currentNumMsglibs = $storage.cl::get<uint8>(Endpoint::numMsglibs);
+        throw_unless(Endpoint::ERROR::numMsglibsExceeded, currentNumMsglibs < MAX_MSGLIBS);
+
+        setContractStorage(
+            $storage
+                .cl::nestedDict256::setRef(
+                    Endpoint::msglibs,
+                    msglibManagerAddress,
+                    cl::nullObject()
+                )
+                .cl::set(Endpoint::numMsglibs, currentNumMsglibs + 1)
+        );
+
+        ;; Call the msglib manager to resolve the correct msglib contract
+        ;; address for this endpoint's remote eid
+        actions~pushAction<call>(
+            msglibManagerAddress,
+            MsglibManager::OP::GET_MSGLIB_INFO,
+            $sanitizedAddMsglibMd
+        );
+    } else {
+        ;; if the previous addMsglib ran out of gas, it can be retried
+        if (cl::isNullObject($msglibInfo)) {
+            actions~pushAction<call>(
+                msglibManagerAddress,
+                MsglibManager::OP::GET_MSGLIB_INFO,
+                $sanitizedAddMsglibMd
+            );
+        }
+    }
+
+    return actions;
+}
+
+;; @in Any MsglibManager that was added in addMsglib
+;; @in_md MsglibInfo
+;; @out refund
+tuple getMsglibInfoCallback(cell $msglibInfo) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedMsglibInfo = $msglibInfo.lz::MsglibInfo::sanitize();
+
+    ;; the storedMsglibInfo is asserted to exist in checkPermissions
+    (cell $storedMsglibInfo, _) = $storage.cl::nestedDict256::get<cellRef>(
+        Endpoint::msglibs,
+        getCaller()
+    );
+
+    throw_unless(Endpoint::ERROR::msglibInfoExists, cl::isNullObject($storedMsglibInfo));
+
+    setContractStorage(
+        $storage.cl::nestedDict256::setRef(Endpoint::msglibs, getCaller(), $sanitizedMsglibInfo)
+    );
+
+    return actions;
+}

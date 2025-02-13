@@ -1,0 +1,28 @@
+#include "../handler.fc";
+#include "../../../../tests/mocks.fc";
+#include "../../../classes/lz/EpConfig.fc";
+#include "../../../classes/msgdata/ExtendedMd.fc";
+#include "../../../classes/msgdata/LzReceiveStatus.fc";
+#include "../../../classes/msgdata/Nonce.fc";
+
+() commitNonce(int nonce) impure inline {
+    channelCommitPacket(
+        md::ExtendedMd::New(
+            MOCK_RECEIVE_PACKET_WITH_NONCE(nonce),
+            MOCK_SML_RECEIVE_EP_CONFIG(),
+            RECEIVE_MSGLIB_CONNECTION_ADDRESS
+        )
+    );
+}
+
+() lockNonce(int nonce) impure inline {
+    lzReceiveLock(md::Nonce::New(nonce));
+}
+
+() executeNonce(int nonce) impure inline {
+    lzReceiveExecuteCallback(md::LzReceiveStatus::New(true, nonce));
+}
+
+() unlockNonce(int nonce) impure inline {
+    lzReceiveExecuteCallback(md::LzReceiveStatus::New(false, nonce));
+}

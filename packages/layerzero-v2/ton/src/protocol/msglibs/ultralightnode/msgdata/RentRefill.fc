@@ -1,0 +1,18 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required md name
+const int md::RentRefill::NAME = "RentRefill"u;
+
+;; field names
+const int md::RentRefill::address = 0;
+const int md::RentRefill::amount = 1;
+
+cell md::RentRefill::New(int address, int amount) impure inline method_id {
+    return cl::declare(
+        md::RentRefill::NAME,
+        unsafeTuple([
+            [cl::t::address, address],   ;; md::RentRefill::address
+            [cl::t::coins, amount]       ;; md::RentRefill::amount
+        ])
+    );
+}

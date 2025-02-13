@@ -1,0 +1,664 @@
+#include "../../../../../../tests/consts.fc";
+#include "../../../../../../tests/mocks.fc";
+
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+
+#include "../../msgdata/InitUln.fc";
+#include "../../msgdata/InitUlnManager.fc";
+#include "../../msgdata/SetAdminWorkerAddresses.fc";
+#include "../../msgdata/TreasuryFeeBps.fc";
+#include "../../msgdata/UlnReceiveConfig.fc";
+#include "../../msgdata/UlnSendConfig.fc";
+#include "../../msgdata/UlnWorkerFeelibInfo.fc";
+#include "../../uln/interface.fc";
+#include "../../ulnConnection/interface.fc";
+
+#include "../../../../../classes/msgdata/Deploy.fc";
+
+#include "../../../../../../tests/baseContractTest.fc";
+#include "../../../../../../tests/protocolStorageTestUtils.fc";
+#include "../../../../../../tests/testMain.fc";
+#include "../../../../interfaces.fc";
+#include "../../../../../funC++/baseInterface.fc";
+#include "../../../../../funC++/testutils.fc";
+#include "../../../../../funC++/classlib.fc";
+#include "../../../../../funC++/constants.fc";
+#include "../../../../../funC++/txnContext.fc";
+#include "../../../../../classes/msgdata/MdEid.fc";
+#include "../../../../../classes/msgdata/MdObj.fc";
+#include "../../../../../classes/msgdata/SetAddress.fc";
+#include "../../../../../funC++/actions/call.fc";
+#include "../../../../../funC++/actions/deploy.fc";
+#include "../../../../../funC++/actions/event.fc";
+#include "../../../../../funC++/dataStructures/AddressList.fc";
+
+slice _testName() { return "ulnManager"; }
+
+() _createInitializedStorage() impure {
+    initialize(
+        md::InitUlnManager::New(
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        )
+    );
+}
+
+cell createContractStorage() impure {
+    setContractStorage(
+        UlnManager::New(
+            getCaller(),
+            MOCK_ULN_CODE(),
+            MOCK_ULN_CONNECTION_CODE(),
+            CONTROLLER_ADDRESS,
+            SRC_EID
+        )
+    );
+    return getContractStorage();
+}
+
+;; ============================== deploy uln tests ==============================
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+(int, slice) initialize::success::basic(cell $storage) impure {
+    cell $initializedStorage = getContractStorage();
+    createContractStorage();
+    authenticate();
+    return test::handler::shouldPass(
+        initialize,
+        md::InitUlnManager::New(
+            MOCK_ENDPOINT_CODE(),
+            MOCK_CHANNEL_CODE()
+        ),
+        emptyActions(),
+        $initializedStorage,
+        txnContext
+    );
+}
+
+(int, slice) deployUln::success::basic(cell $storage) impure {
+    cell $initUlnMd = md::InitUln::New(
+        MOCK_ULN_CONNECTION_CODE(),
+        TREASURY_FEE_BPS
+    );
+
+    return test::handler::shouldPass(
+        deployUln,
+        md::Deploy::NewWithExtraInfo(
+            INITIAL_DEPOSIT,
+            DST_EID,
+            NULLADDRESS,
+            $initUlnMd
+        ),
+        unsafeTuple([
+            0,
+            _newAction<deployAndCall>(
+                MOCK_ULN_CODE(),
+                Uln::New(getContractAddress(), SRC_EID, DST_EID),
+                INITIAL_DEPOSIT,
+                BaseInterface::OP::INITIALIZE,
+                $initUlnMd,
+                0
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) deployUln::fail::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        deployUln,
+        md::Deploy::New(INITIAL_DEPOSIT, 0, NULLADDRESS),
+        UlnManager::ERROR::invalidEid
+    );
+}
+
+;; ============================== deploy uln connection tests ==============================
+
+(int, slice) deployUlnConnection::success::basic(cell $storage) impure {
+    spoofCaller(SRC_OAPP);
+    cell $storage = getContractStorage();
+
+    cell $path = lz::Path::New(SRC_EID, SRC_OAPP, DST_EID, DST_OAPP);
+
+    cell $initUlnConnection = md::InitUlnConnection::NewOnlyConfig(
+        UlnSendConfig::NewWithDefaults(),
+        UlnReceiveConfig::NewWithDefaults()
+    );
+
+    cell $deploy = md::Deploy::New(INITIAL_DEPOSIT, DST_EID, DST_OAPP)
+        .cl::set(md::Deploy::extraInfo, $initUlnConnection);
+
+    return test::handler::shouldPass(
+        deployUlnConnection,
+        $deploy,
+        unsafeTuple([
+            0,
+            _newAction<deployAndCall>(
+                MOCK_ULN_CONNECTION_CODE(),
+                UlnConnection::New(
+                    getContractAddress(),
+                    $path,
+                    _calculateUlnAddress(getContractStorage(), DST_EID)
+                ),
+                INITIAL_DEPOSIT,
+                BaseInterface::OP::INITIALIZE,
+                md::InitUlnConnection::New(
+                    UlnSendConfig::NewWithDefaults(),
+                    UlnReceiveConfig::NewWithDefaults(),
+                    _calculateEndpointAddress($storage, DST_EID),
+                    _calculateChannelAddress($storage, $path)
+                ),
+                0
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) deployUlnConnection::fail::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        deployUlnConnection,
+        md::Deploy::New(INITIAL_DEPOSIT, 0, NULLADDRESS),
+        UlnManager::ERROR::invalidEid
+    );
+}
+
+;; ============================== getMsglibInfo tests ==============================
+
+(int, slice) getMsglibInfo::success::basic(cell $storage) impure {
+    int ulnAddress = _calculateUlnAddress(getContractStorage(), DST_EID);
+
+    return test::handler::shouldPass(
+        getMsglibInfo,
+        md::AddMsglib::New(NULLADDRESS, DST_EID),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                getCaller(),
+                Endpoint::OP::GET_MSGLIB_INFO_CALLBACK,
+                lz::MsglibInfo::New(
+                    ulnAddress,
+                    MOCK_ULN_CONNECTION_CODE(),
+                    UlnConnection::New(
+                        getContractAddress(),
+                        lz::Path::endpointPath(SRC_EID, DST_EID),
+                        ulnAddress
+                    )
+                )
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+ }
+
+(int, slice) getMsglibInfo::fail::invalidEid(cell $storage) impure {
+    return test::handler::shouldFail(
+        getMsglibInfo,
+        md::AddMsglib::New(NULLADDRESS, 0),
+        UlnManager::ERROR::invalidEid
+    );
+}
+
+;; ============================== setDefaultUlnReceiveConfig tests ==============================
+
+(int, slice) setDefaultUlnReceiveConfig::success::basic(cell $storage) impure {
+    return test::handler::shouldPass(
+        setDefaultUlnReceiveConfig,
+        md::MdEid::New(MOCK_DEFAULT_ULN_RECEIVE_CONFIG(), DST_EID),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::SET_DEFAULT_ULN_RECEIVE_CONFIG,
+                MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+;; ============================== setOAppUlnReceiveConfig tests ==============================
+
+(int, slice) setOAppUlnReceiveConfig::success::basic(cell $storage) impure {
+    return test::handler::shouldPass(
+        setOAppUlnReceiveConfig,
+        md::MdObj::New(MOCK_DEFAULT_ULN_RECEIVE_CONFIG(), MOCK_SEND_PATH()),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnConnectionAddress(getContractStorage(), MOCK_SEND_PATH()),
+                UlnConnection::OP::SET_OAPP_ULN_RECEIVE_CONFIG,
+                MOCK_DEFAULT_ULN_RECEIVE_CONFIG()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+;; ============================== claimTreasuryFees tests ==============================
+
+(int, slice) claimTreasuryFees::success::basic(cell $storage) impure {
+    (int myStateCellCount, int myStateBitCount) = getContractStateSize(
+        my_code(),
+        getContractStorage()
+    );
+
+    int minStorageFee = get_storage_fee(
+        BASECHAIN,
+        UlnManager::CONST::minRentSeconds,
+        myStateBitCount,
+        myStateCellCount
+    );
+
+    ;; the code needs you to have enough balance (minus the incoming msg value) to pay the claim amount
+    ;; (the contract balance before this is actually bigger, but we want to be able to reason about it)
+    setContractBalance(
+        getMsgValue() + MOCK_ULN_TREASURY_CLAIM_AMOUNT + minStorageFee + storage_fees()
+    );
+
+    return test::handler::shouldPass(
+        claimTreasuryFees,
+        md::CoinsAmount::New(MOCK_ULN_TREASURY_CLAIM_AMOUNT),
+        unsafeTuple([
+            MOCK_ULN_TREASURY_CLAIM_AMOUNT,
+            _newAction<payment>(
+                getOrigin(),
+                MOCK_ULN_TREASURY_CLAIM_AMOUNT,
+                MOCK_ULN_TREASURY_CLAIM_AMOUNT
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) claimTreasuryFees::fail::insufficientBalance(cell $storage) impure {
+    setContractBalance(getMsgValue());
+    return test::handler::shouldFail(
+        claimTreasuryFees,
+        md::CoinsAmount::New(MOCK_ULN_TREASURY_CLAIM_AMOUNT),
+        UlnManager::ERROR::insufficientBalance
+    );
+}
+
+;; ============================== setAdminWorker tests ==============================
+
+(int, slice) setAdminWorker::success::addAdminWorker(cell $storage) impure {
+    cell $md = md::SetAdminWorkerAddresses::New(
+        MOCK_ADMIN_WORKER_LIST()
+    );
+
+    return test::handler::shouldPass(
+        setAdminWorkers,
+        $md,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnManager::event::ADMIN_WORKERS_SET,
+                $md
+            )
+        ]),
+        getContractStorage()
+            .cl::set(UlnManager::adminWorkers, MOCK_ADMIN_WORKER_LIST()),
+        txnContext
+    );
+}
+
+(int, slice) setAdminWorker::revert::tooManyAdmins(cell $storage) impure {
+    cell addressListNode = AddressList::serialize(
+        unsafeTuple(
+            [
+                ADMIN_WORKER_ADDRESS,
+                ADMIN_WORKER_ADDRESS,
+                ADMIN_WORKER_ADDRESS
+            ]
+        )
+    );
+
+    repeat (UlnManager::CONST::MAX_ADMIN_WORKERS / 3) {
+        addressListNode = begin_cell()
+            .store_uint256(ADMIN_WORKER_ADDRESS)
+            .store_uint256(ADMIN_WORKER_ADDRESS)
+            .store_uint256(ADMIN_WORKER_ADDRESS)
+            .store_ref(addressListNode)
+            .end_cell();
+    }
+
+
+    return test::handler::shouldFail(
+        setAdminWorkers,
+        md::SetAdminWorkerAddresses::New(addressListNode),
+        UlnManager::ERROR::invalidAdminWorkerList
+    );
+}
+
+(int, slice) setAdminWorker::revert::malformedAdminList(cell $storage) impure {
+    cell addressListNode = AddressList::serialize(
+        unsafeTuple(
+            [
+                ADMIN_WORKER_ADDRESS,
+                ADMIN_WORKER_ADDRESS,
+                ADMIN_WORKER_ADDRESS
+            ]
+        )
+    );
+
+    return test::handler::shouldFail(
+        setAdminWorkers,
+        md::SetAdminWorkerAddresses::New(
+            _dupWithGarbage(addressListNode)
+        ),
+        UlnManager::ERROR::invalidAdminWorkerList
+    );
+}
+
+;; ============================== addWorkerFeelibToUlnFeelibInfo tests ==============================
+
+(int, slice) registerWorkerFeelibBytecode::success::basic(cell $storage) impure {
+    return test::handler::shouldPass(
+        registerWorkerFeelibBytecode,
+        MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD(),
+        emptyActions(),
+        getContractStorage()
+            .cl::nestedDict256::setRef(
+                UlnManager::workerFeelibBytecodes,
+                MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE().cell_hash(),
+                MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE()
+            ),
+        txnContext
+    );
+}
+
+(int, slice) registerWorkerFeelibBytecode::success::alreadyRegistered(cell $storage) impure {
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    return test::handler::shouldPass(
+        registerWorkerFeelibBytecode,
+        MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD(),
+        emptyActions(),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::success::usePermissionlessSlot(cell $storage) impure {
+    cell $UlnWorkerFeelibInfo = MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE();
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    return test::handler::shouldPass(
+        addWorkerFeelibToUln,
+        $UlnWorkerFeelibInfo,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::UPDATE_WORKER_FEELIB,
+                $UlnWorkerFeelibInfo
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::success::useAdminSlot(cell $storage) impure {
+    ;; add the caller as an admin worker
+    setAdminWorkers(
+        md::SetAdminWorkerAddresses::New(
+            AddressList::serialize(unsafeTuple([getCaller()]))
+        )
+    );
+
+    cell $UlnWorkerFeelibInfo = MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE();
+
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    return test::handler::shouldPass(
+        addWorkerFeelibToUln,
+        $UlnWorkerFeelibInfo,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::UPDATE_WORKER_FEELIB,
+                $UlnWorkerFeelibInfo
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::fail::useAdminSlotAsNonAdmin(cell $storage) impure {
+    cell $UlnWorkerFeelibInfo = MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE();
+
+    return test::handler::shouldFail(
+        addWorkerFeelibToUln,
+        $UlnWorkerFeelibInfo,
+        UlnManager::ERROR::invalidWorkerInfo
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::fail::unregisteredBytecode(cell $storage) impure {
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    return test::handler::shouldFail(
+        addWorkerFeelibToUln,
+        MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE()
+            .cl::set(UlnWorkerFeelibInfo::workerFeelibBytecode, _getRandomCode(12345)),
+        UlnManager::ERROR::invalidWorkerInfo
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::success::maliciousWorkerInfo(cell $storage) impure {
+    cell $maliciousInfo = _dupWithGarbage(
+        MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE()
+            .cl::set(UlnWorkerFeelibInfo::workerAddress, ARBITRARY_ADDRESS)
+    );
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    return test::handler::shouldPass(
+        addWorkerFeelibToUln,
+        $maliciousInfo,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::UPDATE_WORKER_FEELIB,
+                MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) addWorkerFeelibToUln::success::wrongWorkerAddress(cell $storage) impure {
+    registerWorkerFeelibBytecode(MOCK_DEFAULT_ULN_WORKER_FEELIB_BYTECODE_MD());
+
+    cell $UlnWorkerFeelibInfo = MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE()
+        .cl::set(UlnWorkerFeelibInfo::workerAddress, ARBITRARY_ADDRESS);
+
+    return test::handler::shouldPass(
+        addWorkerFeelibToUln,
+        $UlnWorkerFeelibInfo,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::UPDATE_WORKER_FEELIB,
+                MOCK_ULN_WORKER_FEELIB_INFO_WITH_STORAGE()
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) setUlnTreasuryFeeBps::success::basic(cell $storage) impure {
+    return test::handler::shouldPass(
+        setUlnTreasuryFeeBps,
+        md::MdEid::New(
+            md::TreasuryFeeBps::New(TREASURY_FEE_BPS),
+            DST_EID
+        ),
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnAddress(getContractStorage(), DST_EID),
+                Uln::OP::SET_TREASURY_FEE_BPS,
+                md::TreasuryFeeBps::New(TREASURY_FEE_BPS)
+            )
+        ]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) setDefaultUlnSendConfig::success::basic(cell $storage) impure {
+    cell $mdEid = md::MdEid::New(MOCK_DEFAULT_ULN_SEND_CONFIG(), DST_EID);
+    return test::handler::shouldPass(
+        setDefaultUlnSendConfig,
+        $mdEid,
+        unsafeTuple([
+                0,
+                _newAction<call>(_calculateUlnAddress($storage, $mdEid.cl::get<uint32>(md::MdEid::eid)),
+                Uln::OP::SET_DEFAULT_ULN_SEND_CONFIG,
+                MOCK_DEFAULT_ULN_SEND_CONFIG()
+            )]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) setOAppUlnSendConfig::success::basic(cell $storage) impure {
+    cell $path = MOCK_SEND_PATH();
+    cell $mdObj = md::MdObj::New(MOCK_CUSTOM_ULN_SEND_CONFIG(), $path);
+    return test::handler::shouldPass(
+        setOAppUlnSendConfig,
+        $mdObj,
+        unsafeTuple([
+            0,
+            _newAction<call>(
+                _calculateUlnConnectionAddress($storage, $path),
+                UlnConnection::OP::SET_OAPP_ULN_SEND_CONFIG,
+                MOCK_CUSTOM_ULN_SEND_CONFIG()
+            )]),
+        getContractStorage(),
+        txnContext
+    );
+}
+
+(int, slice) claimOwnership::success::basic(cell $storage) impure {
+    int newOwner = ARBITRARY_ADDRESS;
+    cell $setAddress = md::SetAddress::New(newOwner);
+
+    transferOwnership($setAddress);
+
+    return test::handler::shouldPass(
+        claimOwnership,
+        empty_cell(),
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnManager::event::OWNER_SET,
+                $setAddress
+            )
+        ]),
+        $storage
+            .cl::set(UlnManager::tentativeOwner, NULLADDRESS)
+            .cl::set(
+                UlnManager::baseStorage,
+                $storage
+                    .cl::get<objRef>(UlnManager::baseStorage)
+                    .cl::set(BaseStorage::owner, newOwner)
+            ),
+        txnContext
+    );
+}
+
+(int, slice) claimOwnership::revert::nullAddress(cell $storage) impure {
+    return test::handler::shouldFail(
+        claimOwnership,
+        empty_cell(),
+        UlnManager::ERROR::nullTentativeOwner
+    );
+}
+
+(int, slice) transferOwnership::success::basic(cell $storage) impure {
+    int newOwner = TENTATIVE_OWNER_ADDRESS;
+    cell $setAddress = md::SetAddress::New(newOwner);
+    return test::handler::shouldPass(
+        transferOwnership,
+        $setAddress,
+        unsafeTuple([
+            0,
+            _newAction<event>(
+                UlnManager::event::OWNER_SET_TENTATIVE,
+                $setAddress
+            )
+        ]),
+        $storage
+        .cl::set(UlnManager::tentativeOwner, newOwner),
+        txnContext
+    );
+}
+
+;; ============================== baseTest::getTests ==============================
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([initialize::success::basic, "initialize::success::basic"])
+            ;; deploy uln tests
+            .tpush([deployUln::success::basic, "deployUln::success::basic"])
+            .tpush([deployUln::fail::invalidEid, "deployUln::fail::invalidEid"])
+            ;; deploy uln connection tests
+            .tpush([deployUlnConnection::success::basic, "deployUlnConnection::success::basic"])
+            .tpush([deployUlnConnection::fail::invalidEid, "deployUlnConnection::fail::invalidEid"])
+            ;; getMsglibInfo tests
+            .tpush([getMsglibInfo::success::basic, "getMsglibInfo::success::basic"])
+            .tpush([getMsglibInfo::fail::invalidEid, "getMsglibInfo::fail::invalidEid"])
+            ;; setDefaultUlnReceiveConfig tests
+            .tpush([setDefaultUlnReceiveConfig::success::basic, "setDefaultUlnReceiveConfig::success::basic"])
+            ;; setOAppUlnReceiveConfig tests
+            .tpush([setOAppUlnReceiveConfig::success::basic, "setOAppUlnReceiveConfig::success::basic"])
+            ;; claimTreasuryFees tests
+            .tpush([claimTreasuryFees::success::basic, "claimTreasuryFees::success::basic"])
+            .tpush([claimTreasuryFees::fail::insufficientBalance, "claimTreasuryFees::fail::insufficientBalance"])
+            ;; setAdminWorker tests
+            .tpush([setAdminWorker::success::addAdminWorker, "setAdminWorker::success::addAdminWorker"])
+            .tpush([setAdminWorker::revert::tooManyAdmins, "setAdminWorker::revert::tooManyAdmins"])
+            .tpush([setAdminWorker::revert::malformedAdminList, "setAdminWorker::revert::malformedAdminList"])
+            ;; registerUlnWorkerFeelibBytecode tests
+            .tpush([registerWorkerFeelibBytecode::success::basic, "registerWorkerFeelibBytecode::success::basic"])
+            .tpush([registerWorkerFeelibBytecode::success::alreadyRegistered, "registerWorkerFeelibBytecode::success::alreadyRegistered"])
+            ;; addWorkerFeelibToUln tests
+            .tpush([addWorkerFeelibToUln::success::usePermissionlessSlot, "addWorkerFeelibToUln::success::usePermissionlessSlot"])
+            .tpush([addWorkerFeelibToUln::success::useAdminSlot, "addWorkerFeelibToUln::success::useAdminSlot"])
+            .tpush([addWorkerFeelibToUln::fail::useAdminSlotAsNonAdmin, "addWorkerFeelibToUln::fail::useAdminSlotAsNonAdmin"])
+            .tpush([addWorkerFeelibToUln::fail::unregisteredBytecode, "addWorkerFeelibToUln::fail::unregisteredBytecode"])
+            .tpush([addWorkerFeelibToUln::success::maliciousWorkerInfo, "addWorkerFeelibToUln::success::maliciousWorkerInfo"])
+            .tpush([addWorkerFeelibToUln::success::wrongWorkerAddress, "addWorkerFeelibToUln::success::wrongWorkerAddress"])
+            ;; setTreasuryFee handler tests
+            .tpush([setUlnTreasuryFeeBps::success::basic, "setUlnTreasuryFeeBps::success::basic"])
+            ;; setDefaultUlnSendConfig tests
+            .tpush([setDefaultUlnSendConfig::success::basic, "setDefaultUlnSendConfig::success::basic"])
+            .tpush([setOAppUlnSendConfig::success::basic, "setOAppUlnSendConfig::success::basic"])
+            ;; transferOwnership tests
+            .tpush([transferOwnership::success::basic, "transferOwnership::success::basic"])
+            ;; claimOwnership tests
+            .tpush([claimOwnership::revert::nullAddress, "claimOwnership::revert::nullAddress"])
+            .tpush([claimOwnership::success::basic, "claimOwnership::success::basic"])
+    );
+}

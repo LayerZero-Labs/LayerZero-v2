@@ -1,0 +1,308 @@
+#include "../handler.fc";
+#include "../interface.fc";
+#include "../storage.fc";
+
+#include "../../../../tests/baseContractTest.fc";
+#include "../../../workers/core/tests/workerStorageTestUtils.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../funC++/baseInterface.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/txnContext.fc";
+#include "../../../funC++/constants.fc";
+#include "../../../funC++/handlerCore.fc";
+
+#include "../../../../tests/consts.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "PricefeedCache::Permissions"; }
+
+cell createContractStorage() impure {
+    setContractStorage(
+        PriceFeedCache::New(
+            AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS])),
+            0,
+            MOCK_DEFAULT_PRICE_FEED_STORAGE(),
+            DST_EID
+        )
+    );
+
+    setContractStorage(
+        getContractStorage().setCoreStorage(
+            getCoreStorage().cl::set(
+                WorkerCoreStorage::proxy,
+                PROXY_ADDRESS
+            )
+        )
+    );
+
+    return getContractStorage();
+}
+
+() _createInitializedStorage() impure { }
+
+int _callCheckPermissions(int op, cell $md) impure {
+    checkPermissions(op, $md);
+    return 0;
+}
+
+;;; ===============================TESTS=========================================
+
+(int, slice) checkPermissions::updatePrice::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updatePrice::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updatePrice::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        PriceFeedCache::OP::UPDATE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateNativePrice::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_NATIVE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateNativePrice::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_NATIVE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateNativePrice::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        PriceFeedCache::OP::UPDATE_NATIVE_PRICE,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpPrices::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_OP_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpPrices::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_OP_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpPrices::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        PriceFeedCache::OP::UPDATE_OP_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpNativePrices::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpNativePrices::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateOpNativePrices::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateArbExtension::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_ARB_EXTENSION,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateArbExtension::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        PriceFeedCache::OP::UPDATE_ARB_EXTENSION,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::updateArbExtension::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        PriceFeedCache::OP::UPDATE_ARB_EXTENSION,
+        md::MdAddress::New(MOCK_CUSTOM_PRICE_FEED_STORAGE_DEFAULT(), ARBITRARY_ADDRESS)
+    );
+}
+
+(int, slice) checkPermissions::callViaProxy::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_RANDOM_EXECUTE_PARAMS()
+    );
+}
+
+(int, slice) checkPermissions::callViaProxy::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_RANDOM_EXECUTE_PARAMS()
+    );
+}
+
+(int, slice) checkPermissions::callViaProxy::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::CALL_VIA_PROXY,
+        MOCK_RANDOM_EXECUTE_PARAMS()
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_ADMINS,
+        AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS]))
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_ADMINS,
+        AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS]))
+    );
+}
+
+(int, slice) checkPermissions::setAdmins::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::SET_ADMINS,
+        AddressList::serialize(unsafeTuple([ADMIN_ONE_ADDRESS, ADMIN_TWO_ADDRESS]))
+    );
+}
+
+(int, slice) checkPermissions::claimTon::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CLAIM_TON,
+        MOCK_COINS_AMOUNT()
+    );
+}
+
+(int, slice) checkPermissions::claimTon::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::CLAIM_TON,
+        MOCK_COINS_AMOUNT()
+    );
+}
+
+(int, slice) checkPermissions::claimTon::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::CLAIM_TON,
+        MOCK_COINS_AMOUNT()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::success::admin1(cell $storage) impure {
+    spoofCaller(ADMIN_ONE_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_PROXY,
+        MOCK_SET_ADDRESS()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::success::admin2(cell $storage) impure {
+    spoofCaller(ADMIN_TWO_ADDRESS);
+    return test::permissions::shouldPass(
+        Worker::OP::SET_PROXY,
+        MOCK_SET_ADDRESS()
+    );
+}
+
+(int, slice) checkPermissions::setProxy::fail::notAdmin(cell $storage) impure {
+    spoofCaller(ATTACKER_ADDRESS);
+    return test::permissions::shouldFail(
+        Worker::OP::SET_PROXY,
+        MOCK_SET_ADDRESS()
+    );
+}
+
+(int, slice) checkPermissions::handleCallback::success::basic(cell $storage) impure {
+    spoofCaller(ARBITRARY_ADDRESS);
+    return test::permissions::shouldPass(
+        Proxy::OP::HANDLE_CALLBACK,
+        MOCK_CALLBACK_DATA()
+    );
+}
+
+tuple baseTest::getTests() impure {
+    return unsafeTuple(
+        empty_tuple()
+            .tpush([checkPermissions::updatePrice::success::admin1, "checkPermissions::updatePrice::success::admin1"])
+            .tpush([checkPermissions::updatePrice::success::admin2, "checkPermissions::updatePrice::success::admin2"])
+            .tpush([checkPermissions::updatePrice::fail::notAdmin, "checkPermissions::updatePrice::fail::notAdmin"])
+            .tpush([checkPermissions::updateNativePrice::success::admin1, "checkPermissions::updateNativePrice::success::admin1"])
+            .tpush([checkPermissions::updateNativePrice::success::admin2, "checkPermissions::updateNativePrice::success::admin2"])
+            .tpush([checkPermissions::updateNativePrice::fail::notAdmin, "checkPermissions::updateNativePrice::fail::notAdmin"])
+            .tpush([checkPermissions::updateOpPrices::success::admin1, "checkPermissions::updateOpPrices::success::admin1"])
+            .tpush([checkPermissions::updateOpPrices::success::admin2, "checkPermissions::updateOpPrices::success::admin2"])
+            .tpush([checkPermissions::updateOpPrices::fail::notAdmin, "checkPermissions::updateOpPrices::fail::notAdmin"])
+            .tpush([checkPermissions::updateOpNativePrices::success::admin1, "checkPermissions::updateOpNativePrices::success::admin1"])
+            .tpush([checkPermissions::updateOpNativePrices::success::admin2, "checkPermissions::updateOpNativePrices::success::admin2"])
+            .tpush([checkPermissions::updateOpNativePrices::fail::notAdmin, "checkPermissions::updateOpNativePrices::fail::notAdmin"])
+            .tpush([checkPermissions::updateArbExtension::success::admin1, "checkPermissions::updateArbExtension::success::admin1"])
+            .tpush([checkPermissions::updateArbExtension::success::admin2, "checkPermissions::updateArbExtension::success::admin2"])
+            .tpush([checkPermissions::updateArbExtension::fail::notAdmin, "checkPermissions::updateArbExtension::fail::notAdmin"])
+            .tpush([checkPermissions::callViaProxy::success::admin1, "checkPermissions::callViaProxy::success::admin1"])
+            .tpush([checkPermissions::callViaProxy::success::admin2, "checkPermissions::callViaProxy::success::admin2"])
+            .tpush([checkPermissions::callViaProxy::fail::notAdmin, "checkPermissions::callViaProxy::fail::notAdmin"])
+            .tpush([checkPermissions::setAdmins::success::admin1, "checkPermissions::setAdmins::success::admin1"])
+            .tpush([checkPermissions::setAdmins::success::admin2, "checkPermissions::setAdmins::success::admin2"])
+            .tpush([checkPermissions::setAdmins::fail::notAdmin, "checkPermissions::setAdmins::fail::notAdmin"])
+            .tpush([checkPermissions::claimTon::success::admin1, "checkPermissions::claimTon::success::admin1"])
+            .tpush([checkPermissions::claimTon::success::admin2, "checkPermissions::claimTon::success::admin2"])
+            .tpush([checkPermissions::claimTon::fail::notAdmin, "checkPermissions::claimTon::fail::notAdmin"])
+            .tpush([checkPermissions::setProxy::success::admin1, "checkPermissions::setProxy::success::admin1"])
+            .tpush([checkPermissions::setProxy::success::admin2, "checkPermissions::setProxy::success::admin2"])
+            .tpush([checkPermissions::setProxy::fail::notAdmin, "checkPermissions::setProxy::fail::notAdmin"])
+            .tpush([checkPermissions::handleCallback::success::basic, "checkPermissions::handleCallback::success::basic"])
+    );
+}

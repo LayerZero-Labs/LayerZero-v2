@@ -1,0 +1,42 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::PacketId::NAME = "pktId"u;
+
+;; field names
+const int md::PacketId::path = 0;
+const int md::PacketId::nonce = 1;
+
+cell md::PacketId::New(cell $path, int nonce) impure inline method_id {
+    return cl::declare(
+        md::PacketId::NAME,
+        unsafeTuple([
+            [cl::t::objRef, $path], ;; md::PacketId::path
+            [cl::t::uint64, nonce]  ;; md::PacketId::nonce
+        ])
+    );
+}
+
+;; ========================== Object Builders ==========================
+
+const int md::PacketId::_headerInfoBits = _BASIC_HEADER_WIDTH + (_FIELD_INFO_WIDTH * 2);
+const int md::PacketId::_headerFillerBits = _HEADER_WIDTH - md::PacketId::_headerInfoBits;
+const int md::PacketId::_headerInfo = 33180451689778480514427;
+
+cell md::PacketId::build(cell $path, int nonce) impure inline {
+    return begin_cell()
+        .store_uint(md::PacketId::_headerInfo, md::PacketId::_headerInfoBits) ;; header info
+        .store_ones(md::PacketId::_headerFillerBits)                          ;; header filler
+        .store_ref($path)                                                     ;; ref[0]
+        .store_uint(nonce, 64)                                                ;; uint[1]
+        .end_cell();
+}
+
+;; ========================== Sanitize ==========================
+
+cell md::PacketId::sanitize(cell $self) impure {
+    cell $path = $self.cl::get<objRef>(md::PacketId::path);
+    int nonce = $self.cl::get<uint64>(md::PacketId::nonce);
+
+    return md::PacketId::New($path, nonce);
+}

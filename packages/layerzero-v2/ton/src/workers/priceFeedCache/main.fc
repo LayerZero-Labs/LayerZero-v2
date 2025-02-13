@@ -1,0 +1,31 @@
+#include "../../protocol/core/abstract/protocolMain.fc";
+
+#include "handler.fc";
+#include "interface.fc";
+
+
+tuple _executeOpcode(int op, cell $md) impure inline {
+    if (op == PriceFeedCache::OP::UPDATE_PRICE) {
+        return updatePrice($md);
+    } elseif (op == PriceFeedCache::OP::UPDATE_NATIVE_PRICE) {
+        return updateNativePrice($md);
+    } elseif (op == PriceFeedCache::OP::UPDATE_OP_PRICES) {
+        return updateOpPrices($md);
+    } elseif (op == PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES) {
+        return updateOpNativePrices($md);
+    } elseif (op == PriceFeedCache::OP::UPDATE_ARB_EXTENSION) {
+        return updateArbExtension($md);
+    } elseif (op == Worker::OP::CALL_VIA_PROXY) {
+        return callViaProxy($md);
+    } elseif (op == Worker::OP::SET_ADMINS) {
+        return setAdmins($md);
+    } elseif (op == Worker::OP::CLAIM_TON) {
+        return claimTon($md);
+    } elseif (op == Worker::OP::SET_PROXY) {
+        return setProxy($md);
+    } elseif (op == Proxy::OP::HANDLE_CALLBACK) {
+        return emptyActions();
+    }
+    throw(BaseInterface::ERROR::invalidOpcode);
+    return empty_tuple();
+}

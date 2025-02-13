@@ -1,0 +1,18 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::SetPeer::NAME = "setPeer"u;
+
+;; field names
+const int md::SetPeer::eid = 0;
+const int md::SetPeer::peer = 1;
+
+cell md::SetPeer::New(int eid, int peer) impure inline method_id {
+    return cl::declare(
+        md::SetPeer::NAME,
+        unsafeTuple([
+            [cl::t::uint32, eid],   ;; md::SetPeer::eid
+            [cl::t::uint256, peer]  ;; md::SetPeer::peer
+        ])
+    );
+}

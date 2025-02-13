@@ -1,0 +1,1108 @@
+#include "callbackOpcodes.fc";
+
+#include "../core/abstract/protocolHandler.fc";
+
+#include "../../funC++/actions/dispatch.fc";
+#include "../../funC++/actions/event.fc";
+
+#include "../../classes/lz/EpConfig.fc";
+#include "../../classes/lz/Packet.fc";
+#include "../../classes/lz/Path.fc";
+#include "../../classes/lz/ReceiveEpConfig.fc";
+#include "../../classes/lz/SendEpConfig.fc";
+
+#include "../../classes/msgdata/ChannelNonceInfo.fc";
+#include "../../classes/msgdata/CoinsAmount.fc";
+#include "../../classes/msgdata/ExtendedMd.fc";
+#include "../../classes/msgdata/LzReceivePrepare.fc";
+#include "../../classes/msgdata/LzReceiveStatus.fc";
+#include "../../classes/msgdata/LzReceivePrepare.fc";
+#include "../../classes/msgdata/LzSend.fc";
+#include "../../classes/msgdata/MdAddress.fc";
+#include "../../classes/msgdata/MdObj.fc";
+#include "../../classes/msgdata/MessagingReceipt.fc";
+#include "../../classes/msgdata/MsglibSendCallback.fc";
+#include "../../classes/msgdata/Nonce.fc";
+#include "../../classes/msgdata/PacketId.fc";
+#include "../../classes/msgdata/PacketSent.fc";
+
+
+#include "../../funC++/dataStructures/DeterministicInsertionCircularQueue.fc";
+#include "../../funC++/dataStructures/PipelinedOutOfOrder.fc";
+
+#include "../interfaces.fc";
+#include "../msglibs/interface.fc";
+#include "interface.fc";
+#include "storage.fc";
+
+;;; ================INTERFACE FUNCTIONS=====================
+
+int _getEventSink() inline {
+    return getOwner();
+}
+
+;;; ==========================HELPER FUNCTIONS=====================================
+
+() _assertEqualPaths(cell $path1, cell $path2) impure inline {
+    throw_unless(Channel::ERROR::wrongPath, $path1.cl::hash() == $path2.cl::hash());
+}
+
+;; @info The send request queue (Channel::sendRequestQueue) is a DeterministicInsertionCircularQueue
+;; that stores a mapping from requestId => hash of LzSend object.
+;; {_build, _read}SendRequestQueueEntry functions are helper functions that
+;; serialize and deserialize the 256-bit hash that is stored in the DICQueue
+cell _buildSendRequestQueueEntry(cell $lzSend) impure inline method_id {
+    return begin_cell().store_uint256($lzSend.cl::hash()).end_cell();
+}
+
+int _readSendRequestQueueEntry(cell contents) impure inline method_id {
+    if (contents.is_null()) {
+        return 0;
+    } elseif (contents.cell_is_empty()) {
+        return 0;
+    }
+    return contents.begin_parse().preload_uint(256);
+}
+
+;; returns boolean committable, (packet or null)
+(int, cell) _nonceCommittable(int incomingNonce) impure inline method_id {
+    throw_if(Channel::ERROR::invalidNonce, incomingNonce <= 0);
+
+    cell $storage = getContractStorage();
+
+    cell $executePOOO = $storage.Channel::getExecutePOOO();
+    int firstUnexecutedNonce = $executePOOO.POOO::getNextEmpty();
+
+    (int actualKey, cell $packet, int status, int exists) = DeterministicInsertionCircularQueue::get(
+        $storage.Channel::getExecutionQueue(),
+        incomingNonce
+    );
+
+    if (
+        (incomingNonce == firstUnexecutedNonce)
+        & (actualKey == incomingNonce)
+        & (status != ExecutionQueue::executing)
+    ) {
+        ;; short-circuit for efficiency in the common case
+        return (true, exists ? $packet : null());
+    }
+
+    ;; condition 1 & 2: must be within the window
+    ;; condition 3: must not be executing
+    if (
+        (incomingNonce >= firstUnexecutedNonce)
+        & (incomingNonce <= POOO::maxSettableBit($executePOOO))
+        & (status != ExecutionQueue::executing)
+    ) {
+        ;; this is nested because funC doesn't support short-circuiting boolean/bitwise ops
+        ;; condition 4: must not be executed
+        ifnot (POOO::isBitSet($executePOOO, incomingNonce)) {
+            return (true, exists ? $packet : null());
+        }
+    }
+
+    return (false, null());
+}
+
+;; returns boolean committable
+int _optimizedNonceCommittable(cell $executePOOO, cell executionQueue, int incomingNonce) impure inline {
+    throw_if(Channel::ERROR::invalidNonce, incomingNonce <= 0);
+
+    int firstUnexecutedNonce = $executePOOO.POOO::getNextEmpty();
+
+    (int actualKey, _, int status, int exists) = DeterministicInsertionCircularQueue::get(
+        executionQueue,
+        incomingNonce
+    );
+
+    ;; condition 1 & 2: must be within the window
+    ;; condition 3: must not be executing
+    if (
+        (incomingNonce >= firstUnexecutedNonce)
+        & (incomingNonce <= POOO::maxSettableBit($executePOOO))
+        & (status != ExecutionQueue::executing)
+    ) {
+        ;; this is nested because funC doesn't support short-circuiting boolean/bitwise ops
+        ;; condition 4: must not be executed
+        ifnot (POOO::isBitSet($executePOOO, incomingNonce)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+cell _getExecutablePacket(int incomingNonce) impure inline method_id {
+    (int isCommittable, cell $packet) = _nonceCommittable(incomingNonce);
+    int firstUncommittedNonce = getContractStorage()
+        .Channel::getCommitPOOO()
+        .POOO::getNextEmpty();
+
+    throw_if(
+        Channel::ERROR::notExecutable,
+        ((~ isCommittable) | (incomingNonce >= firstUncommittedNonce) | $packet.is_null())
+    );
+
+    return $packet;
+}
+
+;;; ==========================VIEW FUNCTIONS=====================================
+
+int _viewInboundNonce() impure method_id {
+    return getContractStorage()
+        .Channel::getCommitPOOO()
+        .POOO::getNextEmpty() - 1;
+}
+
+int _viewExecutionStatus(int incomingNonce) impure method_id {
+    cell $storage = getContractStorage();
+
+    cell $executePOOO = $storage.cl::get<objRef>(Channel::executePOOO);
+    int firstUnexecutedNonce = $executePOOO.cl::get<uint64>(POOO::nextEmpty);
+    cell $commitPOOO = $storage.cl::get<objRef>(Channel::commitPOOO);
+    int firstUncommittedNonce = $commitPOOO.cl::get<uint64>(POOO::nextEmpty);
+    int inboundNonce = firstUncommittedNonce - 1;
+
+    int executed = incomingNonce < firstUnexecutedNonce;
+    if ((~ executed) & (incomingNonce < (firstUnexecutedNonce + MAX_CELL_BITS))) {
+        executed = $executePOOO.POOO::isBitSet(incomingNonce);
+    }
+
+    int committed = incomingNonce < firstUncommittedNonce;
+    if ((~ committed) & (incomingNonce < (firstUncommittedNonce + MAX_CELL_BITS))) {
+        committed = $commitPOOO.POOO::isBitSet(incomingNonce);
+    }
+
+    ifnot (committed) {
+        return ExecutionStatus::uncommitted;
+    } elseif (executed) {
+        return ExecutionStatus::executed;
+    }
+
+    (_, _, int status, _) = DeterministicInsertionCircularQueue::get(
+        $storage.cl::get<cellRef>(Channel::executionQueue),
+        incomingNonce
+    );
+    if (status == ExecutionQueue::executing) {
+        return ExecutionStatus::executing;
+    } elseif (incomingNonce <= inboundNonce) {
+        return ExecutionStatus::executable;
+    }
+    return ExecutionStatus::committedNotExecutable;
+}
+
+;;; ================INTERFACE FUNCTIONS=====================
+
+(cell, tuple) _initialize(cell $md) impure inline {
+    (cell $storage, tuple actions) = preamble();
+    cell $path = $storage.cl::get<objRef>(Channel::path);
+
+    throw_if(
+        Channel::ERROR::wrongPath,
+        ($path.cl::get<uint32>(lz::Path::srcEid) == 0)
+        | ($path.cl::get<address>(lz::Path::srcOApp) == NULLADDRESS)
+        | ($path.cl::get<uint32>(lz::Path::dstEid) == 0)
+        | ($path.cl::get<address>(lz::Path::dstOApp) == NULLADDRESS)
+    );
+
+    return (
+        $storage
+            .cl::set(Channel::executionQueue, DeterministicInsertionCircularQueue::create())
+            .cl::set(Channel::sendRequestQueue, DeterministicInsertionCircularQueue::create()),
+        actions
+    );
+}
+
+;;; ================PERMISSION FUNCTIONS=====================
+
+() _assertEndpoint() impure inline {
+    throw_unless(
+        Channel::ERROR::onlyEndpoint,
+        getCaller() == getContractStorage().Channel::getEndpointAddress()
+    );
+}
+
+;; this function is purposely designed to be maximally efficient when using a
+;; custom configuration and less efficient when using a default configuration
+() _assertSendMsglib(cell $mdMsglibSendCallback) impure inline {
+    ;; Resolve the actual sendMsglib address at the time of request.
+    ;; This function assumes the messagelib is not malicious or man-in-the-middle attacking,
+    ;; as those cases are asserted in the handler itself.
+    int sendMsglibAddress = $mdMsglibSendCallback
+        .md::MsglibSendCallback::getLzSend()
+        .md::LzSend::getSendMsglib();
+
+    throw_unless(Channel::ERROR::onlyApprovedSendMsglib, getCaller() == sendMsglibAddress);
+}
+
+() _assertOApp() impure inline {
+    throw_unless(
+        Channel::ERROR::onlyOApp,
+        getCaller() == getContractStorage()
+            .Channel::getPath()
+            .lz::Path::getSrcOApp()
+    );
+}
+
+() _checkPermissions(int op, cell $md) impure inline {
+    if (op == Channel::OP::LZ_RECEIVE_PREPARE) {
+        ;; open and public calls
+        return ();
+    } elseif (
+        (op == Channel::OP::CHANNEL_SEND)
+        | (op == Channel::OP::CHANNEL_COMMIT_PACKET)
+    ) {
+        return _assertEndpoint();
+    } elseif (op == Channel::OP::MSGLIB_SEND_CALLBACK) {
+        return _assertSendMsglib($md);
+    } elseif (
+        (op == Channel::OP::LZ_RECEIVE_LOCK)
+        | (op == Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK)
+    ) {
+        return _assertOApp();
+    } elseif (op == Channel::OP::DEPOSIT_ZRO) {
+        return assertOwner();
+    } elseif (
+        (op == Channel::OP::NOTIFY_PACKET_EXECUTED)
+        | (op == Channel::OP::SYNC_MSGLIB_CONNECTION)
+    ) {
+        return ();
+    } elseif (op == Channel::OP::SET_EP_CONFIG_OAPP) {
+        return _assertEndpoint();
+    } elseif (
+        ;; Management functions are all gated by OApp
+        (op == Channel::OP::NILIFY)
+        | (op == Channel::OP::BURN)
+        | (op == Channel::OP::FORCE_ABORT)
+    ) {
+       return _assertOApp();
+    } elseif (op == Channel::OP::EMIT_LZ_RECEIVE_ALERT) {
+        return ();
+    } else {
+        ;; we must put a check for all opcodes to make sure we don't
+        ;; mistakenly miss an opp code's permissions
+        throw(BaseInterface::ERROR::invalidOpcode);
+    }
+}
+
+;;; ==========================HANDLERS=====================================
+
+;; @in endpoint/handler.fc/setEpConfig
+;; @out controller/handler.fc/emit_event
+;; @md EpConfig
+tuple setEpConfigOApp(cell $epConfigOApp) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    setContractStorage(
+        $storage.cl::set(Channel::epConfigOApp, $epConfigOApp.lz::EpConfig::sanitize())
+    );
+
+    actions~pushAction<event>(Channel::event::EP_CFG_OAPP_SET, $epConfigOApp);
+    return actions;
+}
+
+;;; ==========================================
+;; Send flow
+;; @in: endpoint/handler.fc/quote
+;; @in_md: MdObj(lzSend, defaultEpConfig)
+;; @out: msglib/handler.fc/quote
+;; @out_md: $lzSend
+tuple channelSend(cell $mdObj) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (
+        cell $lzSend, 
+        cell $defaultSendEpConfig
+    ) = $mdObj.md::MdObj::deserialize();
+
+    ;; assert the size and structure of the incoming lzSend message
+    lz::Packet::assertValidSendMessage(
+        $lzSend.md::LzSend::getPacket()
+    );
+
+    (
+        cell $epConfigOApp, 
+        cell $sendPath, 
+        cell sendRequestQueue, 
+        int lastSendRequestId
+    ) = $storage.Channel::getSendInformation();
+
+    ;; Resolve the desired send msglib and send msglib connection
+    (
+        int isEpConfigNull,
+        int sendMsglibManager,
+        int sendMsglib, 
+        int sendMsglibConnection
+    ) = $epConfigOApp.lz::EpConfig::deserializeSendConfig();
+
+    if (isEpConfigNull) {
+        (sendMsglibManager, sendMsglib, sendMsglibConnection) = $defaultSendEpConfig.lz::SendEpConfig::deserialize();
+    }
+
+    if ((sendMsglibManager == NULLADDRESS) | (sendMsglib == NULLADDRESS) | (sendMsglibConnection == NULLADDRESS)) {
+        actions~pushAction<call>(
+            $sendPath.lz::Path::getSrcOApp(), ;; the OApp on this chain
+            Layerzero::OP::CHANNEL_SEND_CALLBACK,
+            md::MdObj::New(
+                md::MessagingReceipt::New(
+                    $lzSend,
+                    0,
+                    0,
+                    Channel::ERROR::MsglibBlocked
+                ),
+                getInitialStorage()
+            )
+        );
+        return actions;
+    }
+
+    ;; Each send request is assigned a unique request ID, which is also used as the key into
+    ;; the sendRequestQueue
+    int curRequestId = lastSendRequestId + 1;
+
+    $lzSend = md::LzSend::fillRequestInfo(
+        $lzSend, 
+        curRequestId, 
+        sendMsglibManager, 
+        sendMsglib, 
+        sendMsglibConnection
+    );
+
+    (_, _, _, int exists) = DeterministicInsertionCircularQueue::get(sendRequestQueue, curRequestId);
+    ifnot (exists) {
+        ;; submit to the msglib
+        setContractStorage(
+            $storage.Channel::setSendRequestQueueAndLastSendRequestId(
+                curRequestId,
+                DeterministicInsertionCircularQueue::set(
+                    sendRequestQueue,
+                    curRequestId,
+                    _buildSendRequestQueueEntry($lzSend),
+                    SendRequestQueue::sending
+                )
+            )
+        );
+
+        actions~pushAction<call>(
+            sendMsglibConnection,
+            MsglibConnection::OP::MSGLIB_CONNECTION_SEND,
+            $lzSend
+        );
+    } else {
+        ;; callback to the oApp with a failure and emit an event
+        actions~pushAction<event>(Channel::ERROR::sendQueueCongested, $lzSend);
+        actions~pushAction<call>(
+            $sendPath.lz::Path::getSrcOApp(), ;; the OApp on this chain
+            Layerzero::OP::CHANNEL_SEND_CALLBACK,
+            md::MdObj::New(
+                md::MessagingReceipt::New($lzSend, 0, 0, Channel::ERROR::sendQueueCongested),
+                getInitialStorage()
+            )
+        );
+    }
+
+    return actions;
+}
+
+;; in: msglib/handler.fc/msglibSend
+;; in_md: MsglibSendCallback
+;; out: OApp/handler.fc/sendCallback
+tuple msglibSendCallback(cell $mdMsglibSendCallback) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (
+        int errorCode,
+        int nativeQuote,
+        int zroQuote,
+        cell $lzSend,
+        cell serializedPayees,
+        cell encodedPacket,
+        int nonceByteOffset,
+        int nonceBytes,
+        int guidByteOffset,
+        int guidBytes,
+        cell $sendEvents
+    ) = $mdMsglibSendCallback.md::MsglibSendCallback::deserialize();
+
+    (
+        int requestId,
+        int lzSendNativeFee,
+        int lzSendZroFee,
+        cell $extraOptions,
+        cell $enforceOptions,
+        int sendMsglibManager
+    ) = $lzSend.md::LzSend::deserializeSendCallback();
+
+    (
+        cell sendRequestQueue,
+        int zroBalance,
+        cell $sendPath,
+        int outboundNonce
+    ) = $storage.Channel::getSendCallbackInformation();
+
+    ;; Read the requestId from the sendRequestQueue to ensure this send request is genuine
+    ;; and is not being double-executed
+    (_, cell contents, _, int exists) = DeterministicInsertionCircularQueue::get(
+        sendRequestQueue,
+        requestId
+    );
+
+    if (exists) {
+        if (_readSendRequestQueueEntry(contents) == $lzSend.cl::hash()) {
+            $storage = $storage.Channel::setSendRequestQueue(
+                DeterministicInsertionCircularQueue::delete(sendRequestQueue, requestId)
+            );
+        } else {
+            ;; See below comment, this else case is logically the same as the below else block,
+            ;; but needs to be split due to lack of short-circuiting boolean expressions in funC
+            return actions;
+        }
+    } else {
+        ;; if the send request doesn't exist, there are two cases
+        ;; 1. a legitimate request was frontrun by a force-abort
+        ;;  in this case, we can safely refund all the funds to the origin
+        ;; 2. a malicious MITM attack by ULN
+        ;;  in this case, we can't refund the funds, but we can still emit an event
+
+        ;; This technically silently reverts, by not processing any output actions,
+        ;; thus providing a refund, instead of hard reverting
+        return actions;
+    }
+
+    ;; verify that cumulative fees quoted by the msglib <= the fee cap specified by the user/app
+    if (lzSendNativeFee < nativeQuote) {
+        errorCode = Channel::ERROR::notEnoughNative;
+    }
+    if (lzSendZroFee < zroQuote) {
+        errorCode = Channel::ERROR::notEnoughZroToken;
+    }
+
+    ;; Verify that the ZRO token credits in the Channel is sufficient to cover the
+    ;; quoted ZRO cost of the message.
+    if (zroBalance < zroQuote) {
+        errorCode = Channel::ERROR::notEnoughZroTokenBalance;
+    }
+
+    int packetGuid = 0;
+    int packetNonce = 0;
+
+    if (errorCode == Channel::NO_ERROR) {
+        ;; Assign a nonce to the packet and calculate the resulting GUID
+        packetNonce = outboundNonce + 1;
+        packetGuid = lz::Packet::calculateGuid($sendPath, packetNonce);
+
+        ;; native payments
+        tuple payees = deserializePayees(serializedPayees);
+
+        ;; If the TON message does not contain sufficient value to perform the payments,
+        ;; the transaction will revert and the send channel will eventually get blocked.
+        ;; It is the responsibility of the OApp to assert sufficient gas + value to cover the
+        ;; entire transaction and avoid this failure.
+        repeat (payees.tlen()) {
+            [int payeeAddress, int nativeAmount] = payees~tpopPayee();
+            actions~pushAction<payment>(payeeAddress, nativeAmount, 0);
+        }
+
+        ;; Due to asynchrony between the Msglib and the Channel, the nonce and guid
+        ;; cannot be ... ?
+
+        cell completedEncodedPacket = null();
+
+        if (guidByteOffset > nonceByteOffset) {
+            completedEncodedPacket = encodedPacket
+                .lz::Packet::replaceTwoFieldsAtOffsets(
+                    packetNonce,
+                    nonceByteOffset,
+                    nonceBytes,
+                    packetGuid,
+                    guidByteOffset,
+                    guidBytes
+                );
+        } else {
+            completedEncodedPacket = encodedPacket
+                .lz::Packet::replaceTwoFieldsAtOffsets(
+                    packetGuid,
+                    guidByteOffset,
+                    guidBytes,
+                    packetNonce,
+                    nonceByteOffset,
+                    nonceBytes
+                );
+        }
+
+        actions~pushAction<event>(
+            Channel::event::PACKET_SENT,
+            md::PacketSent::build(
+                nativeQuote,
+                zroQuote,
+                $extraOptions,
+                $enforceOptions,
+                completedEncodedPacket,
+                packetNonce,
+                sendMsglibManager,
+                $sendEvents
+            )
+        );
+
+        $storage = $storage.Channel::setOutboundNonceAndZroBalance(
+            packetNonce,
+            zroBalance - zroQuote
+        );
+    }
+
+    ;; If the quote was unsuccessful, delete the hash from storage to prevent hol blocking
+    ;; If the quote was successful, additionally update the ZRO balance and outbound nonce
+    setContractStorage($storage);
+
+    actions~pushAction<call>(
+        $sendPath.lz::Path::getSrcOApp(), ;; the OApp on this chain
+        Layerzero::OP::CHANNEL_SEND_CALLBACK,
+        md::MdObj::build(
+            md::MessagingReceipt::build(
+                $lzSend.md::LzSend::setPacketNonceAndGuid(packetNonce, packetGuid),
+                nativeQuote,
+                zroQuote,
+                errorCode
+            ),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+;;; ==========================================
+;; Receive flow
+;; @in     endpoint/handler.fc/verify
+;; @in_md  ExtendedMd(msglibConnectionAddress, defaultEpConfig, verify)
+;; @out    packet_receive/handler.fc/verify
+;; @out_md ExtendedMd(msglib_addr, _, verify)
+;; @out    controller/handler.fc/emit_event
+tuple channelCommitPacket(cell $mdExtended) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizeMdExtended = $mdExtended.md::ExtendedMd::sanitize();
+
+    (
+        cell $packet,
+        int callerMsglibConnectionAddress
+    ) = $sanitizeMdExtended.md::ExtendedMd::getMdAndForwardingAddress();
+    ;; assert the size of the incoming packet
+    lz::Packet::assertValidReceiveMessage($packet);
+
+    (
+        cell $epConfigOApp,
+        cell $commitPOOO,
+        cell $executePOOO,
+        cell executionQueue
+    ) = $storage.Channel::getCommitPacketInformation();
+
+    (
+        int useDefaults,
+        int receiveMsglibConnection
+    ) = $epConfigOApp.lz::EpConfig::deserializeReceiveConfig();
+
+    if (useDefaults) {
+        cell $defaultConfig = $sanitizeMdExtended.md::ExtendedMd::getObj();
+        receiveMsglibConnection = $defaultConfig.lz::ReceiveEpConfig::getReceiveMsglibConnection();
+    }
+
+    if (receiveMsglibConnection != callerMsglibConnectionAddress) {
+        ;; grossly inefficient, but this will (almost) never happen
+        ;; so we can optimize the happy path by isolating this logic into this block
+        cell $defaultConfig = $sanitizeMdExtended.cl::get<objRef>(md::MdObj::obj);
+        int timeoutReceiveMsglibConnection = useDefaults
+            ? $defaultConfig.cl::get<address>(lz::ReceiveEpConfig::timeoutReceiveMsglibConnection)
+            : $epConfigOApp.cl::get<address>(lz::EpConfig::timeoutReceiveMsglibConnection);
+
+        int expiry = useDefaults
+            ? $defaultConfig.cl::get<uint64>(lz::ReceiveEpConfig::expiry)
+            : $epConfigOApp.cl::get<uint64>(lz::EpConfig::timeoutReceiveMsglibExpiry);
+
+        if ((timeoutReceiveMsglibConnection != callerMsglibConnectionAddress) | (expiry < now())) {
+            throw(Channel::ERROR::onlyApprovedReceiveMsglib);
+        }
+    }
+
+    int incomingNonce = $packet.lz::Packet::getNonce();
+
+    int isCommittable = _optimizedNonceCommittable(
+        $executePOOO,
+        executionQueue,
+        incomingNonce
+    );
+
+    if (isCommittable) {
+        setContractStorage(
+            $storage
+                .Channel::setCommitPOOOAndExecutionQueue(
+                    POOO::set($commitPOOO, incomingNonce),
+                    DeterministicInsertionCircularQueue::set(
+                        executionQueue,
+                        incomingNonce,
+                        $packet,
+                        ExecutionQueue::committed
+                    )
+                )
+        );
+        actions~pushAction<event>(Channel::event::PACKET_COMMITTED, $packet);
+    }
+
+    if (incomingNonce <= POOO::maxSettableBit($executePOOO)) {
+        ;; Cannot respond back to msglib if the packet is not currently committable but
+        ;; will be committable in the future
+        ;; Caveat: if the packet is currently executing, we treat it as uncommittable.
+        ;; There exists a race condition where a uncommitted re-committable packet
+        ;; can be marked as committed. If the packet needs to be re-committed for a good reason
+        ;; (e.g., malicious DVN), the OApp owner must first nilify the packet
+
+        actions~pushAction<call>(
+            callerMsglibConnectionAddress,
+            MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK,
+            md::ChannelNonceInfo::New(
+                incomingNonce,
+                $storage.Channel::getExecutePOOO().POOO::getNextEmpty()
+            )
+        );
+    }
+
+    return actions;
+}
+
+;;; ==========================================
+;; Execution step 1
+;; @in_opcode Channel::OP::LZ_RECEIVE_PREPARE
+;; @in_from (external in) permissionless
+;; @in_md nonce
+;; @out_opcode Layerzero::OP::LZ_RECEIVE_PREPARE
+;; @out_to srcOApp
+;; @out_md ExtendedMd(md=packetId, obj=channel_init_state, forwarding_addr=NULLADDRESS)
+;; @permissions: permissonless
+tuple lzReceivePrepare(cell $lzReceivePrepareMd) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (int nonce, int nanotons) = $lzReceivePrepareMd.md::LzReceivePrepare::deserialize();
+
+    ;; extract oApp from path
+    actions~pushAction<dispatch>(
+        $storage.Channel::getPath().lz::Path::getSrcOApp(), ;; the OApp on this chain
+        Layerzero::OP::LZ_RECEIVE_PREPARE,
+        ;; Throws if the Packet is not executable
+        _getExecutablePacket(nonce),
+        nanotons
+    );
+
+    return actions;
+}
+
+;; @in_opcode Channel::OP::LZ_RECEIVE_LOCK
+;; @in_from oApp
+;; @in_md nonce
+;; @out_opcode Layerzero::OP::LZ_RECEIVE_EXECUTE
+;; @out_to oApp
+;; @out_md ExtendedMd(md=Packet, obj=channel_init_state, forwarding_addr=NULLADDRESS)
+;; @permissions: only oApp
+tuple lzReceiveLock(cell $nonceMd) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    int incomingNonce = $nonceMd.md::Nonce::getNonce();
+    throw_if(Channel::ERROR::invalidNonce, incomingNonce <= 0);
+
+    (
+        cell executionQueue,
+        cell $commitPOOO,
+        cell $sendPath
+    ) = $storage.Channel::getLzReceiveLockInformation();
+
+    (int actualKey, cell $packet, int status, _) = DeterministicInsertionCircularQueue::get(
+        executionQueue,
+        incomingNonce
+    );
+
+    int firstUncommittedNonce = $commitPOOO.POOO::getNextEmpty();
+
+    ;; executable if present and all preceding nonces are committed, executing, or executed
+    if (
+        (actualKey == incomingNonce)
+        & (status == ExecutionQueue::committed)
+        & (incomingNonce < firstUncommittedNonce)
+    ) {
+        ;; set state to executing
+        setContractStorage(
+            $storage.Channel::setExecutionQueue(
+                DeterministicInsertionCircularQueue::set(
+                    executionQueue,
+                    incomingNonce,
+                    $packet,
+                    ExecutionQueue::executing
+                )
+            )
+        );
+
+        actions~pushAction<call>(
+            $sendPath.lz::Path::getSrcOApp(), ;; the OApp on this chain
+            Layerzero::OP::LZ_RECEIVE_EXECUTE,
+            md::MdObj::build($packet, getInitialStorage())
+        );
+    } else {
+        actions~pushAction<event>(
+            Channel::event::NOT_EXECUTABLE,
+            md::PacketId::New(
+                $sendPath.lz::Path::reverse(), ;; emit the receive path 
+                incomingNonce
+            )
+        );
+    }
+
+    return actions;
+}
+
+;; @in_opcode Channel::OP::LZ_RECEIVE_EXECUTE_CALLBACK
+;; @in_from oApp
+;; @in_md LzReceiveStatus
+;; @out_opcode OP::PACKET_RECEIVE_DESTROYED_CALLBACK
+;; @out_to oApp
+;; @out_md ExtendedMd(md=packetId, obj=pr_init_state, forwarding_addr=address_std_hashpart_null())
+;; @failure => unlock the Packet
+;; @success => destroy the Packet and refund rent
+;; @permissions: only oApp
+tuple lzReceiveExecuteCallback(cell $lzReceiveStatus) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    (
+        int lzReceiveSuccess, 
+        int packetNonce
+    ) = $lzReceiveStatus.md::LzReceiveStatus::getSuccessAndNonce();
+
+    (
+        cell $executePOOO, 
+        cell executionQueue, 
+        cell $sendPath
+    ) = $storage.Channel::getExecutePOOOAndExecutionQueueAndPath();
+
+    (int actualKey, cell $packet, int status, _) = DeterministicInsertionCircularQueue::get(
+        executionQueue,
+        packetNonce
+    );
+
+    throw_unless(
+        Channel::ERROR::notExecuting,
+        (actualKey == packetNonce) & (status == ExecutionQueue::executing)
+    );
+
+    ;; check for success/failure
+    if (lzReceiveSuccess) {
+        executionQueue = DeterministicInsertionCircularQueue::delete(executionQueue, packetNonce);
+
+        $storage = $storage.Channel::setExecutePOOO(
+            POOO::set($executePOOO, packetNonce)
+        );
+
+        ;; emit Packet in the manager
+        actions~pushAction<event>(
+            Channel::event::DELIVERED,
+            md::PacketId::build(
+                $sendPath.lz::Path::optimizedReverse(), ;; emit the receive path
+                packetNonce
+            )
+        );
+    } else {
+        executionQueue = DeterministicInsertionCircularQueue::set(
+            executionQueue,
+            packetNonce,
+            $packet, ;; same packet object that we extracted from the queue
+            ExecutionQueue::committed
+        );
+
+        ;; emit Packet so we know its unlocked
+        actions~pushAction<event>(
+            Channel::event::LZ_RECEIVE_ALERT,
+            md::LzReceiveStatus::NewFull(
+                false,
+                packetNonce, ;; unforgeable
+                $lzReceiveStatus.cl::get<coins>(md::LzReceiveStatus::value), ;; can be arbitrary/unsafe
+                $lzReceiveStatus.cl::get<cellRef>(md::LzReceiveStatus::extraData), ;; can be arbitrary/unsafe
+                $lzReceiveStatus.cl::get<cellRef>(md::LzReceiveStatus::reason), ;; can be arbitrary/unsafe
+                getOrigin(), ;; unforgeable
+                $packet, ;; unforgeable
+                ExecutionStatus::executable
+            )
+        );
+    }
+
+    setContractStorage($storage.Channel::setExecutionQueue(executionQueue));
+
+    return actions;
+}
+
+;;; ====================== Management Helper ===================================
+() _commitFakePacket(cell $storage, int nonce, cell $receivePath) impure inline method_id {
+    cell $mockPacket = lz::Packet::New($receivePath, empty_cell(), nonce);
+
+    ;; Because this is not originating from the endpoint, we dont have the defaults
+    ;; Actual defaults and the msglib address arent required because the call is direct from the OApp
+    cell $mockEpConfigDefaults = lz::ReceiveEpConfig::New(
+        0xdeadbeef, ;; any non-null dummy value for the receive msglib connection address
+        NULLADDRESS, ;; timeout never has to be used for burn
+        0 ;; as above, timeout never has to be used for burn
+    );
+    cell $epConfigOApp = $storage.cl::get<objRef>(Channel::epConfigOApp);
+
+    ;; Step 1: Commit the 'mockPacket'
+    ;; This is safe because we are going to do the following steps (2 and 3) atomically.
+    ;; channelCommitPacket will not revert if the packet is not committed, but lzReceiveLock will.
+    ;; Basically lying to channelCommitPacket to say the "correct" msglib is committing
+    channelCommitPacket(
+        md::ExtendedMd::New(
+            $mockPacket,
+            $mockEpConfigDefaults, ;; this is completely ignored if useDefaults is false
+            $epConfigOApp.cl::get<bool>(lz::EpConfig::isNull)
+                ? $mockEpConfigDefaults.cl::get<address>(lz::ReceiveEpConfig::receiveMsglibConnection)
+                : $epConfigOApp.cl::get<address>(lz::EpConfig::receiveMsglibConnection)
+        )
+    );
+}
+
+;; @permissions only-oApp
+tuple nilify(cell $packetId) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+    $packetId = $packetId.md::PacketId::sanitize();
+
+    ;; reverse the path because this is from a receive perspective
+    cell $receivePath = $storage.Channel::getPath().lz::Path::reverse();
+    _assertEqualPaths($receivePath, $packetId.cl::get<objRef>(md::PacketId::path));
+
+    int incomingNonce = $packetId.cl::get<uint64>(md::PacketId::nonce);
+
+    (int isCommittable, cell $previousPacket) = _nonceCommittable(incomingNonce);
+    throw_unless(Channel::ERROR::notCommittable, isCommittable);
+
+    _commitFakePacket($storage, incomingNonce, $receivePath);
+    
+    setContractStorage(
+        getContractStorage().cl::set(
+            Channel::executionQueue,
+            DeterministicInsertionCircularQueue::delete(
+                $storage.Channel::getExecutionQueue(),
+                incomingNonce
+            )
+        )
+    );
+
+    if ($previousPacket.is_null()) {
+        $previousPacket = lz::Packet::New($receivePath, empty_cell(), incomingNonce);
+    }
+    actions~pushAction<event>(Channel::event::PACKET_NILIFIED, $previousPacket);
+
+    actions~pushAction<call>(
+        $receivePath.cl::get<address>(lz::Path::dstOApp), ;; the OApp on this chain
+        Layerzero::OP::NILIFY_CALLBACK,
+        md::MdObj::build($packetId, getInitialStorage())
+    );
+
+    return actions;
+}
+
+tuple burn(cell $packetId) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+    cell $packetId = $packetId.md::PacketId::sanitize();
+
+    ;; reverse the path because this is from a receive perspective
+    cell $receivePath = $storage.Channel::getPath().lz::Path::reverse();
+    _assertEqualPaths($receivePath, $packetId.cl::get<objRef>(md::PacketId::path));
+
+    int nonce = $packetId.cl::get<uint64>(md::PacketId::nonce);
+
+    cell $nonceMd = md::Nonce::New(nonce);
+
+    (_, cell $previousPacket) = _nonceCommittable(nonce);
+
+    ;; Step 1: Commit a 'mockPacket' to be used when we 'burn' this nonce
+    _commitFakePacket($storage, nonce, $receivePath);
+    
+    ;; Step 2: Put the packet into 'executing'
+    lzReceiveLock($nonceMd);
+    ;; Step 3: Mock the lzReceiveExecuteCallback, which marks/flags that given nonce as used and 'executed'
+    lzReceiveExecuteCallback(md::LzReceiveStatus::New(true, nonce));
+
+
+    if ($previousPacket.is_null()) {
+        $previousPacket = lz::Packet::New($receivePath, empty_cell(), nonce);
+    }
+
+    ;; Emit an event so we are able to observe offchain that this nonce has been 'burned'
+    actions~pushAction<event>(
+        Channel::event::PACKET_BURNED,
+        $previousPacket
+    );
+
+    actions~pushAction<call>(
+        $receivePath.cl::get<address>(lz::Path::dstOApp), ;; the OApp on this chain
+        Layerzero::OP::BURN_CALLBACK,
+        md::MdObj::build(
+            md::PacketId::New($receivePath, nonce),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+;;; ==========================================
+;; ZRO management
+;; only controller
+tuple depositZro(cell $coinsAmount) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedCoinsAmount = $coinsAmount.md::CoinsAmount::sanitize();
+
+    setContractStorage(
+        $storage.cl::set(
+            Channel::zroBalance,
+            $storage.Channel::getZroBalance()
+            + $sanitizedCoinsAmount.cl::get<coins>(md::CoinsAmount::amount)
+        )
+    );
+
+   actions~pushAction<event>(Channel::event::ZRO_DEPOSITED, $sanitizedCoinsAmount);
+    
+    return actions;
+}
+
+;; Attempt to abort a send request. Check if hash still present, if present delete and send
+;; @in: oApp
+;; @in_opcode Channel::OP::FORCE_ABORT
+;; @in_md lzSend
+;; @out_opcode
+;; @out_to oApp
+;; @out_md lzSend
+;; @permissions: only oApp
+tuple forceAbort(cell $lzSend) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sendPath = $storage.cl::get<objRef>(Channel::path);
+    ;; $lzSend does not need to be sanitized, as it must be correct to match
+    ;; the stored hash
+    _assertEqualPaths(
+        $sendPath,
+        $lzSend.md::LzSend::getPath()
+    );
+
+    int requestId = $lzSend.md::LzSend::getSendRequestId();
+
+    cell sendRequestQueue = $storage.cl::get<cellRef>(Channel::sendRequestQueue);
+
+    (_, cell request, int status, _) = DeterministicInsertionCircularQueue::get(sendRequestQueue, requestId);
+
+    throw_if(
+        Channel::ERROR::cannotAbortSend,
+        (status != SendRequestQueue::sending) | (_readSendRequestQueueEntry(request) != $lzSend.cl::hash())
+    );
+
+    ;; delete the reservation and update the storage
+    setContractStorage(
+        $storage.cl::set(
+            Channel::sendRequestQueue,
+            DeterministicInsertionCircularQueue::delete(sendRequestQueue, requestId)
+        )
+    );
+
+    actions~pushAction<call>(
+        $sendPath.cl::get<address>(lz::Path::srcOApp), ;; the OApp on this chain
+        Layerzero::OP::CHANNEL_SEND_CALLBACK,
+        md::MdObj::New(
+            md::MessagingReceipt::New($lzSend, 0, 0, Channel::ERROR::sendAborted),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+;; Send the current state of the channel to the MsglibConnection
+;; @in: permissionless
+;; @in_opcode Channel::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE
+;; @in_md mdAddress ( MsglibConnectionAddress, Path )
+tuple syncMsglibConnection(cell $mdAddress) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedMdAddress = $mdAddress.md::MdAddress::sanitize();
+
+    actions~pushAction<call>(
+        $sanitizedMdAddress.cl::get<address>(md::MdAddress::address), ;; msglibConnectionAddress
+        MsglibConnection::OP::MSGLIB_CONNECTION_SYNC_CHANNEL_STATE,
+        md::MdObj::New(
+            md::ChannelNonceInfo::New(
+                $storage
+                    .cl::get<objRef>(Channel::commitPOOO)
+                    .cl::get<uint64>(POOO::nextEmpty),
+                $storage
+                    .cl::get<objRef>(Channel::executePOOO)
+                    .cl::get<uint64>(POOO::nextEmpty)
+            ),
+            getInitialStorage()
+        )
+    );
+
+    return actions;
+}
+
+tuple notifyPacketExecuted(cell $mdAddress) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $sanitizedMdAddress = $mdAddress.md::MdAddress::sanitize();
+    cell $sanitizedNonceMd = $sanitizedMdAddress
+        .cl::get<objRef>(md::MdAddress::md)
+        .md::Nonce::sanitize();
+
+    int executionStatus = _viewExecutionStatus($sanitizedNonceMd.cl::get<uint64>(md::Nonce::nonce));
+
+    if (executionStatus != ExecutionStatus::executed) {
+        return actions;
+    }
+
+    actions~pushAction<call>(
+        $sanitizedMdAddress.cl::get<address>(md::MdAddress::address),
+        MsglibConnection::OP::MSGLIB_CONNECTION_COMMIT_PACKET_CALLBACK,
+        md::ChannelNonceInfo::New(
+            $sanitizedNonceMd.cl::get<uint64>(md::Nonce::nonce),
+            $storage.cl::get<objRef>(Channel::executePOOO).cl::get<uint64>(POOO::nextEmpty)
+        )
+    );
+
+    return actions;
+}
+
+tuple emitLzReceiveAlert(cell $lzReceiveStatus) impure inline method_id {
+    (cell $storage, tuple actions) = preamble();
+
+    cell $saniztizedLzReceiveStatus = $lzReceiveStatus.md::LzReceiveStatus::NewFull::sanitize();
+
+    int nonce = $saniztizedLzReceiveStatus.cl::get<uint64>(md::LzReceiveStatus::nonce);
+    throw_if(Channel::ERROR::invalidNonce, nonce == 0);
+    
+    (int actualNonce, cell $packet, _, int exists) = DeterministicInsertionCircularQueue::get(
+        $storage.Channel::getExecutionQueue(),
+        nonce
+    );
+
+    throw_unless(
+        Channel::ERROR::invalidNonce,
+        (actualNonce == nonce) & (exists)
+    );
+
+    actions~pushAction<event>(
+        Channel::event::LZ_RECEIVE_ALERT,
+        md::LzReceiveStatus::NewFull(
+            $saniztizedLzReceiveStatus.cl::get<bool>(md::LzReceiveStatus::success),
+            nonce,
+            $saniztizedLzReceiveStatus.cl::get<coins>(md::LzReceiveStatus::value),
+            $saniztizedLzReceiveStatus.cl::get<cellRef>(md::LzReceiveStatus::extraData),
+            $saniztizedLzReceiveStatus.cl::get<cellRef>(md::LzReceiveStatus::reason),
+            getCaller(),
+            $packet,
+            _viewExecutionStatus(nonce)
+        )
+    );
+    return actions;
+}

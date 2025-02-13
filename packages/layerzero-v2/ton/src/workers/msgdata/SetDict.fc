@@ -1,0 +1,22 @@
+#include "../../funC++/classlib.fc";
+
+;; required storage name
+const int md::SetDict::NAME = "setDct"u;
+
+;; field names
+const int md::SetDict::nonce = 0;
+const int md::SetDict::opcode = 1;
+const int md::SetDict::dict = 2;
+const int md::SetDict::target = 3;
+
+cell md::SetDict::New(int nonce, int opcode, cell _dict, int target) impure inline method_id {
+    return cl::declare(
+        md::SetDict::NAME,
+        unsafeTuple([
+            [cl::t::uint64, nonce],   ;; md::SetDict::nonce
+            [cl::t::uint64, opcode],  ;; md::SetDict::opcode
+            [cl::t::dict256, _dict],  ;; md::SetDict::dict
+            [cl::t::address, target]   ;; md::SetDict::target
+        ])
+    );
+}

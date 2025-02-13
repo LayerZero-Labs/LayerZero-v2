@@ -1,0 +1,58 @@
+#include "../../../../funC++/classlib.fc";
+
+;; required storage name
+const int md::UlnWorkerFeelibEvents::NAME = "UlnWrkEvnt"u;
+
+;; field names
+const int md::UlnWorkerFeelibEvents::workerAddress = 0;
+const int md::UlnWorkerFeelibEvents::workerEvents = 1;
+const int md::UlnWorkerFeelibEvents::nextWorkerEvents = 2;
+
+cell md::UlnWorkerFeelibEvents::New(
+    int workerAddress,
+    cell $workerEvents,
+    cell $nextWorkerEvents
+) impure inline method_id {
+    return cl::declare(
+        md::UlnWorkerFeelibEvents::NAME,
+        unsafeTuple([
+            [cl::t::address, workerAddress],       ;; md::UlnWorkerFeelibEvents::workerAddress
+            [cl::t::objRef, $workerEvents],        ;; md::UlnWorkerFeelibEvents::workerEvents
+            [cl::t::objRef, $nextWorkerEvents]      ;; md::UlnWorkerFeelibEvents::nextWorkerEvents
+        ])
+    );
+}
+
+tuple UlnWorkerFeelibEventsBuilder::create() impure inline {
+    return empty_tuple();
+}
+
+tuple UlnWorkerFeelibEventsBuilder::push(
+    tuple eventBuilder,
+    int workerAddress,
+    cell eventBody
+) impure inline {
+    if (eventBody.is_null()) {
+        return eventBuilder;
+    }
+    return eventBuilder.tpush([workerAddress, eventBody]);
+}
+
+cell UlnWorkerFeelibEvents::FromBuilder(tuple eventBuilder) impure inline {
+    if (eventBuilder.tlen() == 0) {
+        ;; short-circuit the common case for efficiency
+        return cl::nullObject();
+    }
+
+    cell $workerEvents = cl::nullObject();
+    while (eventBuilder.tlen() > 0) {
+        [int workerAddress, cell $workerEventBody] = eventBuilder~tpop();
+        $workerEvents = md::UlnWorkerFeelibEvents::New(
+            workerAddress,
+            $workerEventBody,
+            $workerEvents
+        );
+    }
+
+    return $workerEvents;
+}

@@ -1,0 +1,52 @@
+#include "utils.fc";
+
+const int action::payment::NAME = "payment"u;
+
+;; @info the address to pay
+const int action::payment::toAddress = 1;
+;; @info the amount to pay, in nanotons
+const int action::payment::amount = 2;
+;; @info the amount of value to provision from this contract's balance
+const int action::payment::outflowNanos = 3;
+
+;; @non-terminal
+tuple action::payment::create(int toAddress, int amount, int outflowNanos) impure inline {
+    return unsafeTuple([action::payment::NAME, toAddress, amount, outflowNanos]);
+}
+
+;; returns true if equals
+int action::payment::equals(tuple self, tuple other) impure {
+    return (
+        (self.int_at(0) == other.int_at(0)) ;; NAME
+        & (self.int_at(action::payment::toAddress) == other.int_at(action::payment::toAddress))
+        & (self.int_at(action::payment::amount) == other.int_at(action::payment::amount))
+        & (self.int_at(action::payment::outflowNanos) == other.int_at(action::payment::outflowNanos))
+    );
+}
+
+tuple _newAction<payment>(int toAddress, int amount, int outflowNanos) impure inline {
+    return action::payment::create(toAddress, amount, outflowNanos);
+}
+
+(tuple, ()) ~pushAction<payment>(tuple actions, int toAddress, int amount, int outflowNanos) impure inline {
+    if (outflowNanos > 0) {
+        actions = actions
+            .tset(ACTIONS_OUTFLOW, actions.int_at(ACTIONS_OUTFLOW) + outflowNanos);
+    }
+    return (actions.tpush(_newAction<payment>(toAddress, amount, outflowNanos)), ());
+}
+
+int executePayment(tuple action) impure inline {
+    sendNonTerminalAction(
+        SEND_MSG_NON_BOUNCEABLE,
+        get_forward_fee(BASECHAIN, 0, 1) +
+        action.int_at(action::payment::amount),
+        action.int_at(action::payment::toAddress),
+        empty_cell(),
+        NORMAL
+    );
+
+    ;; this being true means we're assuming there's going to
+    ;; be some value left over after the payment is made
+    return true;
+}

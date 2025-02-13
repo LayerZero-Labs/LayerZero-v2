@@ -1,0 +1,335 @@
+#include "../../../../funC++/classlib.fc";
+
+#include "../../../../funC++/dataStructures/AddressList.fc";
+
+const int UlnReceiveConfig::CONST::NIL_ADDRESS = MAX_U256;
+
+const int UlnReceiveConfig::COMMIT_PACKET_INTERNAL_MESSAGE_COUNT = 4;
+;; connection -> endpoint -> channel -> connection
+const int UlnReceiveConfig::ERROR::DVN_CONFIG_ERROR = 321;
+
+;; Maximum number of DVNs allowed in the config is 8 required + 8 optional = 16 total.
+;; The hashlookups is a mapping of nonce -> address -> attestation
+;; meaning that 16 DVNs will require (2 * 16) - 1 cells for the dictionary tree inner nodes
+;; and 16 cells for the attestations = 63 cells per nonce.
+;; We allow up to 1000 nonces in the hashlookups, so the maximum number of cells required
+;; for the hashlookups is 1000 * 63 = 63000 cells.
+;; This leaves 2535 cells for the fixed-size storage and bytecode of this contract, which is
+;; sufficient.
+const int UlnReceiveConfig::MaxRequiredDVNs = 8;
+const int UlnReceiveConfig::MaxOptionalDVNs = 4;
+
+;; required storage name
+const int UlnReceiveConfig::NAME = "UlnRecvCfg"u;
+
+;; field names
+
+;; EVM struct ExecutorConfig
+;; uint32 maxMessageSize;
+;; address executor;
+
+const int UlnReceiveConfig::minCommitPacketGasNull = 0; ;; bool
+const int UlnReceiveConfig::minCommitPacketGas = 1; ;; uint32
+const int UlnReceiveConfig::confirmationsNull = 2; ;; bool
+const int UlnReceiveConfig::confirmations = 3; ;; uint64
+const int UlnReceiveConfig::requiredDVNsNull = 4; ;; bool
+const int UlnReceiveConfig::requiredDVNs = 5; ;; address[] will be stored as a dictionary
+const int UlnReceiveConfig::optionalDVNsNull = 6; ;; bool
+const int UlnReceiveConfig::optionalDVNs = 7; ;; address[] will be stored as a dictionary
+const int UlnReceiveConfig::optionalDVNThreshold = 8; ;; uint8
+
+const int UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LARGE = 385;
+const int UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LOW = 386;
+const int UlnReceiveConfig::ERROR::DVN_COUNTS_ALL_NIL = 387;
+const int UlnReceiveConfig::ERROR::INVALID_MIN_COMMIT_PACKET_GAS = 388;
+
+;; EVM struct UlnReceiveConfig
+;; uint64 confirmations;
+;; // we store the length of required DVNs and optional DVNs instead of using DVN.length directly to save gas
+;; uint8 requiredDVNCount; // 0 indicate DEFAULT, NIL_DVN_COUNT indicate NONE (to override the value of default)
+;; uint8 optionalDVNCount; // 0 indicate DEFAULT, NIL_DVN_COUNT indicate NONE (to override the value of default)
+;; uint8 optionalDVNThreshold; // (0, optionalDVNCount]
+;; address[] requiredDVNs; // no duplicates. sorted an an ascending order. allowed overlap with optionalDVNs
+;; address[] optionalDVNs; // no duplicates. sorted an an ascending order. allowed overlap with requiredDVNs
+
+cell UlnReceiveConfig::New(
+    int minCommitPacketGasNull,
+    int minCommitPacketGas,
+    int confirmationsNull,
+    int confirmations,
+    int requiredDVNsNull,
+    cell requiredDVNs,
+    int optionalDVNsNull,
+    cell optionalDVNs,
+    int optionalDVNThreshold
+) impure method_id {
+    return cl::declare(
+        UlnReceiveConfig::NAME,
+        unsafeTuple([
+            [cl::t::bool, minCommitPacketGasNull],  ;; UlnReceiveConfig::minCommitPacketGasNull
+            [cl::t::uint32, minCommitPacketGas],    ;; UlnReceiveConfig::minCommitPacketGas
+            [cl::t::bool, confirmationsNull],       ;; UlnReceiveConfig::confirmationsNull
+            [cl::t::uint64, confirmations],         ;; UlnReceiveConfig::confirmations
+            [cl::t::bool, requiredDVNsNull],        ;; UlnReceiveConfig::requiredDVNsNull
+            [cl::t::addressList, requiredDVNs],     ;; UlnReceiveConfig::requiredDVNs
+            [cl::t::bool, optionalDVNsNull],        ;; UlnReceiveConfig::optionalDVNsNull
+            [cl::t::addressList, optionalDVNs],     ;; UlnReceiveConfig::requiredDVNs
+            [cl::t::uint8, optionalDVNThreshold]    ;; UlnReceiveConfig::optionalDVNThreshold
+        ])
+    );
+}
+
+;; Important assumption: the gas consumption of the endpoint will not increase past
+;; 1 million gas per handler in any future update of the TVM.
+int UlnReceiveConfig::MaxCommitPacketValueAssertion() impure method_id {
+    (_, _, _, _, int gasLimit, _, _, _, _) = parseGasLimitsPrices(BASECHAIN);
+    gasLimit = max(gasLimit, 1000000);
+
+    return (
+        _gasToNanoton(gasLimit * UlnReceiveConfig::COMMIT_PACKET_INTERNAL_MESSAGE_COUNT)
+        + (
+            UlnReceiveConfig::COMMIT_PACKET_INTERNAL_MESSAGE_COUNT
+            * get_forward_fee(false, MAX_U8 * MAX_CELL_BITS, MAX_U8)
+        )
+    );
+}
+
+cell UlnReceiveConfig::NewWithDefaults() inline method_id {
+    return UlnReceiveConfig::New(
+        true,
+        0,
+        true,
+        0,
+        true,
+        AddressList::empty(),
+        true,
+        AddressList::empty(),
+        0
+    );
+}
+
+;; ========================== Object getters ===========================
+
+const int UlnReceiveConfig::_minCommitPacketGasNullOffset = _HEADER_WIDTH;
+const int UlnReceiveConfig::_minCommitPacketGasOffset = UlnReceiveConfig::_minCommitPacketGasNullOffset + 1;
+const int UlnReceiveConfig::_confirmationsNullOffset = UlnReceiveConfig::_minCommitPacketGasOffset + 32;
+const int UlnReceiveConfig::_confirmationsOffset = UlnReceiveConfig::_confirmationsNullOffset + 1;
+const int UlnReceiveConfig::_requiredDVNsNullOffset = UlnReceiveConfig::_confirmationsOffset + 64;
+const int UlnReceiveConfig::_optionalDVNsNullOffset = UlnReceiveConfig::_requiredDVNsNullOffset + 1;
+const int UlnReceiveConfig::_optionalDVNThresholdOffset = UlnReceiveConfig::_optionalDVNsNullOffset + 1;
+
+
+int UlnReceiveConfig::getMinCommitPacketGas(cell $self) impure inline {
+    return $self.cellPreloadUint32At(UlnReceiveConfig::_minCommitPacketGasOffset);
+}
+
+int UlnReceiveConfig::getConfirmationsNull(cell $self) impure inline {
+    return $self.cellPreloadBoolAt(UlnReceiveConfig::_confirmationsNullOffset);
+}
+
+int UlnReceiveConfig::getConfirmations(cell $self) impure inline {
+    return $self.cellPreloadUint64At(UlnReceiveConfig::_confirmationsOffset);
+}
+
+int UlnReceiveConfig::getOptionalDVNThreshold(cell $self) impure inline {
+    return $self.cellPreloadUint8At(UlnReceiveConfig::_optionalDVNThresholdOffset);
+}
+
+;; ========================== Object multi - getters ======================
+
+(int, cell) UlnReceiveConfig::getRequiredDVNsAndNull(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadBoolAt(UlnReceiveConfig::_requiredDVNsNullOffset),
+        selfSlice.preloadRefAt(0)
+    );
+}
+
+(int, cell) UlnReceiveConfig::getOptionalDVNsAndNull(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadBoolAt(UlnReceiveConfig::_optionalDVNsNullOffset),
+        selfSlice.preloadRefAt(1)
+    );
+}
+
+;; returns (requiredDVNsNull, requiredDVNs, optionalDVNsNull, optionalDVNs)
+(int, cell, int, cell) UlnReceiveConfig::getRequiredAndOptionalDVNsAndNull(cell $self) impure inline {
+    slice selfSlice = $self.begin_parse();
+    return (
+        selfSlice.preloadBoolAt(UlnReceiveConfig::_requiredDVNsNullOffset),
+        selfSlice.preloadRefAt(0),
+        selfSlice.preloadBoolAt(UlnReceiveConfig::_optionalDVNsNullOffset),
+        selfSlice.preloadRefAt(1)
+    );
+}
+
+;; (minCommitPacketGasNull, minCommitPacketGas, OptionalDvnNull, optionalDvnThreshold)
+(int, int, int, int) UlnReceiveConfig::getCommitInfo(cell $self) impure inline {
+    slice $selfSlice = $self.begin_parse();
+    ;; Could save a bit of gas by using self-modifying parse but
+    ;; it makes the code a lot less readable
+    return (
+        $selfSlice.preloadBoolAt(UlnReceiveConfig::_minCommitPacketGasNullOffset),
+        $selfSlice.preloadUint32At(UlnReceiveConfig::_minCommitPacketGasOffset),
+        $selfSlice.preloadBoolAt(UlnReceiveConfig::_optionalDVNsNullOffset),
+        $selfSlice.preloadUint8At(UlnReceiveConfig::_optionalDVNThresholdOffset)
+    );
+}
+
+;; ============== Object Utils ==============
+
+int UlnReceiveConfig::utils::resolveConfirmations(
+    cell $UlnReceiveConfig,
+    cell $defaultUlnReceiveConfig
+) impure inline {
+    if ($UlnReceiveConfig.UlnReceiveConfig::getConfirmationsNull()) {
+        return $defaultUlnReceiveConfig.UlnReceiveConfig::getConfirmations();
+    }
+    return $UlnReceiveConfig.UlnReceiveConfig::getConfirmations();
+}
+
+;; (requiredDVNs, optionalDVNs, isValid)
+(cell, cell, int) UlnReceiveConfig::utils::getVerifyConfig(
+    cell $customUlnReceiveConfig,
+    cell $defaultUlnReceiveConfig
+) impure inline {
+    int isValid = true;
+
+    (
+        int customRequiredDVNsNull, 
+        cell requiredDVNs, 
+        int customOptionalDVNsNull, 
+        cell optionalDVNs
+    ) = UlnReceiveConfig::getRequiredAndOptionalDVNsAndNull($customUlnReceiveConfig);
+
+    if (customRequiredDVNsNull) {
+        (
+            int defaultRequiredDVNsNull, 
+            requiredDVNs
+        ) = UlnReceiveConfig::getRequiredDVNsAndNull($defaultUlnReceiveConfig);
+        isValid &= (defaultRequiredDVNsNull == false);
+    }
+
+    if (customOptionalDVNsNull) {
+        (
+            int defaultOptionalDVNsNull, 
+            optionalDVNs
+        ) = UlnReceiveConfig::getOptionalDVNsAndNull($defaultUlnReceiveConfig);
+        isValid &= (defaultOptionalDVNsNull == false);
+    }
+
+    return (requiredDVNs, optionalDVNs, isValid);
+}
+
+;; (requiredDVNs, optionalDVNs, optionalDVNThreshold, confirmations, commitPacketGas, isValid)
+(cell, cell, int, int, int, int) UlnReceiveConfig::utils::getCommitConfig(
+    cell $customUlnReceiveConfig,
+    cell $defaultUlnReceiveConfig
+) impure inline method_id {
+    (
+        cell requiredDVNs, 
+        cell optionalDVNs, 
+        int isValid
+    ) = UlnReceiveConfig::utils::getVerifyConfig(
+        $customUlnReceiveConfig,
+        $defaultUlnReceiveConfig
+    );
+
+    (
+        int minCommitPacketGasNull, 
+        int commitPacketGas, 
+        int optionalDVNsNull, 
+        int optionalDVNThreshold
+    ) = UlnReceiveConfig::getCommitInfo($customUlnReceiveConfig);
+
+    if (optionalDVNsNull) {
+        optionalDVNThreshold = $defaultUlnReceiveConfig.UlnReceiveConfig::getOptionalDVNThreshold();
+    }
+
+    if (minCommitPacketGasNull) {
+        commitPacketGas = $defaultUlnReceiveConfig.UlnReceiveConfig::getMinCommitPacketGas();
+    }
+
+    int confirmations = UlnReceiveConfig::utils::resolveConfirmations(
+        $customUlnReceiveConfig,
+        $defaultUlnReceiveConfig
+    );
+
+    return (requiredDVNs, optionalDVNs, optionalDVNThreshold, confirmations, commitPacketGas, isValid);
+}
+
+;; Ensure the Uln receive config does not contain garbage bits etc. that would cause
+;; undefined behaviors in the protocol
+cell UlnReceiveConfig::sanitize(cell $ulnReceiveConfigOApp) impure {
+    int useDefaultMinCommitPacketGas = 
+        $ulnReceiveConfigOApp.cl::get<bool>(UlnReceiveConfig::minCommitPacketGasNull);
+    int minCommitPacketGas = 
+        $ulnReceiveConfigOApp.cl::get<uint32>(UlnReceiveConfig::minCommitPacketGas);
+    int useDefaultConfirmations = 
+        $ulnReceiveConfigOApp.cl::get<bool>(UlnReceiveConfig::confirmationsNull);
+    int confirmations = 
+        $ulnReceiveConfigOApp.cl::get<uint64>(UlnReceiveConfig::confirmations);
+    int useDefaultRequiredDVNs = 
+        $ulnReceiveConfigOApp.cl::get<bool>(UlnReceiveConfig::requiredDVNsNull);
+    cell requiredDVNs = 
+        $ulnReceiveConfigOApp.cl::get<cellRef>(UlnReceiveConfig::requiredDVNs);
+    int useDefaultOptionalDVNs = 
+        $ulnReceiveConfigOApp.cl::get<bool>(UlnReceiveConfig::optionalDVNsNull);
+    cell optionalDVNs = 
+        $ulnReceiveConfigOApp.cl::get<cellRef>(UlnReceiveConfig::optionalDVNs);
+    int optionalDVNThreshold = 
+        $ulnReceiveConfigOApp.cl::get<uint8>(UlnReceiveConfig::optionalDVNThreshold);
+
+    int numRequiredDVNs = requiredDVNs.AddressList::length();
+    int numOptionalDVNs = optionalDVNs.AddressList::length();
+
+    throw_unless(
+        UlnReceiveConfig::ERROR::DVN_CONFIG_ERROR,
+        AddressList::isValid(requiredDVNs, UlnReceiveConfig::MaxRequiredDVNs)
+        & AddressList::isValid(optionalDVNs, UlnReceiveConfig::MaxOptionalDVNs)
+    );
+
+    throw_if(
+        UlnReceiveConfig::ERROR::INVALID_MIN_COMMIT_PACKET_GAS,
+        (useDefaultMinCommitPacketGas == false)
+        & (minCommitPacketGas <= 0)
+    );
+
+    ;; Prevent a malicious OApp from setting the threshold to a value that would
+    ;; make it impossible to commit a packet
+    throw_if(
+        UlnReceiveConfig::ERROR::INVALID_MIN_COMMIT_PACKET_GAS,
+        _gasToNanoton(minCommitPacketGas) > UlnReceiveConfig::MaxCommitPacketValueAssertion()
+    );
+
+    throw_if(
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LARGE,
+        optionalDVNThreshold > numOptionalDVNs
+    );
+
+    throw_if(
+        UlnReceiveConfig::ERROR::OPTIONAL_THRESHOLD_TOO_LOW,
+        (numOptionalDVNs > 0) & (optionalDVNThreshold <= 0)
+    );
+
+    throw_if(
+        UlnReceiveConfig::ERROR::DVN_COUNTS_ALL_NIL,
+        (useDefaultRequiredDVNs == false)
+        & (useDefaultOptionalDVNs == false)
+        & (numRequiredDVNs == 0)
+        & (numOptionalDVNs == 0)
+    );
+
+    return UlnReceiveConfig::New(
+        useDefaultMinCommitPacketGas,
+        minCommitPacketGas,
+        useDefaultConfirmations,
+        confirmations,
+        useDefaultRequiredDVNs,
+        requiredDVNs,
+        useDefaultOptionalDVNs,
+        optionalDVNs,
+        optionalDVNThreshold
+    );
+}

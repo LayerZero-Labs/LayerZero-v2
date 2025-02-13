@@ -1,0 +1,133 @@
+#include "../storage.fc";
+#include "../../../../../../tests/mocks.fc";
+
+#include "../../../../../../tests/baseSerdeTest.fc";
+#include "../../../../../../tests/testMain.fc";
+
+;;; ===============================INTERFACE FUNCTIONS===========================
+
+slice _testName() { return "ULN Serde"; }
+
+;;; ===============================TESTS=========================================
+
+;; Uln Storage has: 3 Getters
+;;                  2 multi-getters
+;;                  2 setters
+(int, slice) Serde::Uln::getDefaultUlnReceiveConfig(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    );
+
+    return test::getRef::equal(
+        $UlnStorage,
+        Uln::getDefaultUlnReceiveConfig,
+        Uln::defaultUlnReceiveConfig
+    );
+}
+
+(int, slice) Serde::Uln::getConnectionCode(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    ).cl::set(Uln::connectionCode, _getRandomCode(55));
+
+    return test::getRef::equal(
+        $UlnStorage,
+        Uln::getConnectionCode,
+        Uln::connectionCode
+    );
+}
+
+(int, slice) Serde::Uln::getWorkerFeelibInfos(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    ).cl::set(Uln::workerFeelibInfos, _getRandomCode(56));
+
+    return test::getRef::equal(
+        $UlnStorage,
+        Uln::getWorkerFeelibInfos,
+        Uln::workerFeelibInfos
+    );
+}
+
+(int, slice) Serde::Uln::getDefaultUlnSendConfig(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    );
+
+    return test::getRef::equal(
+        $UlnStorage,
+        Uln::getDefaultUlnSendConfig,
+        Uln::defaultUlnSendConfig
+    );
+}
+
+(int, slice) Serde::Uln::getQuoteWorkersInformation(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    ).cl::set(Uln::treasuryFeeBps, 500);
+
+    int expectedOwner = $UlnStorage.cl::get<objRef>(Uln::baseStorage).BaseStorage::getOwner();
+    int expectedTreasuryFeeBps = $UlnStorage.cl::get<uint16>(Uln::treasuryFeeBps);
+
+    (int owner, int treasuryFeeBps) = Uln::getQuoteWorkersInformation($UlnStorage);
+
+    return test::shouldBeTrue(
+        (owner == expectedOwner) & (treasuryFeeBps == expectedTreasuryFeeBps)
+
+    );
+}
+
+(int, slice) Serde::Uln::setWorkerFeelibInfos(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    );
+
+    cell $workerFeelibInfos = _getRandomCode(57);
+
+    cell $expectedUlnStorage = $UlnStorage.cl::set(Uln::workerFeelibInfos, $workerFeelibInfos);
+    cell $newUlnStorage = Uln::setWorkerFeelibInfos($UlnStorage, $workerFeelibInfos);
+
+    return test::set::equal($newUlnStorage, $expectedUlnStorage);
+}
+
+(int, slice) Serde::Uln::updateWorkerFeelibInfos(cell $unused) impure {
+    cell $UlnStorage = Uln::New(
+        ULN_MANAGER_ADDRESS,
+        SRC_EID,
+        DST_EID
+    );
+
+    cell $workerFeeLibInfos = $UlnStorage
+        .cl::get<dict256>(Uln::workerFeelibInfos)
+        .cl::dict256::setRef(1, _getRandomCode(58));
+
+    cell $expectedUlnStorage = $UlnStorage.cl::set(Uln::workerFeelibInfos, $workerFeeLibInfos);
+
+    cell $newUlnStorage = Uln::updateWorkerFeelibInfos($UlnStorage, 1, _getRandomCode(58));
+
+    return test::set::equal($newUlnStorage, $expectedUlnStorage);
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([Serde::Uln::getDefaultUlnReceiveConfig, "Serde::Uln::getDefaultUlnReceiveConfig"])
+        .tpush([Serde::Uln::getConnectionCode, "Serde::Uln::getConnectionCode"])
+        .tpush([Serde::Uln::getWorkerFeelibInfos, "Serde::Uln::getWorkerFeelibInfos"])
+        .tpush([Serde::Uln::getDefaultUlnSendConfig, "Serde::Uln::getDefaultUlnSendConfig"])
+        .tpush([Serde::Uln::getQuoteWorkersInformation, "Serde::Uln::getQuoteWorkersInformation"])
+        .tpush([Serde::Uln::setWorkerFeelibInfos, "Serde::Uln::setWorkerFeelibInfos"])
+        .tpush([Serde::Uln::updateWorkerFeelibInfos, "Serde::Uln::updateWorkerFeelibInfos"])
+    ;
+}

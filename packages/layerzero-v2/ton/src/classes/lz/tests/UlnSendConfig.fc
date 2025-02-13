@@ -1,0 +1,85 @@
+#include "../../../protocol/msglibs/ultralightnode/msgdata/UlnSendConfig.fc";
+#include "../../../funC++/classlib.fc";
+#include "../../../funC++/stdlib.fc";
+#include "../../../../tests/mocks.fc";
+
+#include "../../../../tests/testMain.fc";
+#include "../../../funC++/dataStructures/AddressList.fc";
+
+slice _testName() { return "UlnSendConfig"; }
+
+cell baseTest::prepare(tuple args) impure {
+    return cl::nullObject();
+}
+
+;;; ===============================TESTS=========================================
+
+int _dvnListEqual(tuple dvnList, cell serializedDvnList) impure {
+    slice dvnListSlice = serializedDvnList.begin_parse();
+    int idx = 0;
+    while (idx < dvnList.tlen()) {
+        int dvnAddress = dvnListSlice~AddressList::next();
+        if (dvnAddress != dvnList.int_at(idx)) {
+            return false;
+        }
+        if (dvnListSlice.slice_refs() > dvnListSlice.slice_bits()) {
+            dvnListSlice = dvnListSlice.preload_first_ref().begin_parse();
+        }
+        idx += 1;
+    }
+    return dvnListSlice.slice_empty?();
+}
+
+(int, slice) _serializeDVNList::success::1DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(1, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::2DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(2, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::3DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(3, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::4DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(4, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::5DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(5, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::6DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(6, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+(int, slice) _serializeDVNList::success::7DVN(cell $args) impure {
+    tuple dvns = MOCK_DEFAULT_REQUIRED_DVN_LIST(7, true);
+    cell serialized = AddressList::serialize(dvns);
+    return test::shouldBeTrue(_dvnListEqual(dvns, serialized));
+}
+
+tuple baseTest::getTests() impure {
+    return empty_tuple()
+        .tpush([_serializeDVNList::success::1DVN, "_serializeDVNList::success::1DVN"])
+        .tpush([_serializeDVNList::success::2DVN, "_serializeDVNList::success::2DVN"])
+        .tpush([_serializeDVNList::success::3DVN, "_serializeDVNList::success::3DVN"])
+        .tpush([_serializeDVNList::success::4DVN, "_serializeDVNList::success::4DVN"])
+        .tpush([_serializeDVNList::success::5DVN, "_serializeDVNList::success::5DVN"])
+        .tpush([_serializeDVNList::success::6DVN, "_serializeDVNList::success::6DVN"])
+        .tpush([_serializeDVNList::success::7DVN, "_serializeDVNList::success::7DVN"])
+    ;
+}

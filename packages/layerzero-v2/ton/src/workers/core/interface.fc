@@ -1,0 +1,31 @@
+;;; ==========================OPCODES=====================================
+;; Any authorized signer can call CLAIM_TON to claim funds in the executor contract.
+const int Worker::OP::CLAIM_TON = "Worker::OP::CLAIM_TON"c;
+const int Worker::OP::CLAIM_TON_FROM_PROXY = "Worker::OP::CLAIM_TON_FROM_PROXY"c;
+
+;; Send an arbitrary command to an arbitrary contract
+;; only owner
+const int Worker::OP::CALL_VIA_PROXY = "Worker::OP::CALL_VIA_PROXY"c;
+
+;; Change the proxy address
+;; only admins
+const int Worker::OP::SET_PROXY = "Worker::OP::SET_PROXY"c;
+
+;; Change the list of admins
+;; only admins
+const int Worker::OP::SET_ADMINS = "Worker::OP::SET_ADMINS"c;
+
+;;; ==========================ERRORS=====================================
+const int Worker::ERROR::invalidForwardingAddress = 2016;
+const int Worker::ERROR::onlyAdmin = 2015;
+const int Worker::ERROR::invalidOpcode = 2014;
+
+const int Worker::ERROR::invalidSignedOpcode = 2013;
+const int Worker::ERROR::invalidTarget = 2012;
+const int Worker::ERROR::insufficientBalance = 2011;
+;;; ==========================EVENTS=====================================
+const int Worker::event::ADMINS_SET = "Worker::event::ADMINS_SET"u;
+const int Worker::event::CLAIMED_TON = "Worker::event::CLAIMED_TON"u;
+const int Worker::event::CLAIMED_TON_FROM_PROXY = "Worker::event::CLAIMED_TON_PROXY"u;
+
+const int PROXY_CALL_DEFAULT_GAS = 1000000;
