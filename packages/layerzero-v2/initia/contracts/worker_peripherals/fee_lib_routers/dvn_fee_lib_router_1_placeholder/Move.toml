@@ -6,7 +6,7 @@ version = "1.0.0"
 dvn_fee_lib_router_1 = "_"
 
 [dev-addresses]
-dvn_fee_lib_router_1 ="0x3294873"
+dvn_fee_lib_router_1 = "0x3294873"
 
 [dependencies.InitiaStdlib]
 git = "https://github.com/initia-labs/move-natives.git"
