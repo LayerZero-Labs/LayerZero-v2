@@ -2,11 +2,14 @@
 module dvn::dvn_tests {
     use std::account::{create_account_for_test, create_signer_for_test};
     use std::event::was_event_emitted;
+    use std::signer::address_of;
 
     use dvn::dvn::{
-        get_fee_lib, get_quorum, init_module_for_test, initialize, is_admin, is_dvn_signer, is_paused,
-        quorum_change_admin, set_admin, set_allowlist, set_denylist, set_deposit_address, set_dst_config,
-        set_dvn_signer, set_fee_lib, set_pause, set_quorum, set_supported_msglibs, verify,
+        get_default_multiplier_bps, get_effective_price_feed, get_fee_lib, get_price_feed_delegate, get_quorum,
+        init_module_for_test, initialize, is_admin, is_dvn_signer, is_paused, quorum_change_admin, set_admin,
+        set_allowlist, set_default_multiplier_bps, set_denylist, set_deposit_address, set_dst_config, set_dvn_signer,
+        set_fee_lib, set_pause, set_price_feed, set_price_feed_delegate, set_quorum, set_supported_msglibs,
+        set_supported_option_types, verify,
     };
     use dvn::hashes::create_verify_hash;
     use endpoint_v2_common::bytes32::{Self, from_bytes32};
@@ -74,6 +77,124 @@ module dvn::dvn_tests {
         assert!(is_admin(@2234), 5);
         assert!(is_admin(@3234), 6);
         assert!(!is_admin(@9876), 7);
+    }
+
+    #[test]
+    fun test_set_price_feed() {
+        let pub_key_1: vector<u8> = x"3bd5f17b6bc7a9022402246dd8e1530f0acd1d6439089b4f3bd8868250c1656c08a9fc2e4bff170ed023fbf77e6645020a77eba9c7c03390ed1b316af1ab6f0c";
+        universal_config::init_module_for_test(VID);
+        init_module_for_test();
+
+        let dvn = &create_account_for_test(@dvn);
+        initialize(
+            dvn,
+            @dvn,
+            vector[@1234],
+            vector[pub_key_1],
+            1,
+            vector[@0xaaaa],
+            @dvn_fee_lib_router_0,
+        );
+
+        let admin_1 = &create_signer_for_test(@1234);
+        set_price_feed(
+            admin_1,
+            @0xfeed001,
+            @0xfeed002,
+        );
+
+        assert!(was_event_emitted(&worker_config::set_price_feed_event(@dvn, @0xfeed001, @0xfeed002)), 0);
+        let (price_feed, feed_address) = get_effective_price_feed();
+        assert!(price_feed == @0xfeed001, 1);
+        assert!(feed_address == @0xfeed002, 2);
+        assert!(get_price_feed_delegate() == @0x0, 3);
+    }
+
+    #[test]
+    fun test_set_price_feed_delegate() {
+        let pub_key_1: vector<u8> = x"3bd5f17b6bc7a9022402246dd8e1530f0acd1d6439089b4f3bd8868250c1656c08a9fc2e4bff170ed023fbf77e6645020a77eba9c7c03390ed1b316af1ab6f0c";
+        universal_config::init_module_for_test(VID);
+        init_module_for_test();
+
+        // Set up executor (has the price feed set)
+        let executor = &create_account_for_test(@0x12345);
+        worker_config::initialize_for_worker(
+            executor,
+            2,
+            address_of(executor),
+            @0xfeed004,
+            vector[@0x12345],
+            vector[@0xaaaa],
+            @dvn_fee_lib_router_0,
+        );
+        worker_config::set_price_feed(&make_call_ref_for_test(address_of(executor)), @0xfeed003, @0xfeed004);
+
+        // Set up DVN (delegating to executor)
+        let dvn = &create_account_for_test(@dvn);
+        initialize(
+            dvn,
+            @dvn,
+            vector[@dvn],
+            vector[pub_key_1],
+            1,
+            vector[@0xaaaa],
+            @dvn_fee_lib_router_0,
+        );
+
+        set_price_feed_delegate(dvn, address_of(executor));
+
+        assert!(was_event_emitted(&worker_config::set_price_feed_delegate_event(@dvn, address_of(executor))), 0);
+        let (price_feed, feed_address) = get_effective_price_feed();
+        assert!(price_feed == @0xfeed003, 1);
+        assert!(feed_address == @0xfeed004, 2);
+        assert!(get_price_feed_delegate() == address_of(executor), 3);
+    }
+
+    #[test]
+    fun test_set_default_multiplier_bps() {
+        let pub_key_1: vector<u8> = x"3bd5f17b6bc7a9022402246dd8e1530f0acd1d6439089b4f3bd8868250c1656c08a9fc2e4bff170ed023fbf77e6645020a77eba9c7c03390ed1b316af1ab6f0c";
+        universal_config::init_module_for_test(VID);
+        init_module_for_test();
+
+        let dvn = &create_account_for_test(@dvn);
+        initialize(
+            dvn,
+            @dvn,
+            vector[@1234],
+            vector[pub_key_1],
+            1,
+            vector[@0xaaaa],
+            @dvn_fee_lib_router_0,
+        );
+
+        let admin_1 = &create_signer_for_test(@1234);
+
+        set_default_multiplier_bps(admin_1, 1000);
+        assert!(was_event_emitted(&worker_config::set_multiplier_bps_event(@dvn, 1000)), 0);
+        assert!(get_default_multiplier_bps() == 1000, 0);
+    }
+
+    #[test]
+    fun test_set_supported_option_types() {
+        let pub_key_1: vector<u8> = x"3bd5f17b6bc7a9022402246dd8e1530f0acd1d6439089b4f3bd8868250c1656c08a9fc2e4bff170ed023fbf77e6645020a77eba9c7c03390ed1b316af1ab6f0c";
+        universal_config::init_module_for_test(VID);
+        init_module_for_test();
+
+        let dvn = &create_account_for_test(@dvn);
+        initialize(
+            dvn,
+            @dvn,
+            vector[@1234],
+            vector[pub_key_1],
+            1,
+            vector[@0xaaaa],
+            @dvn_fee_lib_router_0,
+        );
+
+        let admin_1 = &create_signer_for_test(@1234);
+        set_supported_option_types(admin_1, vector[1, 2, 3]);
+        assert!(was_event_emitted(&worker_config::set_supported_option_types_event(@dvn, vector[1, 2, 3])), 0);
+        assert!(worker_config::get_supported_option_types(@dvn) == vector[1, 2, 3], 1);
     }
 
     #[test]
