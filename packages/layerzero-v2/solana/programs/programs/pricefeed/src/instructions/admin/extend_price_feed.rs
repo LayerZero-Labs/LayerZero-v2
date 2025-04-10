@@ -6,7 +6,7 @@ pub struct ExtendPriceFeed<'info> {
     pub admin: Signer<'info>,
     #[account(
         mut,
-		realloc = 8 + PriceFeed::INIT_SPACE + Price::INIT_SPACE * (PRICES_MAX_LEN - PRICES_DEFAULT_LEN),
+        realloc = 8 + PriceFeed::INIT_SPACE + Price::INIT_SPACE * (PRICES_MAX_LEN - PRICES_DEFAULT_LEN),
         realloc::payer = admin,
         realloc::zero = false,
         has_one = admin,

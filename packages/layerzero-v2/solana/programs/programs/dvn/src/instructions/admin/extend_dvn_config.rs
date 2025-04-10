@@ -8,7 +8,7 @@ pub struct ExtendDVNConfig<'info> {
         mut,
         seeds = [DVN_CONFIG_SEED],
         bump = config.bump,
-		realloc = 8 + DvnConfig::INIT_SPACE + DstConfig::INIT_SPACE * (DST_CONFIG_MAX_LEN - DST_CONFIG_DEFAULT_LEN),
+        realloc = 8 + DvnConfig::INIT_SPACE + DstConfig::INIT_SPACE * (DST_CONFIG_MAX_LEN - DST_CONFIG_DEFAULT_LEN),
         realloc::payer = admin,
         realloc::zero = false,
         constraint = config.admins.contains(admin.key) @DvnError::NotAdmin
