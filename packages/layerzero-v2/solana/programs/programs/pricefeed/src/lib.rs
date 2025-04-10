@@ -27,12 +27,18 @@ pub mod pricefeed {
     ) -> Result<()> {
         InitPriceFeed::apply(&mut ctx, &params)
     }
+
+    pub fn extend_price_feed(mut ctx: Context<ExtendPriceFeed>) -> Result<()> {
+        ExtendPriceFeed::apply(&mut ctx)
+    }
+
     pub fn set_price_feed(
         mut ctx: Context<SetPriceFeed>,
         params: SetPriceFeedParams,
     ) -> Result<()> {
         SetPriceFeed::apply(&mut ctx, &params)
     }
+
     pub fn transfer_admin(
         mut ctx: Context<TransferAdmin>,
         params: TransferAdminParams,

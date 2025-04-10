@@ -24,10 +24,16 @@ impl SetPrice<'_> {
                 gas_per_byte: price_params.gas_per_byte,
                 model_type: price_params.model_type,
             };
+            let account_size = ctx.accounts.price_feed.to_account_info().data_len();
+            let max_len = if account_size > (PriceFeed::INIT_SPACE + 8) {
+                PRICES_MAX_LEN
+            } else {
+                PRICES_DEFAULT_LEN
+            };
             sorted_list_helper::insert_or_update_sorted_list_by_eid(
                 &mut ctx.accounts.price_feed.prices,
                 price,
-                PRICES_MAX_LEN,
+                max_len,
             )
         } else {
             sorted_list_helper::remove_from_sorted_list_by_eid(
