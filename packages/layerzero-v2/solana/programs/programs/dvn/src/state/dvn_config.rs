@@ -19,7 +19,8 @@ pub const VERIFY_BYTES: u64 = 320;
 pub const ADMINS_MAX_LEN: usize = 5;
 pub const SIGNERS_MAX_LEN: usize = 7;
 pub const MSGLIBS_MAX_LEN: usize = 10;
-pub const DST_CONFIG_MAX_LEN: usize = 140;
+pub const DST_CONFIG_DEFAULT_LEN: usize = 140;
+pub const DST_CONFIG_MAX_LEN: usize = 200;
 
 #[account]
 #[derive(InitSpace)]
@@ -39,7 +40,7 @@ pub struct DvnConfig {
     pub admins: Vec<Pubkey>,
     // set by admins
     pub price_feed: Pubkey,
-    #[max_len(DST_CONFIG_MAX_LEN)]
+    #[max_len(DST_CONFIG_DEFAULT_LEN)]
     pub dst_configs: Vec<DstConfig>,
     pub default_multiplier_bps: u16,
 }
@@ -64,12 +65,12 @@ impl DvnConfig {
         Ok(())
     }
 
-    pub fn set_dst_configs(&mut self, dst_configs: Vec<DstConfig>) -> Result<()> {
+    pub fn set_dst_configs(&mut self, max_len: usize, dst_configs: Vec<DstConfig>) -> Result<()> {
         for config in &dst_configs {
             sorted_list_helper::insert_or_update_sorted_list_by_eid(
                 &mut self.dst_configs,
                 config.clone(),
-                DST_CONFIG_MAX_LEN,
+                max_len,
             )?;
         }
         Ok(())

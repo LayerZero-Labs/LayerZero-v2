@@ -2,7 +2,8 @@ use crate::*;
 use utils::sorted_list_helper;
 
 pub const UPDATERS_MAX_LEN: usize = 8;
-pub const PRICES_MAX_LEN: usize = 140;
+pub const PRICES_DEFAULT_LEN: usize = 140;
+pub const PRICES_MAX_LEN: usize = 340;
 pub const EID_MODULUS: u32 = 30000;
 
 #[account]
@@ -14,7 +15,7 @@ pub struct PriceFeed {
     pub price_ratio_denominator: u128,
     pub arbitrum_compression_percent: u128,
     pub native_token_price_usd: Option<u128>,
-    #[max_len(PRICES_MAX_LEN)]
+    #[max_len(PRICES_DEFAULT_LEN)]
     pub prices: Vec<Price>,
     pub bump: u8,
 }

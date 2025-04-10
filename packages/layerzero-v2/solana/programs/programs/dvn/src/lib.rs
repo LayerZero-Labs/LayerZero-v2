@@ -32,6 +32,10 @@ pub mod dvn {
         SetConfig::apply(&mut ctx, &params)
     }
 
+    pub fn extend_dvn_config(mut ctx: Context<ExtendDVNConfig>) -> Result<()> {
+        ExtendDVNConfig::apply(&mut ctx)
+    }
+
     pub fn invoke(mut ctx: Context<Invoke>, params: InvokeParams) -> Result<()> {
         Invoke::apply(&mut ctx, &params)
     }
