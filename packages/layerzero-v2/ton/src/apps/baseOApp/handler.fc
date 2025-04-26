@@ -266,7 +266,7 @@ tuple setEnforcedOptions(cell $optionsExtended) impure inline method_id {
 tuple setLzConfig(cell $config) impure inline method_id {
     (_, tuple actions) = preamble();
 
-    ;; we use the send path here becuase the send path is used to derive the channel address
+    ;; we use the send path here because the send path is used to derive the channel address
     ;; and the channel is used to configure both send and receive configs
     cell $sendPath = $config.cl::get<objRef>(lz::Config::path);
     _assertSendPath($sendPath);
