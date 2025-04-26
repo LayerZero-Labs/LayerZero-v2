@@ -337,7 +337,7 @@ tuple setZroWallet(cell $setAddress) impure inline method_id {
 }
 
 ;; This will override an existing tentative owner
-;; Becuase we assert that the 'claimOwnership' can't be done by the 'null' address, it means
+;; Because we assert that the 'claimOwnership' can't be done by the 'null' address, it means
 ;; if we want to burn the ownership, we will need to set it to a contract which only has ability to
 ;; claim, but nothing else. This effectively burns it.
 tuple transferOwnership(cell $setAddress) impure inline {
