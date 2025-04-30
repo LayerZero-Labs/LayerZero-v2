@@ -209,7 +209,7 @@ Note: Ensure you confirm when prompted to install yarn:
 Navigate to the Solana contracts directory within the repository and build the contracts using `anchor`:
 
 ```bash
-cd ~/Desktop/layerzero/monorepo/packages/layerzero-v2/solana/programs
+cd ~/Desktop/layerzero/monorepo/packages/layerzero-v2/solana/oft-legacy
 anchor build
 ```
 

@@ -1406,9 +1406,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs":
+"@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/oft-legacy":
   version: 0.0.0-use.local
-  resolution: "@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs"
+  resolution: "@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/oft-legacy"
   dependencies:
     rimraf: "npm:^5.0.5"
   languageName: unknown
