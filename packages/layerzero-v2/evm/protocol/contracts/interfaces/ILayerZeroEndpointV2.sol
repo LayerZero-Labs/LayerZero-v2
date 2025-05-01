@@ -86,4 +86,6 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
     function nativeToken() external view returns (address);
 
     function setDelegate(address _delegate) external;
+
+    function delegates(address _oapp) external view returns (address);
 }
