@@ -1,4 +1,0 @@
-#include "storage.fc";
-#include "handler.fc";
-
-() main() { }

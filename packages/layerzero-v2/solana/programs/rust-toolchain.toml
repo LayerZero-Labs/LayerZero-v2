@@ -1,5 +1,0 @@
-[toolchain]
-channel = "1.75.0"
-# rustup install nightly
-# channel = "nightly-2024-02-04" # if you want to expand the macro, you need to use nightly version
-components = ["rustfmt", "clippy"]

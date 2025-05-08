@@ -1,3 +1,0 @@
-#include "handler.fc";
-
-() main() { }

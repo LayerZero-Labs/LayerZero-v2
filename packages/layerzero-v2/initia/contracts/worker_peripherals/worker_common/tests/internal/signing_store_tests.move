@@ -1,1 +1,0 @@
-../../../../../../aptos/contracts/worker_peripherals/worker_common/tests/internal/signing_store_tests.move

@@ -1,6 +1,6 @@
 {
-  "name": "@layerzerolabs/layerzero-v2",
-  "version": "2.0.2",
+  "name": "@primenumbelabs/layerzero-v2-upgradeable",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "packages/**"
@@ -10,53 +10,46 @@
     "build": "$npm_execpath workspaces foreach --all run build",
     "test": "$npm_execpath workspaces foreach --all run test"
   },
-  "resolutions": {
-    "@typechain/hardhat": "^9.1.0",
-    "aptos": "^1.19.0",
-    "ethereumjs-abi": "0.6.8",
-    "hardhat-deploy": "0.11.27",
-    "solhint": "^4.0.0",
-    "turbo": "1.9.3",
-    "typescript": "~5.1.3"
-  },
   "devDependencies": {
+    "@axelar-network/axelar-gmp-sdk-solidity": "^6.0.6",
+    "@chainlink/contracts-ccip": "^1.5.0",
+    "@layerzerolabs/lz-evm-v1-0.7": "^3.0.93",
     "@layerzerolabs/prettier-config-next": "^2.0.1",
     "@layerzerolabs/solhint-config": "^2.0.1",
-    "prettier": "^3.1.0",
-    "rimraf": "^5.0.5",
-    "solhint": "^4.0.0"
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-ignition": "^0.15.11",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.11",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@nomicfoundation/hardhat-toolbox": "5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.13",
+    "@openzeppelin/contracts": "^5.3.0",
+    "@openzeppelin/contracts-upgradeable": "^5.3.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.11",
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "chai": "^4.2.0",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.26.0",
+    "ethers": "^6.13.7",
+    "hardhat": "2.23.0",
+    "hardhat-deploy": "^1.0.2",
+    "hardhat-gas-reporter": "^2.2.3",
+    "prettier": "^3.5.3",
+    "prettier-plugin-solidity": "^2.0.0",
+    "solhint": "^4.0.0",
+    "solidity-bytes-utils": "^0.8.3",
+    "solidity-coverage": "^0.8.15",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.8.3"
   },
-  "dependenciesMeta": {
-    "@axelar-network/axelar-gmp-sdk-solidity": {
-      "unplugged": true
-    },
-    "@chainlink/contracts-ccip": {
-      "unplugged": true
-    },
-    "@layerzerolabs/lz-evm-v1-0.7": {
-      "unplugged": true
-    },
-    "@layerzerolabs/solidity-examples": {
-      "unplugged": true
-    },
-    "@openzeppelin/contracts": {
-      "unplugged": true
-    },
-    "@openzeppelin/contracts-upgradeable": {
-      "unplugged": true
-    },
-    "hardhat-deploy": {
-      "unplugged": true
-    },
-    "solidity-bytes-utils": {
-      "unplugged": true
-    },
-    "solidity-stringutils": {
-      "unplugged": true
-    }
-  },
-  "packageManager": "yarn@4.0.2",
   "engines": {
     "node": ">=18.12.0"
-  }
+  },
+  "packageManager": "npm@11.3.0+sha512.96eb611483f49c55f7fa74df61b588de9e213f80a256728e6798ddc67176c7b07e4a1cfc7de8922422cbce02543714367037536955221fa451b0c4fefaf20c66"
 }

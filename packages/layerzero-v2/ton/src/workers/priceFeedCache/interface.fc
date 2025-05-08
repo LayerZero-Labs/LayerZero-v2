@@ -1,7 +1,0 @@
-;;; ==========================OPCODES=====================================
-
-const int PriceFeedCache::OP::UPDATE_PRICE = "PriceFeedCache::OP::UPDATE_PRICE"c;
-const int PriceFeedCache::OP::UPDATE_NATIVE_PRICE = "PriceFeedCache::OP::UPDATE_NATIVE_PRICE"c;
-const int PriceFeedCache::OP::UPDATE_OP_PRICES = "PriceFeedCache::OP::UPDATE_OP_PRICES"c;
-const int PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES = "PriceFeedCache::OP::UPDATE_OP_NATIVE_PRICES"c;
-const int PriceFeedCache::OP::UPDATE_ARB_EXTENSION = "PriceFeedCache::OP::UPDATE_ARB_EXTENSION"c;

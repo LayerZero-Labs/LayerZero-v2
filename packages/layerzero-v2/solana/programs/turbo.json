@@ -1,9 +1,0 @@
-{
-  "extends": ["//"],
-  "pipeline": {
-    "build": {
-      "inputs": ["libs/**/*", "programs/**/*"],
-      "outputs": ["target/deploy/**", "target/idl/**"]
-    }
-  }
-}
