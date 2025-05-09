@@ -9,7 +9,7 @@ import { IOAppOptionsType3, EnforcedOptionParam } from "../interfaces/IOAppOptio
  * @title OAppOptionsType3
  * @dev Abstract contract implementing the IOAppOptionsType3 interface with type 3 options.
  */
-abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
+abstract contract OAppOptionsType3 is IOAppOptionsType3, OwnableUpgradeable {
     uint16 internal constant OPTION_TYPE_3 = 3;
 
     // @dev The "msgType" should be defined in the child contract.

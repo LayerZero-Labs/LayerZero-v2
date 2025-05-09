@@ -61,7 +61,8 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCoreUpgradeable 
      * Can be overridden by the OApp if there is other logic to determine this.
      */
     function allowInitializePath(Origin calldata origin) public view virtual returns (bool) {
-        return peers[origin.srcEid] == origin.sender;
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.peers[origin.srcEid] == origin.sender;
     }
 
     /**
@@ -99,8 +100,9 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiver, OAppCoreUpgradeable 
         address _executor,
         bytes calldata _extraData
     ) public payable virtual {
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
         // Ensures that only the endpoint can attempt to lzReceive() messages to this OApp.
-        if (address(endpoint) != msg.sender) revert OnlyEndpoint(msg.sender);
+        if (address($.endpoint) != msg.sender) revert OnlyEndpoint(msg.sender);
 
         // Ensure that the sender matches the expected peer for the source endpoint.
         if (_getPeerOrRevert(_origin.srcEid) != _origin.sender) revert OnlyPeer(_origin.srcEid, _origin.sender);

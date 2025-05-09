@@ -66,11 +66,11 @@ contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
         return (0, 0);
     }
 
-    function _getPreCrimeUpgradeablePeers(
+    function _getPreCrimePeers(
         InboundPacket[] memory _packets
-    ) internal view override returns (PreCrimeUpgradeablePeer[] memory peers) {
-        PreCrimeUpgradeablePeer[] memory allPeers = PreCrimePeer;
-        PreCrimeUpgradeablePeer[] memory peersTmp = new PreCrimeUpgradeablePeer[](_packets.length);
+    ) internal view override returns (PreCrimePeer[] memory peers) {
+        PreCrimePeer[] memory allPeers = PreCrimePeer;
+        PreCrimePeer[] memory peersTmp = new PreCrimePeer[](_packets.length);
 
         int256 cursor = -1;
         for (uint256 i = 0; i < _packets.length; i++) {
@@ -86,14 +86,14 @@ contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
         // copy to return
         if (cursor >= 0) {
             uint256 len = uint256(cursor) + 1;
-            peers = new PreCrimeUpgradeablePeer[](len);
+            peers = new PreCrimePeer[](len);
             for (uint256 i = 0; i < len; i++) {
                 peers[i] = peersTmp[i];
             }
         }
     }
 
-    function _indexOf(PreCrimeUpgradeablePeer[] memory _peers, uint32 _eid) internal pure returns (int256) {
+    function _indexOf(PreCrimePeer[] memory _peers, uint32 _eid) internal pure returns (int256) {
         for (uint256 i = 0; i < _peers.length; i++) {
             if (_peers[i].eid == _eid) return int256(i);
         }

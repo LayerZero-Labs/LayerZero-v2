@@ -17,7 +17,7 @@ import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
  * @title ONFT721Core
  * @dev Abstract contract for an ONFT721 token.
  */
-abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable, OAppOptionsType3 {
+abstract contract ONFT721CoreUpgradeable is IONFT721Upgradeable, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable, OAppOptionsType3 {
     using ONFT721MsgCodec for bytes;
     using ONFT721MsgCodec for bytes32;
 
@@ -28,7 +28,7 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
     // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721core")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ONFT721CoreStorageLocation = 0x831bef63b5afbb472ffb0039f0027e0f8cb92dca0f265bddf9c795a7b4be6400;
 
-    function _getStorage() internal pure returns (ONFT721CoreStorage storage ds) {
+    function _getONFT721CoreStorage() internal pure returns (ONFT721CoreStorage storage ds) {
         assembly {
             ds.slot := ONFT721CoreStorageLocation
         }
@@ -47,7 +47,13 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
      * @param _lzEndpoint The address of the LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(address _lzEndpoint, address _delegate) Ownable(_delegate) OApp(_lzEndpoint, _delegate) {}
+    function __ONFT721Core_init(
+        address _lzEndpoint,
+        address _delegate
+    ) internal onlyInitializing {
+        __Ownable_init(_delegate);
+        __OApp_init(_lzEndpoint, _delegate);
+    }
 
     /**
      * @notice Retrieves interfaceID and the version of the ONFT.
@@ -58,7 +64,7 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
      * @dev ie. localONFT version(x,1) CAN send messages to remoteONFT version(x,1)
      */
     function onftVersion() external pure virtual returns (bytes4 interfaceId, uint64 version) {
-        return (type(IONFT721).interfaceId, 1);
+        return (type(IONFT721Upgradeable).interfaceId, 1);
     }
 
     /**
@@ -68,7 +74,7 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
      * @dev Set it to address(0) to disable it, or set it to a contract address to enable it.
      */
     function setMsgInspector(address _msgInspector) public virtual onlyOwner {
-        ONFT721CoreStorage storage $ = _getStorage();
+        ONFT721CoreStorage storage $ = _getONFT721CoreStorage();
         $.msgInspector = _msgInspector;
         emit MsgInspectorSet(_msgInspector);
     }
@@ -113,7 +119,7 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
 
         // @dev Optionally inspect the message and options depending if the OApp owner has set a msg inspector.
         // @dev If it fails inspection, needs to revert in the implementation. ie. does not rely on return boolean
-        ONFT721CoreStorage storage $ = _getStorage();
+        ONFT721CoreStorage storage $ = _getONFT721CoreStorage();
         address inspector = $.msgInspector; // caches the msgInspector to avoid potential double storage read
         if (inspector != address(0)) IOAppMsgInspector(inspector).inspect(message, options);
     }
@@ -141,17 +147,19 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
 
         _credit(toAddress, tokenId, _origin.srcEid);
 
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+
         if (_message.isComposed()) {
             bytes memory composeMsg = ONFTComposeMsgCodec.encode(_origin.nonce, _origin.srcEid, _message.composeMsg());
             // @dev As batching is not implemented, the compose index is always 0.
             // @dev If batching is added, the index will need to be tracked.
-            endpoint.sendCompose(toAddress, _guid, 0 /* the index of composed message*/, composeMsg);
+            $.endpoint.sendCompose(toAddress, _guid, 0 /* the index of composed message*/, composeMsg);
         }
 
         emit ONFTReceived(_guid, _origin.srcEid, toAddress, tokenId);
     }
 
-    /*
+    /**
      * @dev Internal function to handle the OAppPreCrimeSimulator simulated receive.
      * @param _origin The origin information.
      *  - srcEid: The source chain endpoint ID.
@@ -182,7 +190,8 @@ abstract contract ONFT721Core is IONFT721Upgradeable, OAppUpgradeable, OAppPreCr
      * @dev Enables OAppPreCrimeSimulator to check whether a potential Inbound Packet is from a trusted source.
      */
     function isPeer(uint32 _eid, bytes32 _peer) public view virtual override returns (bool) {
-        return peers[_eid] == _peer;
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.peers[_eid] == _peer;
     }
 
     function _debit(address /*_from*/, uint256 /*_tokenId*/, uint32 /*_dstEid*/) internal virtual;

@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 
 import { ILayerZeroEndpointV2, MessagingFee, MessagingReceipt, Origin } from "../../../protocol/interfaces/ILayerZeroEndpointV2.sol";
 import { ILayerZeroComposer } from "../../../protocol/interfaces/ILayerZeroComposer.sol";
-
 import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 import { OptionsBuilder } from "../libs/OptionsBuilder.sol";
 import { OAppPreCrimeSimulatorUpgradeable } from "../../precrime/OAppPreCrimeSimulatorUpgradeable.sol";
@@ -45,33 +44,50 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     using MsgCodec for bytes;
     using OptionsBuilder for bytes;
 
-    uint256 public count;
-    uint256 public composedCount;
+    struct OmniCounterAbstractStorage {
+        uint256 count;
+        uint256 composedCount;
+        address admin;
+        uint32 eid;
+        mapping(uint32 srcEid => mapping(bytes32 sender => uint64 nonce)) maxReceivedNonce;
+        bool orderedNonce;
+        // for global assertions
+        mapping(uint32 srcEid => uint256 count) inboundCount;
+        mapping(uint32 dstEid => uint256 count) outboundCount;
+    }
 
-    address public admin;
-    uint32 public eid;
+    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.omnicounterabstract")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OmniCounterAbstractStorageLocation = 0x077b97a8aca79405ec58163a260b303a7e7903026c7db58eeb101ceece6c4900;
 
-    mapping(uint32 srcEid => mapping(bytes32 sender => uint64 nonce)) private maxReceivedNonce;
-    bool private orderedNonce;
+    function _getOmniCounterAbstractStorage() internal pure returns (OmniCounterAbstractStorage storage ds) {
+        assembly {
+            ds.slot := OmniCounterAbstractStorageLocation
+        }
+    }
 
-    // for global assertions
-    mapping(uint32 srcEid => uint256 count) public inboundCount;
-    mapping(uint32 dstEid => uint256 count) public outboundCount;
+    function __OmniCounterAbstract_init(address _endpoint, address _delegate) internal onlyInitializing {
+        __OApp_init(_endpoint, _delegate);
+        __OAppPreCrimeSimulator_init(_endpoint, _delegate);
+        __OmniCounterAbstract_init_unchained(_endpoint);
+    }
 
-    constructor(address _endpoint, address _delegate) OAppUpgradeable(_endpoint, _delegate) {
-        admin = msg.sender;
-        eid = ILayerZeroEndpointV2(_endpoint).eid();
+    function __OmniCounterAbstract_init_unchained(address _endpoint) internal onlyInitializing {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        $.admin = msg.sender;
+        $.eid = ILayerZeroEndpointV2(_endpoint).eid();
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "only admin");
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        require(msg.sender == $.admin, "only admin");
         _;
     }
 
     // -------------------------------
     // Only Admin
     function setAdmin(address _admin) external onlyAdmin {
-        admin = _admin;
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        $.admin = _admin;
     }
 
     function withdraw(address payable _to, uint256 _amount) external onlyAdmin {
@@ -82,16 +98,18 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // -------------------------------
     // Send
     function increment(uint32 _eid, uint8 _type, bytes calldata _options) external payable {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
         //        bytes memory options = combineOptions(_eid, _type, _options);
-        _lzSend(_eid, MsgCodec.encode(_type, eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        _lzSend(_eid, MsgCodec.encode(_type, $.eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
         _incrementOutbound(_eid);
     }
 
     // this is a broken function to skip incrementing outbound count
     // so that preCrime will fail
     function brokenIncrement(uint32 _eid, uint8 _type, bytes calldata _options) external payable onlyAdmin {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
         //        bytes memory options = combineOptions(_eid, _type, _options);
-        _lzSend(_eid, MsgCodec.encode(_type, eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        _lzSend(_eid, MsgCodec.encode(_type, $.eid), _options, MessagingFee(msg.value, 0), payable(msg.sender));
         // _incrementOutbound(_eid); // mock method which intentionally does not increment outboundCount to cause a PreCrime Crime
     }
 
@@ -101,7 +119,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         bytes[] calldata _options
     ) external payable {
         require(_eids.length == _options.length && _eids.length == _types.length, "OmniCounter: length mismatch");
-
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
         MessagingReceipt memory receipt;
         uint256 providedFee = msg.value;
         for (uint256 i = 0; i < _eids.length; i++) {
@@ -111,7 +129,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
             //            bytes memory options = combineOptions(dstEid, msgType, _options[i]);
             receipt = _lzSend(
                 dstEid,
-                MsgCodec.encode(msgType, eid),
+                MsgCodec.encode(msgType, $.eid),
                 _options[i],
                 MessagingFee(providedFee, 0),
                 payable(refundAddress)
@@ -128,8 +146,9 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         uint8 _type,
         bytes calldata _options
     ) public view returns (uint256 nativeFee, uint256 lzTokenFee) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
         //        bytes memory options = combineOptions(_eid, _type, _options);
-        MessagingFee memory fee = _quote(_eid, MsgCodec.encode(_type, eid), _options, false);
+        MessagingFee memory fee = _quote(_eid, MsgCodec.encode(_type, $.eid), _options, false);
         return (fee.nativeFee, fee.lzTokenFee);
     }
 
@@ -155,9 +174,10 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     ) internal override {
         _acceptNonce(_origin.srcEid, _origin.sender, _origin.nonce);
         uint8 messageType = _message.msgType();
-
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
         if (messageType == MsgCodec.VANILLA_TYPE) {
-            count++;
+            $.count++;
 
             //////////////////////////////// IMPORTANT //////////////////////////////////
             /// if you request for msg.value in the options, you should also encode it
@@ -170,11 +190,11 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
 
             _incrementInbound(_origin.srcEid);
         } else if (messageType == MsgCodec.COMPOSED_TYPE || messageType == MsgCodec.COMPOSED_ABA_TYPE) {
-            count++;
+            $.count++;
             _incrementInbound(_origin.srcEid);
-            endpoint.sendCompose(address(this), _guid, 0, _message);
+            oApp$.endpoint.sendCompose(address(this), _guid, 0, _message);
         } else if (messageType == MsgCodec.ABA_TYPE) {
-            count++;
+            $.count++;
             _incrementInbound(_origin.srcEid);
 
             // send back to the sender
@@ -182,7 +202,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
             bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 10);
             _lzSend(
                 _origin.srcEid,
-                MsgCodec.encode(MsgCodec.VANILLA_TYPE, eid, 10),
+                MsgCodec.encode(MsgCodec.VANILLA_TYPE, $.eid, 10),
                 options,
                 MessagingFee(msg.value, 0),
                 payable(address(this))
@@ -193,11 +213,13 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     }
 
     function _incrementInbound(uint32 _srcEid) internal {
-        inboundCount[_srcEid]++;
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        $.inboundCount[_srcEid]++;
     }
 
     function _incrementOutbound(uint32 _dstEid) internal {
-        outboundCount[_dstEid]++;
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        $.outboundCount[_dstEid]++;
     }
 
     function lzCompose(
@@ -207,21 +229,23 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         address,
         bytes calldata
     ) external payable override {
+        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
         require(_oApp == address(this), "!oApp");
-        require(msg.sender == address(endpoint), "!endpoint");
-
+        require(msg.sender == address(oApp$.endpoint), "!endpoint");
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        
         uint8 msgType = _message.msgType();
         if (msgType == MsgCodec.COMPOSED_TYPE) {
-            composedCount += 1;
+            $.composedCount += 1;
         } else if (msgType == MsgCodec.COMPOSED_ABA_TYPE) {
-            composedCount += 1;
+            $.composedCount += 1;
 
             uint32 srcEid = _message.srcEid();
             _incrementOutbound(srcEid);
             bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
             _lzSend(
                 srcEid,
-                MsgCodec.encode(MsgCodec.VANILLA_TYPE, eid),
+                MsgCodec.encode(MsgCodec.VANILLA_TYPE, $.eid),
                 options,
                 MessagingFee(msg.value, 0),
                 payable(address(this))
@@ -237,12 +261,16 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // normally an app should decide ordered or not on contract construction
     // this is just a demo
     function setOrderedNonce(bool _orderedNonce) external onlyOwner {
-        orderedNonce = _orderedNonce;
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        $.orderedNonce = _orderedNonce;
     }
 
     function _acceptNonce(uint32 _srcEid, bytes32 _sender, uint64 _nonce) internal virtual {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        mapping(uint32 => mapping(bytes32 => uint64)) storage maxReceivedNonce = $.maxReceivedNonce;
+
         uint64 currentNonce = maxReceivedNonce[_srcEid][_sender];
-        if (orderedNonce) {
+        if ($.orderedNonce) {
             require(_nonce == currentNonce + 1, "OApp: invalid nonce");
         }
         // update the max nonce anyway. once the ordered mode is turned on, missing early nonces will be rejected
@@ -252,7 +280,9 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     }
 
     function nextNonce(uint32 _srcEid, bytes32 _sender) public view virtual override returns (uint64) {
-        if (orderedNonce) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        mapping(uint32 => mapping(bytes32 => uint64)) storage maxReceivedNonce = $.maxReceivedNonce;
+        if ($.orderedNonce) {
             return maxReceivedNonce[_srcEid][_sender] + 1;
         } else {
             return 0; // path nonce starts from 1. if 0 it means that there is no specific nonce enforcement
@@ -262,14 +292,18 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
     // TODO should override oApp version with added ordered nonce increment
     // a governance function to skip nonce
     function skipInboundNonce(uint32 _srcEid, bytes32 _sender, uint64 _nonce) public virtual onlyOwner {
-        endpoint.skip(address(this), _srcEid, _sender, _nonce);
-        if (orderedNonce) {
-            maxReceivedNonce[_srcEid][_sender]++;
+        OAppCoreStorage storage oApp$ = _getOAppCoreStorage();
+        oApp$.endpoint.skip(address(this), _srcEid, _sender, _nonce);
+
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        if ($.orderedNonce) {
+            $.maxReceivedNonce[_srcEid][_sender]++;
         }
     }
 
     function isPeer(uint32 _eid, bytes32 _peer) public view override returns (bool) {
-        return peers[_eid] == _peer;
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.peers[_eid] == _peer;
     }
 
     // @dev Batch send requires overriding this function from OAppSender because the msg.value contains multiple fees

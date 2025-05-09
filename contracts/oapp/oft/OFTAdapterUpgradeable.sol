@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import { IERC20Metadata, IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IOFT, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
+import { IOFTUpgradeable, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
 
 /**
  * @title OFTAdapter Contract
@@ -17,7 +17,7 @@ import { IOFT, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
  * IF the 'innerToken' applies something like a transfer fee, the default will NOT work...
  * a pre/post balance check will need to be done to calculate the amountSentLD/amountReceivedLD.
  */
-abstract contract OFTAdapter is OFTCoreUpgradeable {
+abstract contract OFTAdapterUpgradeable is OFTCoreUpgradeable {
     using SafeERC20 for IERC20;
 
     IERC20 internal immutable innerToken;

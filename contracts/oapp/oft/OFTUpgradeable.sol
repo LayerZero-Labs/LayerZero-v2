@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { IOFT, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
+import { IOFTUpgradeable, OFTCoreUpgradeable } from "./OFTCoreUpgradeable.sol";
 
 /**
  * @title OFT Contract
@@ -17,12 +17,15 @@ abstract contract OFTUpgradeable is OFTCoreUpgradeable, ERC20Upgradeable {
      * @param _lzEndpoint The LayerZero endpoint address.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(
+    function __OFT_init(
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
         address _delegate
-    ) ERC20(_name, _symbol) OFTCoreUpgradeable(decimals(), _lzEndpoint, _delegate) {}
+    ) internal onlyInitializing {
+        __ERC20_init(_name, _symbol);
+        __OFTCore_init(_lzEndpoint, _delegate);
+    }
 
     /**
      * @dev Retrieves the address of the underlying ERC20 implementation.

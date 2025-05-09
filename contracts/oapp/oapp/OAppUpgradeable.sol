@@ -20,7 +20,9 @@ abstract contract OAppUpgradeable is OAppSenderUpgradeable, OAppReceiverUpgradea
      * @param _endpoint The address of the LOCAL LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(address _endpoint, address _delegate) OAppCore(_endpoint, _delegate) {}
+    function __OApp_init(address _endpoint, address _delegate) internal onlyInitializing {
+        __OAppCore_init(_endpoint, _delegate);
+    }
 
     /**
      * @notice Retrieves the OApp version information.
@@ -31,7 +33,7 @@ abstract contract OAppUpgradeable is OAppSenderUpgradeable, OAppReceiverUpgradea
         public
         pure
         virtual
-        override(OAppSender, OAppReceiver)
+        override(OAppSenderUpgradeable, OAppReceiverUpgradeable)
         returns (uint64 senderVersion, uint64 receiverVersion)
     {
         return (SENDER_VERSION, RECEIVER_VERSION);

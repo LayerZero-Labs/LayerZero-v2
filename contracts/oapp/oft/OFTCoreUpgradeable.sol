@@ -20,20 +20,27 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
     using OFTMsgCodec for bytes;
     using OFTMsgCodec for bytes32;
 
-    // @notice Provides a conversion rate when swapping between denominations of SD and LD
-    //      - shareDecimals == SD == shared Decimals
-    //      - localDecimals == LD == local decimals
-    // @dev Considers that tokens have different decimal amounts on various chains.
-    // @dev eg.
-    //  For a token
-    //      - locally with 4 decimals --> 1.2345 => uint(12345)
-    //      - remotely with 2 decimals --> 1.23 => uint(123)
-    //      - The conversion rate would be 10 ** (4 - 2) = 100
-    //  @dev If you want to send 1.2345 -> (uint 12345), you CANNOT represent that value on the remote,
-    //  you can only display 1.23 -> uint(123).
-    //  @dev To preserve the dust that would otherwise be lost on that conversion,
-    //  we need to unify a denomination that can be represented on ALL chains inside of the OFT mesh
-    uint256 public immutable decimalConversionRate;
+    struct OFTCoreStorage {
+        address msgInspector; // Address of the optional message inspector contract
+        // @notice Provides a conversion rate when swapping between denominations of SD and LD
+        //      - shareDecimals == SD == shared Decimals
+        //      - localDecimals == LD == local decimals
+        // @dev Considers that tokens have different decimal amounts on various chains.
+        // @dev eg.
+        //  For a token
+        //      - locally with 4 decimals --> 1.2345 => uint(12345)
+        //      - remotely with 2 decimals --> 1.23 => uint(123)
+        //      - The conversion rate would be 10 ** (4 - 2) = 100
+        //  @dev If you want to send 1.2345 -> (uint 12345), you CANNOT represent that value on the remote,
+        //  you can only display 1.23 -> uint(123).
+        //  @dev To preserve the dust that would otherwise be lost on that conversion,
+        //  we need to unify a denomination that can be represented on ALL chains inside of the OFT mesh
+        uint256 decimalConversionRate;
+    }
+
+
+    // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.oftcore")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OFTCoreStorageLocation = 0xcdf163d3f8e25283aa6e6b65bf54c91efea10d39ab5536a331f79fb680ac7600;
 
     // @notice Msg types that are used to identify the various OFT operations.
     // @dev This can be extended in child contracts for non-default oft operations
@@ -41,9 +48,13 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
     uint16 public constant SEND = 1;
     uint16 public constant SEND_AND_CALL = 2;
 
-    // Address of an optional contract to inspect both 'message' and 'options'
-    address public msgInspector;
     event MsgInspectorSet(address inspector);
+
+    function _getOFTCoreStorage() internal pure returns (OFTCoreStorage storage ds) {
+        assembly {
+            ds.slot := OFTCoreStorageLocation
+        }
+    }
 
     /**
      * @dev Constructor.
@@ -51,9 +62,17 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @param _endpoint The address of the LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(uint8 _localDecimals, address _endpoint, address _delegate) OApp(_endpoint, _delegate) {
-        if (_localDecimals < sharedDecimals()) revert InvalidLocalDecimals();
-        decimalConversionRate = 10 ** (_localDecimals - sharedDecimals());
+    function __OFTCore_init(
+        uint8 _localDecimals,
+        address _endpoint,
+        address _delegate
+    ) internal onlyInitializing {
+        __OApp_init(_endpoint, _delegate);
+
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
+        // @dev The decimal conversion rate is calculated as 10 ** (localDecimals - sharedDecimals).
+        // @dev This is used to convert between local decimals and shared decimals.
+        $.decimalConversionRate = 10 ** (_localDecimals - sharedDecimals());
     }
 
     /**
@@ -67,7 +86,7 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * ie. localOFT version(x,1) CAN send messages to remoteOFT version(x,1)
      */
     function oftVersion() external pure virtual returns (bytes4 interfaceId, uint64 version) {
-        return (type(IOFT).interfaceId, 1);
+        return (type(IOFTUpgradeable).interfaceId, 1);
     }
 
     /**
@@ -92,7 +111,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @dev Set it to address(0) to disable it, or set it to a contract address to enable it.
      */
     function setMsgInspector(address _msgInspector) public virtual onlyOwner {
-        msgInspector = _msgInspector;
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
+        $.msgInspector = _msgInspector;
         emit MsgInspectorSet(_msgInspector);
     }
 
@@ -207,6 +227,7 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
         SendParam calldata _sendParam,
         uint256 _amountLD
     ) internal view virtual returns (bytes memory message, bytes memory options) {
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
         bool hasCompose;
         // @dev This generated message has the msg.sender encoded into the payload so the remote knows who the caller is.
         (message, hasCompose) = OFTMsgCodec.encode(
@@ -223,7 +244,7 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
 
         // @dev Optionally inspect the message and options depending if the OApp owner has set a msg inspector.
         // @dev If it fails inspection, needs to revert in the implementation. ie. does not rely on return boolean
-        if (msgInspector != address(0)) IOAppMsgInspector(msgInspector).inspect(message, options);
+        if ($.msgInspector != address(0)) IOAppMsgInspector($.msgInspector).inspect(message, options);
     }
 
     /**
@@ -250,6 +271,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
         // @dev Credit the amountLD to the recipient and return the ACTUAL amount the recipient received in local decimals
         uint256 amountReceivedLD = _credit(toAddress, _toLD(_message.amountSD()), _origin.srcEid);
 
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+
         if (_message.isComposed()) {
             // @dev Proprietary composeMsg format for the OFT.
             bytes memory composeMsg = OFTComposeMsgCodec.encode(
@@ -264,7 +287,7 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
             // @dev The off-chain executor will listen and process the msg based on the src-chain-callers compose options passed.
             // @dev The index is used when a OApp needs to compose multiple msgs on lzReceive.
             // For default OFT implementation there is only 1 compose msg per lzReceive, thus its always 0.
-            endpoint.sendCompose(toAddress, _guid, 0 /* the index of the composed message*/, composeMsg);
+            $.endpoint.sendCompose(toAddress, _guid, 0 /* the index of the composed message*/, composeMsg);
         }
 
         emit OFTReceived(_guid, _origin.srcEid, toAddress, amountReceivedLD);
@@ -303,7 +326,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @dev Enables OAppPreCrimeSimulator to check whether a potential Inbound Packet is from a trusted source.
      */
     function isPeer(uint32 _eid, bytes32 _peer) public view virtual override returns (bool) {
-        return peers[_eid] == _peer;
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.peers[_eid] == _peer;
     }
 
     /**
@@ -315,7 +339,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @dev eg. uint(123) with a conversion rate of 100 becomes uint(100).
      */
     function _removeDust(uint256 _amountLD) internal view virtual returns (uint256 amountLD) {
-        return (_amountLD / decimalConversionRate) * decimalConversionRate;
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
+        return (_amountLD / $.decimalConversionRate) * $.decimalConversionRate;
     }
 
     /**
@@ -324,7 +349,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @return amountLD The amount in local decimals.
      */
     function _toLD(uint64 _amountSD) internal view virtual returns (uint256 amountLD) {
-        return _amountSD * decimalConversionRate;
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
+        return _amountSD * $.decimalConversionRate;
     }
 
     /**
@@ -333,7 +359,8 @@ abstract contract OFTCoreUpgradeable is IOFTUpgradeable, OAppUpgradeable, OAppPr
      * @return amountSD The amount in shared decimals.
      */
     function _toSD(uint256 _amountLD) internal view virtual returns (uint64 amountSD) {
-        return uint64(_amountLD / decimalConversionRate);
+        OFTCoreStorage storage $ = _getOFTCoreStorage();
+        return uint64(_amountLD / $.decimalConversionRate);
     }
 
     /**

@@ -21,7 +21,7 @@ abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
     // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721adapter")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ONFT721AdapterStorageLocation = 0x11e0f117225a3dc9e19549ccf79cc9737461fce17edb3816e369f52c9f1b5100;
 
-    function _getStorage() internal pure returns (ONFT721AdapterUpgradeableStorage storage ds) {
+    function _getONFT721AdapterStorage() internal pure returns (ONFT721AdapterStorage storage ds) {
         assembly {
             ds.slot := position
         }
@@ -33,15 +33,21 @@ abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
      * @param _lzEndpoint The LayerZero endpoint address.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(address _token, address _lzEndpoint, address _delegate) ONFT721Core(_lzEndpoint, _delegate) {
-        innerToken = IERC721(_token);
+    function __ONFT721Adapter_init(
+        address _token,
+        address _lzEndpoint,
+        address _delegate
+    ) internal onlyInitializing {
+        __ONFT721Core_init(_lzEndpoint, _delegate);
+        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
+        $.innerToken = IERC721(_token);
     }
 
     /**
      * @notice Retrieves the address of the underlying ERC721 implementation (ie. external contract).
      */
     function token() external view returns (address) {
-        ONFT721AdapterStorage storage $ = _getStorage();
+        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
         return address($.innerToken);
     }
 
@@ -56,7 +62,7 @@ abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
         // @dev Dont need to check onERC721Received() when moving into this contract, ie. no 'safeTransferFrom' required
-        ONFT721AdapterStorage storage $ = _getStorage();
+        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
         $.innerToken.transferFrom(_from, address(this), _tokenId);
     }
 
@@ -65,7 +71,7 @@ abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
         // required
         // @dev The default implementation does not implement IERC721Receiver as 'safeTransferFrom' is not used.
         // @dev If IERC721Receiver is required, ensure proper re-entrancy protection is implemented.
-        ONFT721AdapterStorage storage $ = _getStorage();
+        ONFT721AdapterStorage storage $ = _getONFT721AdapterStorage();
         $.innerToken.transferFrom(address(this), _toAddress, _tokenId);
     }
 }

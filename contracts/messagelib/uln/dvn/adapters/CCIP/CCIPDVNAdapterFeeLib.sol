@@ -16,7 +16,7 @@ contract CCIPDVNAdapterFeeLib is OwnableUpgradeable, Proxied, ICCIPDVNAdapterFee
     mapping(uint32 dstEid => DstConfig) public dstConfig;
 
     function initialize() external proxied initializer {
-        __Ownable_init();
+        __Ownable_init(_msgSender());
     }
 
     // ================================ OnlyOwner ===============================

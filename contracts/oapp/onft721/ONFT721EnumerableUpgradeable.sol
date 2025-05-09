@@ -33,12 +33,15 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
      * @param _lzEndpoint The LayerZero endpoint address.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(
+    function __ONFT721Enumerable_init(
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
         address _delegate
-    ) ERC721(_name, _symbol) ONFT721Core(_lzEndpoint, _delegate) {}
+    ) internal onlyInitializing {
+        __ERC721_init(_name, _symbol);
+        __ONFT721Core_init(_lzEndpoint, _delegate);
+    }
 
     /**
      * @notice Retrieves the address of the underlying ERC721 implementation (ie. this contract).
@@ -68,7 +71,7 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
     }
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
-        if (_from != ERC721.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721.ownerOf(_tokenId));
+        if (_from != ERC721Upgradeable.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721Upgradeable.ownerOf(_tokenId));
         _burn(_tokenId);
     }
 

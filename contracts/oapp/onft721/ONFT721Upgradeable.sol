@@ -18,7 +18,7 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
     // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ONFT721StorageLocation = 0xa5a99e5d707b91b39b61e115bcc168c190d746f2210fdee1a2c5310845432400;
 
-    function _getStorage() internal pure returns (ONFT721Storage storage ds) {
+    function _getONFT721Storage() internal pure returns (ONFT721Storage storage ds) {
         assembly {
             ds.slot := ONFT721StorageLocation
         }
@@ -33,12 +33,15 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
      * @param _lzEndpoint The LayerZero endpoint address.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    constructor(
+    function __ONFT721_init(
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
         address _delegate
-    ) ERC721(_name, _symbol) ONFT721Core(_lzEndpoint, _delegate) {}
+    ) internal onlyInitializing {
+        __ERC721_init(_name, _symbol);
+        __ONFT721Core_init(_lzEndpoint, _delegate);
+    }
 
     /**
      * @notice Retrieves the address of the underlying ERC721 implementation (ie. this contract).
@@ -48,12 +51,14 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
     }
 
     function setBaseURI(string calldata _baseTokenURI) external onlyOwner {
-        baseTokenURI = _baseTokenURI;
-        emit BaseURISet(baseTokenURI);
+        ONFT721Storage storage $ = _getONFT721Storage();
+        $.baseTokenURI = _baseTokenURI;
+        emit BaseURISet($.baseTokenURI);
     }
 
     function _baseURI() internal view override returns (string memory) {
-        return baseTokenURI;
+        ONFT721Storage storage $ = _getONFT721Storage();
+        return $.baseTokenURI;
     }
 
     /**
@@ -66,7 +71,7 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
     }
 
     function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
-        if (_from != ERC721.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721.ownerOf(_tokenId));
+        if (_from != ERC721Upgradeable.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721Upgradeable.ownerOf(_tokenId));
         _burn(_tokenId);
     }
 

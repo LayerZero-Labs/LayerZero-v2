@@ -7,7 +7,7 @@ import { ILayerZeroEndpointV2 } from "../../../protocol/interfaces/ILayerZeroEnd
 /**
  * @title IOAppCore
  */
-interface IOAppCore {
+interface IOAppCoreUpgradeable {
     // Custom error messages
     error OnlyPeer(uint32 eid, bytes32 sender);
     error NoPeer(uint32 eid);

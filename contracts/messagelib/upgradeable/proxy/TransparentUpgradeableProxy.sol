@@ -5,6 +5,7 @@
 pragma solidity ^0.8.0;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 /**
  * @author OpenZeppelin. Modified from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.4/contracts/proxy/transparent/TransparentUpgradeableProxy.sol
@@ -40,15 +41,15 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * optionally initialized with `_data` as explained in {ERC1967Proxy-constructor}.
      */
     constructor(address _logic, address admin_, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
-        assert(_ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
-        _changeAdmin(admin_);
+        assert(ERC1967Utils._ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
+        ERC1967Utils.changeAdmin(admin_);
     }
 
     /**
      * @dev Modifier used internally that will delegate the call to the implementation unless the sender is the admin.
      */
     modifier ifAdmin() {
-        if (msg.sender == _getAdmin()) {
+        if (msg.sender == ERC1967Utils.getAdmin()) {
             _;
         } else {
             _fallback();
@@ -65,7 +66,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103`
      */
     function admin() external ifAdmin returns (address admin_) {
-        admin_ = _getAdmin();
+        admin_ = ERC1967Utils.getAdmin();
     }
 
     /**
@@ -78,7 +79,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc`
      */
     function implementation() external ifAdmin returns (address implementation_) {
-        implementation_ = _implementation();
+        implementation_ = ERC1967Utils._implementation();
     }
 
     /**
@@ -89,7 +90,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * NOTE: Only the admin can call this function. See {ProxyAdmin-changeProxyAdmin}.
      */
     function changeAdmin(address newAdmin) external virtual ifAdmin {
-        _changeAdmin(newAdmin);
+        ERC1967Utils.changeAdmin(newAdmin);
     }
 
     /**
@@ -98,7 +99,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgrade}.
      */
     function upgradeTo(address newImplementation) external ifAdmin {
-        _upgradeToAndCall(newImplementation, bytes(""), false);
+        ERC1967Utils.upgradeToAndCall(newImplementation, bytes(""), false);
     }
 
     /**
@@ -109,21 +110,21 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgradeAndCall}.
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable ifAdmin {
-        _upgradeToAndCall(newImplementation, data, true);
+        ERC1967Utils.upgradeToAndCall(newImplementation, data, true);
     }
 
     /**
      * @dev Returns the current admin.
      */
     function _admin() internal view virtual returns (address) {
-        return _getAdmin();
+        return ERC1967Utils.getAdmin();
     }
 
     /**
      * @dev Makes sure the admin cannot access the fallback function. See {Proxy-_beforeFallback}.
      */
     function _beforeFallback() internal virtual override {
-        if (msg.sender == _getAdmin()) {
+        if (msg.sender == ERC1967Utils.getAdmin()) {
             revert AdminAccessDenied();
         }
         super._beforeFallback();
