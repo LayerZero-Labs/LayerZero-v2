@@ -18,7 +18,7 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
     // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.onft721enumerable")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ONFT721EnumerableStorageLocation = 0x85fe181c183f62f4c3645b58cc89f6b95a0f60bbf7704c33df5b2a7606e50b00;
 
-    function _getStorage() internal pure returns (ONFT721EnumerableStorage storage ds) {
+    function _getONFT721EnumerableStorage() internal pure returns (ONFT721EnumerableStorage storage ds) {
         assembly {
             ds.slot := ONFT721EnumerableStorageLocation
         }
@@ -51,13 +51,13 @@ abstract contract ONFT721EnumerableUpgradeable is ONFT721CoreUpgradeable, ERC721
     }
 
     function setBaseURI(string calldata _baseTokenURI) external onlyOwner {
-        ONFT721EnumerableStorage storage $ = _getStorage();
+        ONFT721EnumerableStorage storage $ = _getONFT721EnumerableStorage();
         $.baseTokenURI = _baseTokenURI;
         emit BaseURISet($.baseTokenURI);
     }
 
     function _baseURI() internal view override returns (string memory) {
-        ONFT721EnumerableStorage storage $ = _getStorage();
+        ONFT721EnumerableStorage storage $ = _getONFT721EnumerableStorage();
         return $.baseTokenURI;
     }
 
