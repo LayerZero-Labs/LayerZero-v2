@@ -1,4 +1,0 @@
-#include "channel/interface.fc";
-#include "controller/interface.fc";
-#include "endpoint/interface.fc";
-#include "msglibs/interface.fc";

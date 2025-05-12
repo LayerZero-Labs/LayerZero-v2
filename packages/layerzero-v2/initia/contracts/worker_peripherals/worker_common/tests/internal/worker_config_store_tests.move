@@ -1,1 +1,0 @@
-../../../../../../aptos/contracts/worker_peripherals/worker_common/tests/internal/worker_config_store_tests.move

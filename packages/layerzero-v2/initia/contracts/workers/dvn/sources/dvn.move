@@ -1,1 +1,0 @@
-../../../../../aptos/contracts/workers/dvn/sources/dvn.move

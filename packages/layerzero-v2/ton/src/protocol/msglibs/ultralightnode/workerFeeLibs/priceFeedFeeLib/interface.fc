@@ -1,1 +1,0 @@
-const int PriceFeedFeeLib::method_id::estimateFee = 11111;
