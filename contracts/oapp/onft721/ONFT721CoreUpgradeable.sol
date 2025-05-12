@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.22;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { OAppUpgradeable, Origin } from "../oapp/OAppUpgradeable.sol";
 import { OAppOptionsType3 } from "../oapp/libs/OAppOptionsType3.sol";
