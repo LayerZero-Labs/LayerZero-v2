@@ -138,7 +138,7 @@ contract CCIPDVNAdapter is DVNAdapterBase, IAny2EVMMessageReceiver, ICCIPDVNAdap
             receiver: _receiver,
             data: _data,
             tokenAmounts: new Client.EVMTokenAmount[](0), // Empty array indicating no tokens are being sent
-            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({ gasLimit: _gas, strict: false })),
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({ gasLimit: _gas })),
             feeToken: NATIVE_GAS_TOKEN_ADDRESS
         });
     }

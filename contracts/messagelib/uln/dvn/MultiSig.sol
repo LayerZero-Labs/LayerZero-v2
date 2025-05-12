@@ -101,7 +101,7 @@ abstract contract MultiSig {
         for (uint256 i = 0; i < quorum; i++) {
             // the quorum is guaranteed not to be zero in the constructor and setter
             bytes calldata signature = _signatures[i * 65:(i + 1) * 65];
-            (address currentSigner, ECDSA.RecoverError error) = ECDSA.tryRecover(messageDigest, signature);
+            (address currentSigner, ECDSA.RecoverError error, ) = ECDSA.tryRecover(messageDigest, signature);
 
             if (error != ECDSA.RecoverError.NoError) return (false, Errors.SignatureError);
             if (currentSigner <= lastSigner) return (false, Errors.DuplicatedSigner); // prevent duplicate signatures, the signers must be ordered to sign the digest

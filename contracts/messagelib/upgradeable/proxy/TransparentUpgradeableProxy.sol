@@ -34,14 +34,14 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
     /**
      * @dev The proxy caller is the current admin, and can't fallback to the proxy target.
      */
-    error AdminAccessDenied();
+    error ProxyDeniedAdminAccess();
 
     /**
      * @dev Initializes an upgradeable proxy managed by `_admin`, backed by the implementation at `_logic`, and
      * optionally initialized with `_data` as explained in {ERC1967Proxy-constructor}.
      */
     constructor(address _logic, address admin_, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
-        assert(ERC1967Utils._ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
+        assert(ERC1967Utils.ADMIN_SLOT == bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1));
         ERC1967Utils.changeAdmin(admin_);
     }
 
@@ -79,7 +79,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc`
      */
     function implementation() external ifAdmin returns (address implementation_) {
-        implementation_ = ERC1967Utils._implementation();
+        implementation_ = ERC1967Utils.getImplementation();
     }
 
     /**
@@ -99,7 +99,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgrade}.
      */
     function upgradeTo(address newImplementation) external ifAdmin {
-        ERC1967Utils.upgradeToAndCall(newImplementation, bytes(""), false);
+        ERC1967Utils.upgradeToAndCall(newImplementation, bytes(""));
     }
 
     /**
@@ -110,7 +110,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * NOTE: Only the admin can call this function. See {ProxyAdmin-upgradeAndCall}.
      */
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable ifAdmin {
-        ERC1967Utils.upgradeToAndCall(newImplementation, data, true);
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 
     /**
@@ -121,12 +121,29 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
     }
 
     /**
-     * @dev Makes sure the admin cannot access the fallback function. See {Proxy-_beforeFallback}.
+     * @dev Upgrade the implementation of the proxy. See {ERC1967Utils-upgradeToAndCall}.
+     *
+     * Requirements:
+     *
+     * - If `data` is empty, `msg.value` must be zero.
      */
-    function _beforeFallback() internal virtual override {
+    function _dispatchUpgradeToAndCall() private {
+        (address newImplementation, bytes memory data) = abi.decode(msg.data[4:], (address, bytes));
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
+    }
+
+    /**
+     * @dev If caller is the admin process the call internally, otherwise transparently fallback to the proxy behavior.
+     */
+    function _fallback() internal virtual override {
         if (msg.sender == ERC1967Utils.getAdmin()) {
-            revert AdminAccessDenied();
+            if (msg.sig != TransparentUpgradeableProxy.upgradeToAndCall.selector) {
+                revert ProxyDeniedAdminAccess();
+            } else {
+                _dispatchUpgradeToAndCall();
+            }
+        } else {
+            super._fallback();
         }
-        super._beforeFallback();
     }
 }

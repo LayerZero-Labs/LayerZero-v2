@@ -16,6 +16,8 @@ contract Treasury is Ownable, ILayerZeroTreasury {
 
     error LZ_Treasury_LzTokenNotEnabled();
 
+    constructor() Ownable(msg.sender) {}
+
     function getFee(
         address /*_sender*/,
         uint32 /*_eid*/,

@@ -45,7 +45,7 @@ contract PriceFeed is ILayerZeroPriceFeed, OwnableUpgradeable, Proxied {
     // ============================ Constructor ===================================
 
     function initialize(address _priceUpdater) public proxied initializer {
-        __Ownable_init();
+        __Ownable_init(_msgSender());
         priceUpdater[_priceUpdater] = true;
         PRICE_RATIO_DENOMINATOR = 1e20;
         ARBITRUM_COMPRESSION_PERCENT = 47;

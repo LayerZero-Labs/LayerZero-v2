@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import { ERC165, IERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 import { ILayerZeroEndpointV2, MessagingFee, Origin } from "../../../protocol/interfaces/ILayerZeroEndpointV2.sol";
 import { IMessageLib, MessageLibType, SetConfigParam } from "../../../protocol/interfaces/IMessageLib.sol";
@@ -64,7 +65,7 @@ contract ReadLib1002 is ISendLib, ERC165, ReadLibBase, MessageLibBase {
         address _endpoint,
         uint256 _treasuryGasLimit,
         uint256 _treasuryGasForFeeCap
-    ) MessageLibBase(_endpoint, ILayerZeroEndpointV2(_endpoint).eid()) {
+    ) MessageLibBase(_endpoint, ILayerZeroEndpointV2(_endpoint).eid()) Ownable(msg.sender) {
         treasuryGasLimit = _treasuryGasLimit;
         treasuryNativeFeeCap = _treasuryGasForFeeCap;
     }

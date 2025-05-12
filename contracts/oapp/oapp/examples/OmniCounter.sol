@@ -8,7 +8,13 @@ import { OmniCounterAbstract, MsgCodec } from "./OmniCounterAbstract.sol";
 
 contract OmniCounter is OmniCounterAbstract {
     // @dev Oz4 implementation
-    constructor(address _endpoint, address _delegate) OmniCounterAbstract(_endpoint, _delegate) {}
+    function initialize(
+        address _endpoint,
+        address _delegate
+    ) external initializer {
+        __Ownable_init(_delegate);
+        __OmniCounterAbstract_init(_endpoint, _delegate);
+    }
 
     // @dev Oz5 implementation
     //    constructor(address _endpoint, address _delegate) OmniCounterAbstract(_endpoint, _delegate) Ownable(_delegate) {}

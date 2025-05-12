@@ -16,17 +16,20 @@ contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
     constructor(address _endpoint, address _counter) PreCrimeUpgradeable(_endpoint, _counter) {}
 
     function buildSimulationResult() external view override returns (bytes memory) {
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimePeer[] memory preCrimePeers = $.preCrimePeers;
         address payable payableSimulator = payable(simulator);
         OmniCounter counter = OmniCounter(payableSimulator);
-        ChainCount[] memory chainCounts = new ChainCount[](PreCrimePeer.length);
-        for (uint256 i = 0; i < PreCrimePeer.length; i++) {
-            uint32 remoteEid = PreCrimePeer[i].eid;
+        uint256 length = preCrimePeers.length;
+        ChainCount[] memory chainCounts = new ChainCount[](length);
+        for (uint256 i = 0; i < length; i++) {
+            uint32 remoteEid = preCrimePeers[i].eid;
             chainCounts[i] = ChainCount(remoteEid, counter.inboundCount(remoteEid), counter.outboundCount(remoteEid));
         }
         return abi.encode(chainCounts);
     }
 
-    function _PreCrimeUpgradeable(
+    function _preCrime(
         InboundPacket[] memory /** _packets */,
         uint32[] memory _eids,
         bytes[] memory _simulations
@@ -69,8 +72,9 @@ contract OmniCounterPreCrimeUpgradeable is PreCrimeUpgradeable {
     function _getPreCrimePeers(
         InboundPacket[] memory _packets
     ) internal view override returns (PreCrimePeer[] memory peers) {
-        PreCrimePeer[] memory allPeers = PreCrimePeer;
-        PreCrimePeer[] memory peersTmp = new PreCrimePeer[](_packets.length);
+        PreCrimeStorage storage $ = _getPreCrimeStorage();
+        PreCrimePeer[] memory allPeers = $.preCrimePeers;
+        PreCrimePeer[] memory peersTmp = new PreCrimePeer[](allPeers.length);
 
         int256 cursor = -1;
         for (uint256 i = 0; i < _packets.length; i++) {

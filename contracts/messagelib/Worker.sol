@@ -143,21 +143,21 @@ abstract contract Worker is AccessControl, Pausable, IWorker {
     /// @dev overrides AccessControl to allow for counting of allowlistSize
     /// @param _role role to grant
     /// @param _account address to grant role to
-    function _grantRole(bytes32 _role, address _account) internal override {
+    function _grantRole(bytes32 _role, address _account) internal override returns (bool) {
         if (_role == ALLOWLIST && !hasRole(_role, _account)) {
             ++allowlistSize;
         }
-        super._grantRole(_role, _account);
+        return super._grantRole(_role, _account);
     }
 
     /// @dev overrides AccessControl to allow for counting of allowlistSize
     /// @param _role role to revoke
     /// @param _account address to revoke role from
-    function _revokeRole(bytes32 _role, address _account) internal override {
+    function _revokeRole(bytes32 _role, address _account) internal override returns (bool) {
         if (_role == ALLOWLIST && hasRole(_role, _account)) {
             --allowlistSize;
         }
-        super._revokeRole(_role, _account);
+        return super._revokeRole(_role, _account);
     }
 
     /// @dev overrides AccessControl to disable renouncing of roles

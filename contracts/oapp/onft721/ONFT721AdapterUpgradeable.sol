@@ -23,7 +23,7 @@ abstract contract ONFT721AdapterUpgradeable is ONFT721CoreUpgradeable {
 
     function _getONFT721AdapterStorage() internal pure returns (ONFT721AdapterStorage storage ds) {
         assembly {
-            ds.slot := position
+            ds.slot := ONFT721AdapterStorageLocation
         }
     }
 

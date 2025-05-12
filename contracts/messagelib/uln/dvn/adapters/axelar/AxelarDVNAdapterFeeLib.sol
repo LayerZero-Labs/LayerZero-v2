@@ -28,7 +28,7 @@ contract AxelarDVNAdapterFeeLib is OwnableUpgradeable, Proxied, IAxelarDVNAdapte
         address _dvn,
         uint16 _nativeGasFeeMultiplierBps
     ) external proxied initializer {
-        __Ownable_init();
+        __Ownable_init(_msgSender());
         gasService = IAxelarGasService(_gasService);
         dvn = IAxelarDVNAdapter(_dvn);
         nativeGasFeeMultiplierBps = _nativeGasFeeMultiplierBps;

@@ -45,7 +45,7 @@ contract SimpleMessageLib is Ownable, ERC165 {
         _;
     }
 
-    constructor(address _endpoint, address _treasury) {
+    constructor(address _endpoint, address _treasury) Ownable(_msgSender()) {
         endpoint = _endpoint;
         treasury = _treasury;
         localEid = ILayerZeroEndpointV2(_endpoint).eid();

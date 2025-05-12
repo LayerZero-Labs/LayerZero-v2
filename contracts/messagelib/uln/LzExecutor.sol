@@ -50,7 +50,7 @@ contract LzExecutor is OwnableUpgradeable, EndpointV2ViewUpgradeable, Proxied {
         address _receiveUln302View,
         address _endpoint
     ) external proxied initializer {
-        __Ownable_init();
+        __Ownable_init(_msgSender());
         __EndpointV2View_init(_endpoint);
 
         receiveUln302 = _receiveUln302;

@@ -33,7 +33,7 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
     // keccak256(abi.encode(uint256(keccak256("primefi.layerzero.storage.lzreadcounter")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 internal constant LzReadCounterStorageLocation = 0xff9d5fe0e5d16df304a8a1e0adecf6166c1a70835ffdf079de6b44823c9a8900;
 
-    function _getStorage() internal pure returns (LzReadCounterStorage storage ds) {
+    function _getLzReadCounterStorage() internal pure returns (LzReadCounterStorage storage ds) {
         assembly {
             ds.slot := LzReadCounterStorageLocation
         }
@@ -46,8 +46,17 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
 
     uint32 public immutable eid;
 
-    constructor(address _endpoint) OAppReadUpgradeable(_endpoint, msg.sender) {
+    constructor(address _endpoint) {
         eid = ILayerZeroEndpointV2(_endpoint).eid();
+    }
+
+    function initialize(address _endpoint, address _delegate) external initializer {
+        __OAppRead_init(_endpoint, _delegate);
+    }
+
+    function count() external view returns (uint256) {
+        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
+        return $.count;
     }
 
     // -------------------------------
@@ -60,13 +69,13 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
         bytes calldata _options
     ) external payable returns (MessagingReceipt memory receipt) {
         bytes memory cmd = buildCmd(_appLabel, _requests, _computeSetting);
-        LzReadCounterStorage storage $ = _getStorage();
+        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
         $.count += 1; // increase the count, for pin block testing
         return _lzSend(_channelId, cmd, _options, MessagingFee(msg.value, 0), payable(msg.sender));
     }
 
     function clearCount() external {
-        LzReadCounterStorage storage $ = _getStorage();
+        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
         $.count = 0;
     }
 
@@ -121,7 +130,7 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
 
     function readCount(uint256 countAddition) external view returns (uint256) {
         require(countAddition != 9, "LzReadCounter: invalid count addition"); // This is only for testing
-        LzReadCounterStorage storage $ = _getStorage();
+        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
         return $.count + countAddition;
     }
 
@@ -157,17 +166,16 @@ contract LzReadCounterUpgradeable is OAppReadUpgradeable, IOAppComputer {
     ) internal override {
         require(_message.length % 32 == 0, "LzReadCounter: invalid message length");
         uint256 total = 0;
-        LzReadCounterStorage storage $ = _getStorage();
-        uint256 count = $.count;
+        LzReadCounterStorage storage $ = _getLzReadCounterStorage();
         // loop read bytes32 of the message and decode it to uint256 then add it to the total
         for (uint256 i = 0; i < _message.length; i += 32) {
             total += abi.decode(_message[i:i + 32], (uint256));
         }
         // reset count if it's too large
-        if (count >= 2 ** 128) {
-            count = 0;
+        if ($.count >= 2 ** 128) {
+            $.count = 0;
         }
-        count += total;
+        $.count += total;
     }
 
     // be able to receive ether

@@ -43,6 +43,16 @@ abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable, OwnableUpgradeabl
         $.endpoint.setDelegate(_delegate);
     }
 
+    function peers(uint32 _eid) external view returns (bytes32) {
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.peers[_eid];
+    }
+
+    function endpoint() external view returns (ILayerZeroEndpointV2) {
+        OAppCoreStorage storage $ = _getOAppCoreStorage();
+        return $.endpoint;
+    }
+
     /**
      * @notice Sets the peer address (OApp instance) for a corresponding endpoint.
      * @param _eid The endpoint ID.

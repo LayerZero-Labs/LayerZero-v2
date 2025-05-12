@@ -8,7 +8,9 @@ import { OAppUpgradeable } from "./OAppUpgradeable.sol";
 
 abstract contract OAppReadUpgradeable is OAppUpgradeable {
 
-    constructor(address _endpoint, address _delegate) OAppUpgradeable(_endpoint, _delegate) {}
+    function __OAppRead_init(address _endpoint, address _delegate) internal onlyInitializing {
+        __OApp_init(_endpoint, _delegate);
+    }
 
     // -------------------------------
     // Only Owner

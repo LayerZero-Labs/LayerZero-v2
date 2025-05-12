@@ -67,7 +67,7 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
 
     function __OmniCounterAbstract_init(address _endpoint, address _delegate) internal onlyInitializing {
         __OApp_init(_endpoint, _delegate);
-        __OAppPreCrimeSimulator_init(_endpoint, _delegate);
+        __OAppPreCrimeSimulator_init();
         __OmniCounterAbstract_init_unchained(_endpoint);
     }
 
@@ -81,6 +81,36 @@ abstract contract OmniCounterAbstract is ILayerZeroComposer, OAppUpgradeable, OA
         OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
         require(msg.sender == $.admin, "only admin");
         _;
+    }
+
+    function inboundCount(uint32 _srcEid) external view returns (uint256) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.inboundCount[_srcEid];
+    }
+
+    function outboundCount(uint32 _dstEid) external view returns (uint256) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.outboundCount[_dstEid];
+    }
+
+    function count() external view returns (uint256) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.count;
+    }
+
+    function composedCount() external view returns (uint256) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.composedCount;
+    }
+
+    function admin() external view returns (address) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.admin;
+    }
+
+    function eid() external view returns (uint32) {
+        OmniCounterAbstractStorage storage $ = _getOmniCounterAbstractStorage();
+        return $.eid;
     }
 
     // -------------------------------
