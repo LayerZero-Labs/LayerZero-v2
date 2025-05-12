@@ -11,7 +11,7 @@
     "test": "$npm_execpath workspaces foreach --all run test"
   },
   "devDependencies": {
-    "@axelar-network/axelar-gmp-sdk-solidity": "^6.0.6",
+    "@axelar-network/axelar-gmp-sdk-solidity": "^5.6.3",
     "@chainlink/contracts-ccip": "^1.5.0",
     "@layerzerolabs/lz-evm-v1-0.7": "^3.0.93",
     "@layerzerolabs/prettier-config-next": "^2.0.1",

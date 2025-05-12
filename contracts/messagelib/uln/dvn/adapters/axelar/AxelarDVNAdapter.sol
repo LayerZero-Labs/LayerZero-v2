@@ -110,7 +110,7 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
             msg.sender
         );
 
-        gateway().callContract(config.chainName, config.peer, payload);
+        gateway.callContract(config.chainName, config.peer, payload);
     }
 
     // ========================= View =========================
@@ -132,7 +132,6 @@ contract AxelarDVNAdapter is DVNAdapterBase, AxelarExecutable, IAxelarDVNAdapter
 
     // ========================= Internal =========================
     function _execute(
-        bytes32 commandId,
         string calldata _sourceChain,
         string calldata _sourceAddress,
         bytes calldata _payload
