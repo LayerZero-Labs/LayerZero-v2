@@ -17,7 +17,7 @@ import { ONFTComposeMsgCodec } from "../libs/ONFTComposeMsgCodec.sol";
  * @title ONFT721Core
  * @dev Abstract contract for an ONFT721 token.
  */
-abstract contract ONFT721CoreUpgradeable is IONFT721Upgradeable, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable, OAppOptionsType3 {
+abstract contract ONFT721CoreUpgradeable is IONFT721Upgradeable, OwnableUpgradeable, OAppUpgradeable, OAppPreCrimeSimulatorUpgradeable, OAppOptionsType3 {
     using ONFT721MsgCodec for bytes;
     using ONFT721MsgCodec for bytes32;
 

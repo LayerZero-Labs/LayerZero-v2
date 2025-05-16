@@ -39,8 +39,8 @@ abstract contract ONFT721Upgradeable is ONFT721CoreUpgradeable, ERC721Upgradeabl
         address _lzEndpoint,
         address _delegate
     ) internal onlyInitializing {
-        __ERC721_init(_name, _symbol);
         __ONFT721Core_init(_lzEndpoint, _delegate);
+        __ERC721_init(_name, _symbol);
     }
 
     /**
