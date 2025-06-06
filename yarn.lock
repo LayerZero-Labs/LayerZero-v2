@@ -1442,6 +1442,9 @@ __metadata:
   dependencies:
     "@layerzerolabs/prettier-config-next": "npm:^2.0.1"
     "@layerzerolabs/solhint-config": "npm:^2.0.1"
+    "@openzeppelin/contracts": "npm:4.8.1"
+    "@openzeppelin/contracts-upgradeable": "npm:4.8.1"
+    hardhat-deploy: "npm:^0.11.44"
     prettier: "npm:^3.1.0"
     rimraf: "npm:^5.0.5"
     solhint: "npm:^4.0.0"
@@ -1927,6 +1930,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@openzeppelin/contracts-upgradeable@npm:4.8.1":
+  version: 4.8.1
+  resolution: "@openzeppelin/contracts-upgradeable@npm:4.8.1"
+  checksum: 8376cd024ea80cc2e81393b312bbf13b75812c1a0c1d5d9836b30182b167008cbbbb9f748ce64799f4a441d5ddf7a9cf12a3c25da793e7055c563235a392cafd
+  languageName: node
+  linkType: hard
+
 "@openzeppelin/contracts-upgradeable@npm:^4.8.1":
   version: 4.9.5
   resolution: "@openzeppelin/contracts-upgradeable@npm:4.9.5"
@@ -1938,6 +1948,13 @@ __metadata:
   version: 3.4.2
   resolution: "@openzeppelin/contracts@npm:3.4.2"
   checksum: e803e322bd111565e2de742c62f1a598c7c7dd7385c1c0fe3c06e2b4913e599024ad1d32e2693f199f5230af4d9b0eeefb389f32740006312895b962a4d937d4
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts@npm:4.8.1":
+  version: 4.8.1
+  resolution: "@openzeppelin/contracts@npm:4.8.1"
+  checksum: 6bc32bc4768af2fde4d4a63b59a33983ef79be2d13cb94cde7a5ee1a5e7509fcebc1bfdca21789fb019997a19e0bdf7fb73ebb24d2d4221a797c3d40952ce83d
   languageName: node
   linkType: hard
 

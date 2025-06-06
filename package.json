@@ -22,6 +22,9 @@
   "devDependencies": {
     "@layerzerolabs/prettier-config-next": "^2.0.1",
     "@layerzerolabs/solhint-config": "^2.0.1",
+    "@openzeppelin/contracts": "4.8.1",
+    "@openzeppelin/contracts-upgradeable": "4.8.1",
+    "hardhat-deploy": "^0.11.44",
     "prettier": "^3.1.0",
     "rimraf": "^5.0.5",
     "solhint": "^4.0.0"
