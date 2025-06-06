@@ -1,0 +1,26 @@
+[profile.default]
+auto_detect_solc = true
+verbosity = 3
+src = "packages/layerzero-v2/evm/protocol/contracts"
+test = "exploit-tests/solidity"
+out = "out"
+cache_path = "cache"
+optimizer = true
+optimizer_runs = 20000
+
+allow_paths = [
+    ".yarn/unplugged",
+    "node_modules"
+]
+
+libs = [
+    'lib'
+]
+
+remappings = [
+    '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
+    '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
+    'solidity-bytes-utils/=node_modules/solidity-bytes-utils/',
+    'hardhat-deploy/=node_modules/hardhat-deploy/',
+    '@layerzerolabs/lz-evm-protocol-v2/=packages/layerzero-v2/evm/protocol/contracts/'
+]
