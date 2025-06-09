@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub mod endpoint_cpi;
+pub mod lz_receive_v2;
 pub mod options;
 
 pub use endpoint;
@@ -26,3 +27,11 @@ pub struct LzComposeParams {
     pub message: Vec<u8>,
     pub extra_data: Vec<u8>,
 }
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Invalid address lookup table data")]
+    InvalidAddressLookupTable,
+}
+
+pub type AltIndex = (u8, u8); // (alt_index, address_index_within_alt)
