@@ -1,12 +1,14 @@
 use anchor_lang::prelude::*;
 
+pub mod common;
 pub mod endpoint_cpi;
-pub mod lz_receive_v2;
+pub mod lz_receive_types_v2;
 pub mod options;
 
 pub use endpoint;
 
 pub const LZ_RECEIVE_TYPES_SEED: &[u8] = b"LzReceiveTypes";
+pub const LZ_COMPOSE_TYPES_SEED: &[u8] = b"LzComposeTypes";
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct LzReceiveParams {
@@ -33,5 +35,3 @@ pub enum ErrorCode {
     #[msg("Invalid address lookup table data")]
     InvalidAddressLookupTable,
 }
-
-pub type AltIndex = (u8, u8); // (alt_index, address_index_within_alt)
