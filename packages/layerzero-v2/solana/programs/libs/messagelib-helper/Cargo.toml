@@ -9,7 +9,7 @@ default = []
 idl-build = ["messagelib-interface/idl-build"]
 
 [dependencies]
-anchor-lang = "0.29.0"
+anchor-lang = "0.31.0"
 endpoint = { path = "../../programs/endpoint", features = ["cpi"] }
 messagelib-interface = { path = "../../programs/messagelib-interface" }
 utils = { path = "../utils" }

@@ -7,5 +7,5 @@ edition = "2021"
 idl-build = ["anchor-lang/idl-build", 'endpoint/idl-build']
 
 [dependencies]
-anchor-lang = "0.29.0"
-endpoint = { path = "../../programs/endpoint", features = ["cpi"]}
+anchor-lang = "0.31.0"
+endpoint = { path = "../../programs/endpoint", features = ["cpi"] }
