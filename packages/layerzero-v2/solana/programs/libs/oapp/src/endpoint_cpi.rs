@@ -2,7 +2,7 @@ use anchor_lang::{
     prelude::*,
     solana_program::{keccak::hash, system_program::ID as SYSTEM_ID},
 };
-use endpoint::{
+use endpoint_interface::{
     self,
     cpi::accounts::{
         Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate, Skip,
@@ -28,7 +28,7 @@ pub fn register_oapp(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = RegisterOApp::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::register_oapp(cpi_ctx.with_signer(&[&seeds]), params)
+    endpoint_interface::cpi::register_oapp(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn set_delegate(
@@ -42,7 +42,7 @@ pub fn set_delegate(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = SetDelegate::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::set_delegate(cpi_ctx.with_signer(&[&seeds]), params)
+    endpoint_interface::cpi::set_delegate(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn send(
@@ -59,7 +59,7 @@ pub fn send(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = Send::construct_context(endpoint_program, accounts)?;
-    let rtn = endpoint::cpi::send(cpi_ctx.with_signer(&[&seeds]), params)?;
+    let rtn = endpoint_interface::cpi::send(cpi_ctx.with_signer(&[&seeds]), params)?;
     Ok(rtn.get())
 }
 
@@ -69,7 +69,7 @@ pub fn quote(
     params: QuoteParams,
 ) -> Result<MessagingFee> {
     let cpi_ctx = Quote::construct_context(endpoint_program, accounts)?;
-    let result = endpoint::cpi::quote(cpi_ctx, params)?;
+    let result = endpoint_interface::cpi::quote(cpi_ctx, params)?;
     Ok(result.get())
 }
 
@@ -84,7 +84,7 @@ pub fn clear(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = Clear::construct_context(endpoint_program, accounts)?;
-    let result = endpoint::cpi::clear(cpi_ctx.with_signer(&[&seeds]), params)?;
+    let result = endpoint_interface::cpi::clear(cpi_ctx.with_signer(&[&seeds]), params)?;
     Ok(result.get())
 }
 
@@ -99,7 +99,7 @@ pub fn send_compose(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = SendCompose::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::send_compose(cpi_ctx.with_signer(&[&seeds]), params)
+    endpoint_interface::cpi::send_compose(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn clear_compose(
@@ -113,7 +113,7 @@ pub fn clear_compose(
         return Err(ErrorCode::ConstraintAddress.into());
     }
     let cpi_ctx = ClearCompose::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::clear_compose(cpi_ctx.with_signer(&[&seeds]), params)
+    endpoint_interface::cpi::clear_compose(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn skip_nonce(
@@ -123,7 +123,7 @@ pub fn skip_nonce(
     params: SkipParams,
 ) -> Result<()> {
     let cpi_ctx = Skip::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::skip(cpi_ctx.with_signer(&[&seeds]), params)
+    endpoint_interface::cpi::skip(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn get_accounts_for_clear(

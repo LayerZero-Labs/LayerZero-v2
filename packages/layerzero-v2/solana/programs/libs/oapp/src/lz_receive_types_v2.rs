@@ -4,7 +4,7 @@ use anchor_lang::{
     prelude::*,
     solana_program::{keccak::hash, system_program::ID as SYSTEM_ID},
 };
-use endpoint::{
+use endpoint_interface::{
     COMPOSED_MESSAGE_HASH_SEED, ENDPOINT_SEED, NONCE_SEED, OAPP_SEED, PAYLOAD_HASH_SEED,
 };
 

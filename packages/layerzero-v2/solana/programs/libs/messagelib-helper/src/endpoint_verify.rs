@@ -1,6 +1,6 @@
 use crate::*;
 use anchor_lang::prelude::*;
-use endpoint::{cpi::accounts::Verify, instructions::VerifyParams, ConstructCPIContext};
+use endpoint_interface::{cpi::accounts::Verify, instructions::VerifyParams, ConstructCPIContext};
 use packet_v1_codec;
 
 pub fn verify(
@@ -23,5 +23,5 @@ pub fn verify(
     };
 
     let cpi_ctx = Verify::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::verify(cpi_ctx.with_signer(&[seeds]), verify_params)
+    endpoint_interface::cpi::verify(cpi_ctx.with_signer(&[seeds]), verify_params)
 }

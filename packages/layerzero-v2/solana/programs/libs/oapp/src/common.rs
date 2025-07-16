@@ -20,7 +20,7 @@ pub struct ExecutionContextV1 {
 impl anchor_lang::Discriminator for ExecutionContextV1 {
     // let discriminator_preimage = "account:ExecutionContextV1";
     // let hash = anchor_lang::solana_program::hash::hash(discriminator_preimage.as_bytes());
-    const DISCRIMINATOR: [u8; 8] = [132, 92, 176, 59, 141, 186, 141, 137];
+    const DISCRIMINATOR: &'static [u8] = &[132, 92, 176, 59, 141, 186, 141, 137];
 }
 
 impl anchor_lang::AccountDeserialize for ExecutionContextV1 {
@@ -28,8 +28,7 @@ impl anchor_lang::AccountDeserialize for ExecutionContextV1 {
         if buf.len() < Self::DISCRIMINATOR.len() {
             return Err(anchor_lang::error::ErrorCode::AccountDiscriminatorNotFound.into());
         }
-        let given_disc = &buf[..8];
-        if &Self::DISCRIMINATOR != given_disc {
+        if &Self::DISCRIMINATOR != buf {
             return Err(anchor_lang::error!(
                 anchor_lang::error::ErrorCode::AccountDiscriminatorMismatch
             )
