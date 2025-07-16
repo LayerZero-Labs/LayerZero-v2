@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 pub mod common;
 pub mod endpoint_cpi;
+pub mod lz_compose_types_v2;
 pub mod lz_receive_types_v2;
 pub mod options;
 

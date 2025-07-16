@@ -121,7 +121,7 @@ pub fn get_accounts_for_clear(
         AccountMetaRef { pubkey: endpoint_program.into(), is_writable: false },
         AccountMetaRef { pubkey: (*receiver).into(), is_writable: false },
         AccountMetaRef { pubkey: oapp_registry_account.into(), is_writable: false },
-        AccountMetaRef { pubkey: nonce_account.into(), is_writable: true },
+        AccountMetaRef { pubkey: nonce_account.into(), is_writable: false },
         AccountMetaRef { pubkey: payload_hash_account.into(), is_writable: true },
         AccountMetaRef { pubkey: endpoint_settings_account.into(), is_writable: true },
         AccountMetaRef { pubkey: event_authority_account.into(), is_writable: false },
