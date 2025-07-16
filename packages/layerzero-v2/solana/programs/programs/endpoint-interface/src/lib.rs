@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 use instructions::*;
 pub use messagelib_interface::{InitConfigParams, MessagingFee, MessagingReceipt, SetConfigParams};
 
-declare_id!("FGNZea2SzeNM8pdugux1qnrMwRzdNb4McX25FtKWe72y");
+declare_id!("76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6");
 
 pub const ENDPOINT_SEED: &[u8] = b"Endpoint";
 pub const MESSAGE_LIB_SEED: &[u8] = b"MessageLib";
