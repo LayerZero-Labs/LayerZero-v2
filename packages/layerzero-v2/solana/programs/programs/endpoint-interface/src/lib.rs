@@ -22,6 +22,18 @@ pub const DEFAULT_MESSAGE_LIB: Pubkey = Pubkey::new_from_array([0u8; 32]);
 pub mod endpoint_interface {
     use super::*;
 
+    pub fn verify(mut ctx: Context<Verify>, params: VerifyParams) -> Result<()> {
+        Verify::apply(&mut ctx, &params)
+    }
+
+    pub fn lz_compose_alert(mut ctx: Context<LzComposeAlert>, params: LzComposeAlertParams) -> Result<()> {
+        LzComposeAlert::apply(&mut ctx, &params)
+    }
+
+    pub fn lz_receive_alert(mut ctx: Context<LzReceiveAlert>, params: LzReceiveAlertParams) -> Result<()> {
+        LzReceiveAlert::apply(&mut ctx, &params)
+    }
+
     /// --------------------------- OApp Instructions ---------------------------
     pub fn burn(mut ctx: Context<Burn>, params: BurnParams) -> Result<()> {
         Burn::apply(&mut ctx, &params)
