@@ -1,8 +1,5 @@
 [workspace]
-members = [
-    "programs/*",
-    "libs/*",
-]
+members = ["programs/*", "libs/*"]
 resolver = "2"
 
 [profile.release]
@@ -21,3 +18,18 @@ inherits = "release"
 [profile.fast.build-override]
 opt-level = 0
 codegen-units = 20
+
+
+[workspace.dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
+solana-helper = "0.1.0"
+oapp = { path = "libs/oapp" }
+cpi-helper = { path = "libs/cpi-helper" }
+messagelib-helper = { path = "libs/messagelib-helper" }
+utils = { path = "libs/utils" }
+endpoint-interface = { path = "programs/endpoint-interface" }
+messagelib-interface = { path = "programs/messagelib-interface" }
+worker-interface = { path = "programs/worker-interface" }
+uln = { path = "programs/uln" }
+pricefeed = { path = "programs/pricefeed" }

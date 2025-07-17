@@ -1,6 +1,6 @@
 [toolchain]
-anchor_version = "0.29.0"
-solana_version = "1.17.31"
+anchor_version = "0.31.1"
+solana_version = "2.2.20"
 
 [features]
 seeds = false
@@ -10,6 +10,7 @@ skip-lint = false
 blocked_messagelib = "2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB"
 dvn = "HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW"
 endpoint = "76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6"
+endpoint_interface = "FGNZea2SzeNM8pdugux1qnrMwRzdNb4McX25FtKWe72y"
 executor = "6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn"
 worker_interface = "2iENutMTfTfxdFEjEQSbFCBstZqakXFZQCLZLLk4Ti58"
 messagelib_interface = "J8tfaWEsewRGacgvAeQsXLTRTuUQz5FGyUuqDW2TpiTJ"

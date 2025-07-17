@@ -17,9 +17,9 @@ default = []
 idl-build = ["anchor-lang/idl-build", "messagelib-interface/idl-build"]
 
 [dependencies]
-anchor-lang = { version = "0.29.0", features = ["event-cpi"] }
-solana-program = "=1.17.31"
-solana-helper = "0.1.0"
-cpi-helper = { path = "../../libs/cpi-helper" }
-messagelib-interface = { path = "../messagelib-interface", features = ["cpi"] }
-utils = { path = "../../libs/utils" }
+anchor-lang = { workspace = true, features = ["event-cpi"] }
+# solana-program = "=2.3.0"
+solana-helper = { workspace = true }
+cpi-helper = { workspace = true }
+messagelib-interface = { workspace = true, features = ["cpi"] }
+utils = { workspace = true }

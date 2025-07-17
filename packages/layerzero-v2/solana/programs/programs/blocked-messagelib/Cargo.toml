@@ -16,6 +16,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.29.0"
-solana-helper = "0.1.0"
-messagelib-helper = { path = "../../libs/messagelib-helper" }
+anchor-lang = { workspace = true }
+solana-helper = { workspace = true }
+messagelib-helper = { workspace = true }

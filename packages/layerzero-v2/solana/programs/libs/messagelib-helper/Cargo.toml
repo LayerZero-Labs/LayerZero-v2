@@ -9,7 +9,7 @@ default = []
 idl-build = ["messagelib-interface/idl-build"]
 
 [dependencies]
-anchor-lang = "0.31.1"
-endpoint-interface = { path = "../../programs/endpoint-interface" }
-messagelib-interface = { path = "../../programs/messagelib-interface" }
-utils = { path = "../utils" }
+anchor-lang = { workspace = true }
+endpoint-interface = { workspace = true }
+messagelib-interface = { workspace = true }
+utils = { workspace = true }

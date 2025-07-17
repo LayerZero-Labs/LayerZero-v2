@@ -17,13 +17,13 @@ default = []
 idl-build = ["anchor-lang/idl-build", "uln/idl-build"]
 
 [dependencies]
-anchor-lang = { version = "0.29.0", features = ["event-cpi"] }
-worker-interface = { path = "../worker-interface", features = ["no-entrypoint"] }
-pricefeed = { path = "../pricefeed", features = ["cpi"] }
-utils = { path = "../../libs/utils" }
-messagelib-helper = { path = "../../libs/messagelib-helper" }
-uln = { path = "../uln", features = ["no-entrypoint"] }
-solana-helper = "0.1.0"
+anchor-lang = { workspace = true, features = ["event-cpi"] }
+worker-interface = { workspace = true, features = ["no-entrypoint"] }
+pricefeed = { workspace = true, features = ["cpi"] }
+utils = { workspace = true }
+messagelib-helper = { workspace = true }
+uln = { workspace = true, features = ["no-entrypoint"] }
+solana-helper = { workspace = true }
 
 [dev-dependencies]
-secp256k1 = { version = "0.29.0", features = ["rand", "recovery"] }
+secp256k1 = { version = "0.31.1", features = ["rand", "recovery"] }
