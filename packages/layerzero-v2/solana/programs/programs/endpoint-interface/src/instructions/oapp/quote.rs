@@ -8,12 +8,41 @@ use cpi_helper::CpiContext;
 pub struct Quote<'info> {
     /// CHECK: assert this program in assert_send_library()
     pub send_library_program: UncheckedAccount<'info>,
-    pub send_library_config: UncheckedAccount<'info>,
-    pub default_send_library_config: UncheckedAccount<'info>,
+    #[account(
+        seeds = [SEND_LIBRARY_CONFIG_SEED, &params.sender.to_bytes(), &params.dst_eid.to_be_bytes()],
+        bump = send_library_config.bump
+    )]
+    pub send_library_config: Account<'info, SendLibraryConfig>,
+    #[account(
+        seeds = [SEND_LIBRARY_CONFIG_SEED, &params.dst_eid.to_be_bytes()],
+        bump = default_send_library_config.bump
+    )]
+    pub default_send_library_config: Account<'info, SendLibraryConfig>,
     /// The PDA signer to the send library when the endpoint calls the send library.
-    pub send_library_info: UncheckedAccount<'info>,
-    pub endpoint: UncheckedAccount<'info>,
-    pub nonce: UncheckedAccount<'info>,
+    #[account(
+        seeds = [
+            MESSAGE_LIB_SEED,
+            &get_send_library(
+                &send_library_config,
+                &default_send_library_config
+            ).key().to_bytes()
+        ],
+        bump = send_library_info.bump,
+        constraint = !send_library_info.to_account_info().is_writable @LayerZeroError::ReadOnlyAccount
+    )]
+    pub send_library_info: Account<'info, MessageLibInfo>,
+    #[account(seeds = [ENDPOINT_SEED], bump = endpoint.bump)]
+    pub endpoint: Account<'info, EndpointSettings>,
+    #[account(
+        seeds = [
+            NONCE_SEED,
+            &params.sender.to_bytes(),
+            &params.dst_eid.to_be_bytes(),
+            &params.receiver[..]
+        ],
+        bump = nonce.bump
+    )]
+    pub nonce: Account<'info, Nonce>,
 }
 
 impl Quote<'_> {

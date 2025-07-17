@@ -8,12 +8,6 @@ pub struct LzReceiveAlert<'info> {
     pub executor: Signer<'info>,
 }
 
-impl LzReceiveAlert<'_> {
-    pub fn apply(_ctx: &mut Context<LzReceiveAlert>, _params: &LzReceiveAlertParams) -> Result<()> {
-        Ok(())
-    }
-}
-
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct LzReceiveAlertParams {
     pub receiver: Pubkey,

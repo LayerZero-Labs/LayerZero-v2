@@ -7,19 +7,53 @@ use cpi_helper::CpiContext;
 pub struct Skip<'info> {
     /// The PDA of the OApp or delegate
     pub signer: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub nonce: UncheckedAccount<'info>,
-    pub pending_inbound_nonce: UncheckedAccount<'info>,
+    #[account(
+        seeds = [OAPP_SEED, params.receiver.as_ref()],
+        bump = oapp_registry.bump,
+        constraint = signer.key() == params.receiver
+            || signer.key() == oapp_registry.delegate @LayerZeroError::Unauthorized
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        mut,
+        seeds = [
+            NONCE_SEED,
+            params.receiver.as_ref(),
+            &params.src_eid.to_be_bytes(),
+            &params.sender[..]
+        ],
+        bump = nonce.bump,
+        constraint = params.nonce == nonce.inbound_nonce + 1 @LayerZeroError::InvalidNonce
+    )]
+    pub nonce: Account<'info, Nonce>,
+    #[account(
+        mut,
+        seeds = [
+            PENDING_NONCE_SEED,
+            params.receiver.as_ref(),
+            &params.src_eid.to_be_bytes(),
+            &params.sender[..]
+        ],
+        bump = pending_inbound_nonce.bump
+    )]
+    pub pending_inbound_nonce: Account<'info, PendingInboundNonce>,
     /// the payload hash needs to be initialized before it can be skipped and closed, in order to prevent someone
     /// from skipping a payload hash that has been initialized and can be re-verified and executed after skipping
-    pub payload_hash: UncheckedAccount<'info>,
-    pub endpoint: UncheckedAccount<'info>,
-}
-
-impl Skip<'_> {
-    pub fn apply(_ctx: &mut Context<Skip>, _params: &SkipParams) -> Result<()> {
-        Ok(())
-    }
+    #[account(
+        mut,
+        seeds = [
+            PAYLOAD_HASH_SEED,
+            &params.receiver.to_bytes(),
+            &params.src_eid.to_be_bytes(),
+            &params.sender[..],
+            &params.nonce.to_be_bytes()
+        ],
+        bump = payload_hash.bump,
+        close = endpoint
+    )]
+    pub payload_hash: Account<'info, PayloadHash>,
+    #[account(mut, seeds = [ENDPOINT_SEED], bump = endpoint.bump)]
+    pub endpoint: Account<'info, EndpointSettings>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

@@ -7,18 +7,21 @@ pub struct InitReceiveLibrary<'info> {
     /// only the delegate can initialize the send_library_config
     #[account(mut)]
     pub delegate: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub receive_library_config: UncheckedAccount<'info>,
+    #[account(
+        seeds = [OAPP_SEED, params.receiver.as_ref()],
+        bump = oapp_registry.bump,
+        has_one = delegate
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        init,
+        payer = delegate,
+        space = 8 + ReceiveLibraryConfig::INIT_SPACE,
+        seeds = [RECEIVE_LIBRARY_CONFIG_SEED, &params.receiver.to_bytes(), &params.eid.to_be_bytes()],
+        bump
+    )]
+    pub receive_library_config: Account<'info, ReceiveLibraryConfig>,
     pub system_program: Program<'info, System>,
-}
-
-impl InitReceiveLibrary<'_> {
-    pub fn apply(
-        ctx: &mut Context<InitReceiveLibrary>,
-        _params: &InitReceiveLibraryParams,
-    ) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

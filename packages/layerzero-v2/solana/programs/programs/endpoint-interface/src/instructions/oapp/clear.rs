@@ -9,18 +9,42 @@ use cpi_helper::CpiContext;
 pub struct Clear<'info> {
     /// The PDA of the OApp or delegate
     pub signer: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub nonce: UncheckedAccount<'info>,
+    #[account(
+        seeds = [OAPP_SEED, params.receiver.as_ref()],
+        bump = oapp_registry.bump,
+        constraint = signer.key() == params.receiver
+            || signer.key() == oapp_registry.delegate @LayerZeroError::Unauthorized
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        seeds = [
+            NONCE_SEED,
+            params.receiver.as_ref(),
+            &params.src_eid.to_be_bytes(),
+            &params.sender[..]
+        ],
+        bump = nonce.bump,
+        constraint = params.nonce <= nonce.inbound_nonce @LayerZeroError::InvalidNonce
+    )]
+    pub nonce: Account<'info, Nonce>,
     /// close the account and return the lamports to endpoint settings account
-    pub payload_hash: UncheckedAccount<'info>,
-    pub endpoint: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [
+            PAYLOAD_HASH_SEED,
+            params.receiver.as_ref(),
+            &params.src_eid.to_be_bytes(),
+            &params.sender[..],
+            &params.nonce.to_be_bytes()
+        ],
+        bump = payload_hash.bump,
+        close = endpoint
+    )]
+    pub payload_hash: Account<'info, PayloadHash>,
+    #[account(mut, seeds = [ENDPOINT_SEED], bump = endpoint.bump)]
+    pub endpoint: Account<'info, EndpointSettings>,
 }
 
-impl Clear<'_> {
-    pub fn apply(ctx: &mut Context<Clear>, params: &ClearParams) -> Result<[u8; 32]> {
-        Ok([0u8; 32])
-    }
-}
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct ClearParams {

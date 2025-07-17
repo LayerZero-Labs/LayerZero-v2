@@ -1,4 +1,5 @@
 use crate::*;
+use anchor_lang::solana_program::keccak::hash;
 use cpi_helper::CpiContext;
 
 #[event_cpi]
@@ -8,15 +9,24 @@ pub struct SendCompose<'info> {
     pub from: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    pub compose_message: UncheckedAccount<'info>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + ComposeMessageState::INIT_SPACE,
+        seeds = [
+            COMPOSED_MESSAGE_HASH_SEED,
+            from.key.as_ref(),
+            &params.to.to_bytes(),
+            &params.guid[..],
+            &params.index.to_be_bytes(),
+            &hash(&params.message).to_bytes()
+        ],
+        bump
+    )]
+    pub compose_message: Account<'info, ComposeMessageState>,
     pub system_program: Program<'info, System>,
 }
 
-impl SendCompose<'_> {
-    pub fn apply(_ctx: &mut Context<SendCompose>, _params: &SendComposeParams) -> Result<()> {
-        Ok(())
-    }
-}
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct SendComposeParams {

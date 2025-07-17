@@ -7,16 +7,39 @@ pub struct InitNonce<'info> {
     /// only the delegate can initialize the nonce accounts
     #[account(mut)]
     pub delegate: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub nonce: UncheckedAccount<'info>,
-    pub pending_inbound_nonce: UncheckedAccount<'info>,
+    #[account(
+        seeds = [OAPP_SEED, params.local_oapp.as_ref()],
+        bump = oapp_registry.bump,
+        has_one = delegate
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        init,
+        payer = delegate,
+        space = 8 + Nonce::INIT_SPACE,
+        seeds = [
+            NONCE_SEED,
+            &params.local_oapp.to_bytes(),
+            &params.remote_eid.to_be_bytes(),
+            &params.remote_oapp[..],
+        ],
+        bump
+    )]
+    pub nonce: Account<'info, Nonce>,
+    #[account(
+        init,
+        payer = delegate,
+        space = 8 + PendingInboundNonce::INIT_SPACE,
+        seeds = [
+            PENDING_NONCE_SEED,
+            &params.local_oapp.to_bytes(),
+            &params.remote_eid.to_be_bytes(),
+            &params.remote_oapp[..],
+        ],
+        bump
+    )]
+    pub pending_inbound_nonce: Account<'info, PendingInboundNonce>,
     pub system_program: Program<'info, System>,
-}
-
-impl InitNonce<'_> {
-    pub fn apply(_ctx: &mut Context<InitNonce>, _params: &InitNonceParams) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

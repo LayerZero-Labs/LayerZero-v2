@@ -6,20 +6,25 @@ use cpi_helper::CpiContext;
 pub struct InitSendLibrary<'info> {
     /// only the delegate can initialize the send_library_config
     #[account(mut)]
-    pub delegate: Signer<'info>, 
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub send_library_config: UncheckedAccount<'info>,
+    pub delegate: Signer<'info>,
+    #[account(
+        seeds = [OAPP_SEED, params.sender.as_ref()],
+        bump = oapp_registry.bump,
+        has_one = delegate
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        init,
+        payer = delegate,
+        space = 8 + SendLibraryConfig::INIT_SPACE,
+        seeds = [SEND_LIBRARY_CONFIG_SEED, &params.sender.to_bytes(), &params.eid.to_be_bytes()],
+        bump
+    )]
+    pub send_library_config: Account<'info, SendLibraryConfig>,
     pub system_program: Program<'info, System>,
 }
 
-impl InitSendLibrary<'_> {
-    pub fn apply(
-        ctx: &mut Context<InitSendLibrary>,
-        _params: &InitSendLibraryParams,
-    ) -> Result<()> {
-        Ok(())
-    }
-}
+
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct InitSendLibraryParams {

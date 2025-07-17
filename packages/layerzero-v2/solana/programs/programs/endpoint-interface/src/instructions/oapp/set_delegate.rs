@@ -7,13 +7,12 @@ use cpi_helper::CpiContext;
 pub struct SetDelegate<'info> {
     /// The PDA of the OApp
     pub oapp: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-}
-
-impl SetDelegate<'_> {
-    pub fn apply(ctx: &mut Context<SetDelegate>, params: &SetDelegateParams) -> Result<()> {
-        Ok(())
-    }
+    #[account(
+        mut,
+        seeds = [OAPP_SEED, oapp.key.as_ref()],
+        bump = oapp_registry.bump
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

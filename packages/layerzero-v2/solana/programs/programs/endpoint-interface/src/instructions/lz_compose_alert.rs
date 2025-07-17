@@ -8,12 +8,6 @@ pub struct LzComposeAlert<'info> {
     pub executor: Signer<'info>,
 }
 
-impl LzComposeAlert<'_> {
-    pub fn apply(_ctx: &mut Context<LzComposeAlert>, _params: &LzComposeAlertParams) -> Result<()> {
-        Ok(())
-    }
-}
-
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct LzComposeAlertParams {
     pub from: Pubkey,

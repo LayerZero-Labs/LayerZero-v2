@@ -7,15 +7,26 @@ use cpi_helper::CpiContext;
 pub struct SetSendLibrary<'info> {
     /// The PDA of the OApp or delegate
     pub signer: Signer<'info>,
-    pub oapp_registry: UncheckedAccount<'info>,
-    pub send_library_config: UncheckedAccount<'info>,
-    pub message_lib_info: UncheckedAccount<'info>,
-}
-
-impl SetSendLibrary<'_> {
-    pub fn apply(_ctx: &mut Context<SetSendLibrary>, _params: &SetSendLibraryParams) -> Result<()> {
-        Ok(())
-    }
+    #[account(
+        seeds = [OAPP_SEED, params.sender.as_ref()],
+        bump = oapp_registry.bump,
+        constraint = signer.key() == params.sender
+            || signer.key() == oapp_registry.delegate @LayerZeroError::Unauthorized
+    )]
+    pub oapp_registry: Account<'info, OAppRegistry>,
+    #[account(
+        mut,
+        seeds = [SEND_LIBRARY_CONFIG_SEED, params.sender.as_ref(), &params.eid.to_be_bytes()],
+        bump = send_library_config.bump,
+        constraint = send_library_config.message_lib != params.new_lib @LayerZeroError::SameValue
+    )]
+    pub send_library_config: Account<'info, SendLibraryConfig>,
+    #[account(
+        seeds = [MESSAGE_LIB_SEED, &params.new_lib.to_bytes()],
+        bump = message_lib_info.bump,
+        constraint = message_lib_info.message_lib_type != MessageLibType::Receive @LayerZeroError::OnlySendLib
+    )]
+    pub message_lib_info: Option<Account<'info, MessageLibInfo>>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

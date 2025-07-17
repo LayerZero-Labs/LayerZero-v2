@@ -1,8 +1,14 @@
+pub mod errors;
 pub mod instructions;
+pub mod state;
 
 use anchor_lang::prelude::*;
+use errors::*;
 use instructions::*;
-pub use messagelib_interface::{InitConfigParams, MessagingFee, MessagingReceipt, SetConfigParams};
+pub use messagelib_interface::{
+    InitConfigParams, MessageLibType, MessagingFee, MessagingReceipt, SetConfigParams,
+};
+use state::*;
 
 declare_id!("76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6");
 
@@ -22,104 +28,110 @@ pub const DEFAULT_MESSAGE_LIB: Pubkey = Pubkey::new_from_array([0u8; 32]);
 pub mod endpoint_interface {
     use super::*;
 
-    pub fn verify(mut ctx: Context<Verify>, params: VerifyParams) -> Result<()> {
-        Verify::apply(&mut ctx, &params)
+    pub fn verify(_ctx: Context<Verify>, _params: VerifyParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn lz_compose_alert(mut ctx: Context<LzComposeAlert>, params: LzComposeAlertParams) -> Result<()> {
-        LzComposeAlert::apply(&mut ctx, &params)
+    pub fn lz_compose_alert(
+        _ctx: Context<LzComposeAlert>,
+        _params: LzComposeAlertParams,
+    ) -> Result<()> {
+        Ok(())
     }
 
-    pub fn lz_receive_alert(mut ctx: Context<LzReceiveAlert>, params: LzReceiveAlertParams) -> Result<()> {
-        LzReceiveAlert::apply(&mut ctx, &params)
+    pub fn lz_receive_alert(
+        _ctx: Context<LzReceiveAlert>,
+        _params: LzReceiveAlertParams,
+    ) -> Result<()> {
+        Ok(())
     }
 
     /// --------------------------- OApp Instructions ---------------------------
-    pub fn burn(mut ctx: Context<Burn>, params: BurnParams) -> Result<()> {
-        Burn::apply(&mut ctx, &params)
+    pub fn burn(_ctx: Context<Burn>, _params: BurnParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn clear_compose(mut ctx: Context<ClearCompose>, params: ClearComposeParams) -> Result<()> {
-        ClearCompose::apply(&mut ctx, &params)
+    pub fn clear_compose(_ctx: Context<ClearCompose>, _params: ClearComposeParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn clear(mut ctx: Context<Clear>, params: ClearParams) -> Result<[u8; 32]> {
-        Clear::apply(&mut ctx, &params)
+    pub fn clear(_ctx: Context<Clear>, _params: ClearParams) -> Result<[u8; 32]> {
+        Ok([0u8; 32])
     }
 
-    pub fn init_config(mut ctx: Context<InitConfig>, params: InitConfigParams) -> Result<()> {
-        InitConfig::apply(&mut ctx, &params)
+    pub fn init_config(_ctx: Context<InitConfig>, _params: InitConfigParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn init_nonce(mut ctx: Context<InitNonce>, params: InitNonceParams) -> Result<()> {
-        InitNonce::apply(&mut ctx, &params)
+    pub fn init_nonce(_ctx: Context<InitNonce>, _params: InitNonceParams) -> Result<()> {
+        Ok(())
     }
 
     pub fn init_receive_library(
-        mut ctx: Context<InitReceiveLibrary>,
-        params: InitReceiveLibraryParams,
+        _ctx: Context<InitReceiveLibrary>,
+        _params: InitReceiveLibraryParams,
     ) -> Result<()> {
-        InitReceiveLibrary::apply(&mut ctx, &params)
+        Ok(())
     }
 
     pub fn init_send_library(
-        mut ctx: Context<InitSendLibrary>,
-        params: InitSendLibraryParams,
+        _ctx: Context<InitSendLibrary>,
+        _params: InitSendLibraryParams,
     ) -> Result<()> {
-        InitSendLibrary::apply(&mut ctx, &params)
+        Ok(())
     }
 
-    pub fn nilify(mut ctx: Context<Nilify>, params: NilifyParams) -> Result<()> {
-        Nilify::apply(&mut ctx, &params)
+    pub fn nilify(_ctx: Context<Nilify>, _params: NilifyParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn quote(mut ctx: Context<Quote>, params: QuoteParams) -> Result<MessagingFee> {
-        Quote::apply(&mut ctx, &params)
+    pub fn quote(_ctx: Context<Quote>, _params: QuoteParams) -> Result<MessagingFee> {
+        Ok(MessagingFee { native_fee: 0, lz_token_fee: 0 })
     }
 
-    pub fn register_oapp(mut ctx: Context<RegisterOApp>, params: RegisterOAppParams) -> Result<()> {
-        RegisterOApp::apply(&mut ctx, &params)
+    pub fn register_oapp(_ctx: Context<RegisterOApp>, _params: RegisterOAppParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn send_compose(mut ctx: Context<SendCompose>, params: SendComposeParams) -> Result<()> {
-        SendCompose::apply(&mut ctx, &params)
+    pub fn send_compose(_ctx: Context<SendCompose>, _params: SendComposeParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn send(mut ctx: Context<Send>, params: SendParams) -> Result<MessagingReceipt> {
-        Send::apply(&mut ctx, &params)
+    pub fn send(_ctx: Context<Send>, _params: SendParams) -> Result<MessagingReceipt> {
+        Ok(MessagingReceipt::default())
     }
 
-    pub fn set_config(mut ctx: Context<SetConfig>, params: SetConfigParams) -> Result<()> {
-        SetConfig::apply(&mut ctx, &params)
+    pub fn set_config(_ctx: Context<SetConfig>, _params: SetConfigParams) -> Result<()> {
+        Ok(())
     }
 
-    pub fn set_delegate(mut ctx: Context<SetDelegate>, params: SetDelegateParams) -> Result<()> {
-        SetDelegate::apply(&mut ctx, &params)
+    pub fn set_delegate(_ctx: Context<SetDelegate>, _params: SetDelegateParams) -> Result<()> {
+        Ok(())
     }
 
     pub fn set_receive_library_timeout(
-        mut ctx: Context<SetReceiveLibraryTimeout>,
-        params: SetReceiveLibraryTimeoutParams,
+        _ctx: Context<SetReceiveLibraryTimeout>,
+        _params: SetReceiveLibraryTimeoutParams,
     ) -> Result<()> {
-        SetReceiveLibraryTimeout::apply(&mut ctx, &params)
+        Ok(())
     }
 
     pub fn set_receive_library(
-        mut ctx: Context<SetReceiveLibrary>,
-        params: SetReceiveLibraryParams,
+        _ctx: Context<SetReceiveLibrary>,
+        _params: SetReceiveLibraryParams,
     ) -> Result<()> {
-        SetReceiveLibrary::apply(&mut ctx, &params)
+        Ok(())
     }
 
     pub fn set_send_library(
-        mut ctx: Context<SetSendLibrary>,
-        params: SetSendLibraryParams,
+        _ctx: Context<SetSendLibrary>,
+        _params: SetSendLibraryParams,
     ) -> Result<()> {
-        SetSendLibrary::apply(&mut ctx, &params)
+        Ok(())
     }
 
-    pub fn skip(mut ctx: Context<Skip>, params: SkipParams) -> Result<()> {
-        Skip::apply(&mut ctx, &params)
+    pub fn skip(_ctx: Context<Skip>, _params: SkipParams) -> Result<()> {
+        Ok(())
     }
 }
 
