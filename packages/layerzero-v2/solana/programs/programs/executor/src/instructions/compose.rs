@@ -2,8 +2,8 @@ use crate::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke, system_program};
 use oapp::{
     endpoint::{
-        self, cpi::accounts::LzComposeAlert, instructions::LzComposeAlertParams, program::Endpoint,
-        ConstructCPIContext,
+        self, cpi::accounts::LzComposeAlert, instructions::LzComposeAlertParams,
+        program::EndpointInterface, ConstructCPIContext,
     },
     LzComposeParams,
 };
@@ -21,8 +21,8 @@ pub struct Compose<'info> {
         constraint = config.executors.contains(executor.key) @ExecutorError::NotExecutor
     )]
     pub config: Account<'info, ExecutorConfig>,
-    pub endpoint_program: Program<'info, Endpoint>,
-    /// The authority for the endpoint program to emit events
+    pub endpoint_program: Program<'info, EndpointInterface>,
+    /// CHECK: The authority for the endpoint program to emit events
     pub endpoint_event_authority: UncheckedAccount<'info>,
 }
 

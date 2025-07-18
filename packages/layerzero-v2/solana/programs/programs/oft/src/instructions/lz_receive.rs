@@ -3,7 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
 };
-use oapp::endpoint_interface::{
+use oapp::endpoint::{
     cpi::accounts::Clear,
     instructions::{ClearParams, SendComposeParams},
     ConstructCPIContext,

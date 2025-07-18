@@ -5,4 +5,4 @@ pub use endpoint_interface as endpoint;
 pub use messagelib_interface;
 pub use utils;
 
-pub const MESSAGE_LIB_SEED: &[u8] = endpoint_interface::MESSAGE_LIB_SEED;
+pub const MESSAGE_LIB_SEED: &[u8] = endpoint::MESSAGE_LIB_SEED;

@@ -20,7 +20,7 @@ pub struct InitConfig<'info> {
         constraint = !message_lib_info.to_account_info().is_writable @LayerZeroError::ReadOnlyAccount
     )]
     pub message_lib_info: Account<'info, MessageLibInfo>,
-    /// the pda of the message_lib_program
+    /// CHECK: the pda of the message_lib_program
     #[account(
         seeds = [MESSAGE_LIB_SEED],
         bump = message_lib_info.message_lib_bump,

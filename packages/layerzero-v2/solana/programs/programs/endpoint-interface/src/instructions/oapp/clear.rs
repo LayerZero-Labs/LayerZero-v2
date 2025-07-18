@@ -1,4 +1,5 @@
 use crate::*;
+use anchor_lang::solana_program::keccak::hashv;
 use cpi_helper::CpiContext;
 
 /// MESSAGING STEP 3. the oapp should pull the message out using clear()
@@ -45,6 +46,9 @@ pub struct Clear<'info> {
     pub endpoint: Account<'info, EndpointSettings>,
 }
 
+pub fn hash_payload(guid: &[u8; 32], message: &[u8]) -> [u8; 32] {
+    hashv(&[&guid[..], &message[..]]).to_bytes()
+}
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct ClearParams {

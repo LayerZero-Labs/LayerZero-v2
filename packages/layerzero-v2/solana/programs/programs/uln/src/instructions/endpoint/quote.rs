@@ -10,7 +10,7 @@ pub struct Quote<'info> {
     pub endpoint: Signer<'info>,
     #[account(seeds = [ULN_SEED], bump = uln.bump, has_one = endpoint)]
     pub uln: Account<'info, UlnSettings>,
-    /// The custom send config account may be uninitialized, so deserialize it only if it's initialized
+    /// CHECK: The custom send config account may be uninitialized, so deserialize it only if it's initialized
     #[account(
         seeds = [SEND_CONFIG_SEED, &params.packet.dst_eid.to_be_bytes(), &params.packet.sender.to_bytes()],
         bump

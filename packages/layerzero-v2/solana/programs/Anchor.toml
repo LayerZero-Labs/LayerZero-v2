@@ -5,6 +5,7 @@ solana_version = "2.2.20"
 [features]
 seeds = false
 skip-lint = false
+resolution = false
 
 [programs.localnet]
 blocked_messagelib = "2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB"

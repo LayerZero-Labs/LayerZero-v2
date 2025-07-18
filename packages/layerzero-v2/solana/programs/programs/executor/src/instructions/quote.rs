@@ -9,8 +9,10 @@ use worker_interface::{worker_utils, QuoteExecutorParams};
 pub struct Quote<'info> {
     #[account(seeds = [EXECUTOR_CONFIG_SEED], bump = executor_config.bump)]
     pub executor_config: Account<'info, ExecutorConfig>,
+    /// CHECK: price_feed_program
     #[account(address = price_feed_config.owner.clone())]
     pub price_feed_program: AccountInfo<'info>,
+    /// CHECK: price_feed_config
     #[account(address = executor_config.price_feed)]
     pub price_feed_config: AccountInfo<'info>,
 }

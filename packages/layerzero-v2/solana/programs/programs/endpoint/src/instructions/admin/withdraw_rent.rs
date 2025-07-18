@@ -6,6 +6,7 @@ pub struct WithdrawRent<'info> {
     pub admin: Signer<'info>,
     #[account(mut, has_one = admin, seeds = [ENDPOINT_SEED], bump = endpoint.bump)]
     pub endpoint: Account<'info, EndpointSettings>, // this account collects the rent from the cleared payloadHashes.
+    /// CHECK: receiver
     #[account(mut)]
     pub receiver: UncheckedAccount<'info>,
 }

@@ -3,6 +3,7 @@ pub mod instructions;
 pub mod state;
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
 use errors::*;
 use instructions::*;
 pub use messagelib_interface::{

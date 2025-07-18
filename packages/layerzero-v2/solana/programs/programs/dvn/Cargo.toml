@@ -29,4 +29,4 @@ uln = { workspace = true, features = ["no-entrypoint"] }
 solana-helper = { workspace = true }
 
 [dev-dependencies]
-secp256k1 = { version = "0.31.1", features = ["rand", "recovery"] }
+secp256k1 = { version = "0.29.0", features = ["rand", "recovery"] }

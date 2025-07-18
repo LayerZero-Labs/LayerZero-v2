@@ -13,7 +13,7 @@ pub struct Send<'info> {
     pub endpoint: Signer<'info>,
     #[account(has_one = endpoint, seeds = [ULN_SEED], bump = uln.bump)]
     pub uln: Account<'info, UlnSettings>,
-    /// The custom send config account may be uninitialized, so deserialize it only if it's initialized
+    /// CHECK: The custom send config account may be uninitialized, so deserialize it only if it's initialized
     #[account(
         seeds = [SEND_CONFIG_SEED, &params.packet.dst_eid.to_be_bytes(), &params.packet.sender.to_bytes()],
         bump
