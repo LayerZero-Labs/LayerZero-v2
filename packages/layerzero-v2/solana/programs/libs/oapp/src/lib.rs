@@ -6,7 +6,7 @@ pub mod lz_compose_types_v2;
 pub mod lz_receive_types_v2;
 pub mod options;
 
-pub use endpoint_interface;
+pub use endpoint_interface as endpoint;
 
 pub const LZ_RECEIVE_TYPES_SEED: &[u8] = b"LzReceiveTypes";
 pub const LZ_COMPOSE_TYPES_SEED: &[u8] = b"LzComposeTypes";

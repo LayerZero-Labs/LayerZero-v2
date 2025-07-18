@@ -14,6 +14,9 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
+custom-heap = []
+custom-panic = []
+anchor-debug = []
 
 [dependencies]
 anchor-lang = { workspace = true }

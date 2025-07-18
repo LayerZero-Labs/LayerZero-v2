@@ -19,6 +19,10 @@ idl-build = [
     "messagelib-helper/idl-build",
     "worker-interface/idl-build",
 ]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
+
 
 [dependencies]
 anchor-lang = { workspace = true }

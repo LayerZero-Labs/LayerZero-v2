@@ -19,6 +19,9 @@ idl-build = [
     "worker-interface/idl-build",
     "pricefeed/idl-build",
 ]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
 
 [dependencies]
 anchor-lang = { workspace = true, features = ["event-cpi"] }

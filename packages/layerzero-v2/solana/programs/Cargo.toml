@@ -23,6 +23,7 @@ codegen-units = 20
 [workspace.dependencies]
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
+solana-program = "2.3.0"
 solana-helper = "0.1.0"
 oapp = { path = "libs/oapp" }
 cpi-helper = { path = "libs/cpi-helper" }
