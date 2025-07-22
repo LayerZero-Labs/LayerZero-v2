@@ -26,7 +26,6 @@ pub struct Executable<'info> {
         seeds::program = ENDPOINT_ID
     )]
     pub nonce: Account<'info, Nonce>,
-    /// CHECK: deserialize only it exists
     #[account(
         seeds = [
             PAYLOAD_HASH_SEED,
@@ -38,7 +37,7 @@ pub struct Executable<'info> {
         bump,
         seeds::program = ENDPOINT_ID
     )]
-    pub payload_hash: AccountInfo<'info>,
+    pub payload_hash: AccountInfo<'info>, // deserialize only it exists
 }
 
 impl Executable<'_> {

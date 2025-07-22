@@ -6,7 +6,6 @@ pub struct WithdrawRent<'info> {
     pub admin: Signer<'info>,
     #[account(mut, has_one = admin, seeds = [ULN_SEED], bump = uln.bump)]
     pub uln: Account<'info, UlnSettings>,
-    /// CHECK: receiver
     #[account(mut)]
     pub receiver: UncheckedAccount<'info>,
 }

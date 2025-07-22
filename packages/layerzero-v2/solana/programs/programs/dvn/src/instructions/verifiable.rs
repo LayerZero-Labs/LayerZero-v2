@@ -25,7 +25,6 @@ pub enum VerificationState {
 #[derive(Accounts)]
 #[instruction(params: VerifiableParams)]
 pub struct Verifiable<'info> {
-    /// CHECK: deserialize only if exists (possibly not initializable)
     #[account(
         seeds = [
             NONCE_SEED,
@@ -36,7 +35,7 @@ pub struct Verifiable<'info> {
         bump,
         seeds::program = ENDPOINT_ID
     )]
-    pub nonce: AccountInfo<'info>,
+    pub nonce: AccountInfo<'info>, // deserialize only if exists (possibly not initializable)
     #[account(
         seeds = [
             PAYLOAD_HASH_SEED,
@@ -48,9 +47,7 @@ pub struct Verifiable<'info> {
         bump,
         seeds::program = ENDPOINT_ID
     )]
-    /// CHECK: deserialize only if exists
-    pub payload_hash: AccountInfo<'info>,
-    /// CHECK: deserialize only if configured
+    pub payload_hash: AccountInfo<'info>, // deserialize only if exists
     #[account(
         seeds = [
             RECEIVE_CONFIG_SEED,
@@ -60,7 +57,7 @@ pub struct Verifiable<'info> {
         bump,
         seeds::program = ULN_ID
     )]
-    pub receive_config: AccountInfo<'info>,
+    pub receive_config: AccountInfo<'info>, // deserialize only if configured
     #[account(
         seeds = [RECEIVE_CONFIG_SEED, &packet_v1_codec::src_eid(&params.packet_header).to_be_bytes()],
         bump = default_receive_config.bump,

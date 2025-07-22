@@ -11,7 +11,6 @@ pub struct WithdrawFee<'info> {
         constraint = config.admins.contains(admin.key) @DvnError::NotAdmin
     )]
     pub config: Account<'info, DvnConfig>,
-    /// CHECK: receiver
     #[account(mut)]
     pub receiver: UncheckedAccount<'info>,
 }

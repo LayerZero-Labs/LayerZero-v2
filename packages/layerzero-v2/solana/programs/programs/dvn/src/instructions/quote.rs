@@ -8,10 +8,8 @@ use worker_interface::worker_utils;
 pub struct Quote<'info> {
     #[account(seeds = [DVN_CONFIG_SEED], bump = dvn_config.bump)]
     pub dvn_config: Account<'info, DvnConfig>,
-    /// CHECK: price_feed_program
     #[account(address = price_feed_config.owner.clone())]
     pub price_feed_program: AccountInfo<'info>,
-    /// CHECK: price_feed_config
     #[account(address = dvn_config.price_feed)]
     pub price_feed_config: AccountInfo<'info>,
 }

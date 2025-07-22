@@ -10,7 +10,6 @@ pub struct WithdrawFees<'info> {
         bump = message_lib.bump
     )]
     pub message_lib: Account<'info, MessageLib>,
-    /// CHECK: receiver
     #[account(mut)]
     pub receiver: UncheckedAccount<'info>,
 }

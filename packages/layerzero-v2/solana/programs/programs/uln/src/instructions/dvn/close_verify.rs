@@ -4,7 +4,6 @@ use crate::*;
 #[instruction(params: CloseVerifyParams)]
 pub struct CloseVerify<'info> {
     pub dvn: Signer<'info>,
-    /// CHECK: receiver
     #[account(mut)]
     pub receiver: AccountInfo<'info>,
     #[account(
