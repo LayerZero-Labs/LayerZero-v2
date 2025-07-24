@@ -1,7 +1,6 @@
 use crate::*;
-use cpi_helper::CpiContext;
 
-#[derive(CpiContext, Accounts)]
+#[derive(Accounts)]
 #[instruction(params: InitSendLibraryParams)]
 pub struct InitSendLibrary<'info> {
     /// only the delegate can initialize the send_library_config
