@@ -1,7 +1,6 @@
 use crate::*;
-use cpi_helper::CpiContext;
 
-#[derive(CpiContext, Accounts)]
+#[derive(Accounts)]
 #[instruction(params: InitNonceParams)]
 pub struct InitNonce<'info> {
     /// only the delegate can initialize the nonce accounts

@@ -1,8 +1,7 @@
 use crate::*;
-use cpi_helper::CpiContext;
 
 /// to initialize the configuration of an oapp in a certain message library
-#[derive(CpiContext, Accounts)]
+#[derive(Accounts)]
 #[instruction(params: InitConfigParams)]
 pub struct InitConfig<'info> {
     /// only the delegate can initialize the config accounts
