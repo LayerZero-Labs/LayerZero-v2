@@ -30,4 +30,4 @@ cpi-helper = { path = "../programs/libs/cpi-helper" }
 messagelib-helper = { path = "libs/messagelib-helper", package = "messagelib-helper-latest" }
 utils = { path = "libs/utils", package = "utils-latest" }
 endpoint-interface = { path = "programs/endpoint-interface" }
-messagelib-interface = { path = "programs/messagelib-interface" }
+messagelib-interface = { path = "programs/messagelib-interface", package = "messagelib-interface-latest" }

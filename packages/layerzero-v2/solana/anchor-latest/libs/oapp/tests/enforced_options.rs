@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test_enforced_options {
-    use oapp::options::{assert_type_3, combine_options};
+    use oapp_latest::options::{assert_type_3, combine_options};
 
     #[test]
     fn test_assert_type_3_revert() {

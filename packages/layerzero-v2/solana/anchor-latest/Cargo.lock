@@ -553,7 +553,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "cpi-helper",
- "messagelib-interface",
+ "messagelib-interface-latest",
  "solana-helper",
  "utils-latest",
 ]
@@ -788,12 +788,12 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "endpoint-interface",
- "messagelib-interface",
+ "messagelib-interface-latest",
  "utils-latest",
 ]
 
 [[package]]
-name = "messagelib-interface"
+name = "messagelib-interface-latest"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
