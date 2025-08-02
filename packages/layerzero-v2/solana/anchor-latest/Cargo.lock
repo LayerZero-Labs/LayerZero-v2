@@ -555,7 +555,7 @@ dependencies = [
  "cpi-helper",
  "messagelib-interface",
  "solana-helper",
- "utils",
+ "utils-latest",
 ]
 
 [[package]]
@@ -783,13 +783,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "messagelib-helper"
+name = "messagelib-helper-latest"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "endpoint-interface",
  "messagelib-interface",
- "utils",
+ "utils-latest",
 ]
 
 [[package]]
@@ -839,7 +839,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oapp"
+name = "oapp-latest"
 version = "0.2.0"
 dependencies = [
  "anchor-lang",
@@ -2118,7 +2118,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
 
 [[package]]
-name = "utils"
+name = "utils-latest"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",

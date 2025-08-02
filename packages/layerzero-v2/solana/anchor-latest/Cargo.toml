@@ -25,9 +25,9 @@ anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
 solana-program = "2.3.0"
 solana-helper = "0.1.0"
-oapp = { path = "libs/oapp" }
+oapp = { path = "libs/oapp", package = "oapp-latest" }
 cpi-helper = { path = "../programs/libs/cpi-helper" }
-messagelib-helper = { path = "libs/messagelib-helper" }
-utils = { path = "libs/utils" }
+messagelib-helper = { path = "libs/messagelib-helper", package = "messagelib-helper-latest" }
+utils = { path = "libs/utils", package = "utils-latest" }
 endpoint-interface = { path = "programs/endpoint-interface" }
-messagelib-interface = { path = "programs/messagelib-interface" }# packages/layerzero-v2/solana/programs/libs/cpi-helper
+messagelib-interface = { path = "programs/messagelib-interface" }
