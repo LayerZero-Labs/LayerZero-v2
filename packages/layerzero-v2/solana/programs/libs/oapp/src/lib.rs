@@ -1,15 +1,11 @@
 use anchor_lang::prelude::*;
 
-pub mod common;
 pub mod endpoint_cpi;
-pub mod lz_compose_types_v2;
-pub mod lz_receive_types_v2;
 pub mod options;
 
-pub use endpoint_interface as endpoint;
+pub use endpoint;
 
 pub const LZ_RECEIVE_TYPES_SEED: &[u8] = b"LzReceiveTypes";
-pub const LZ_COMPOSE_TYPES_SEED: &[u8] = b"LzComposeTypes";
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct LzReceiveParams {
@@ -29,10 +25,4 @@ pub struct LzComposeParams {
     pub index: u16,
     pub message: Vec<u8>,
     pub extra_data: Vec<u8>,
-}
-
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Invalid address lookup table data")]
-    InvalidAddressLookupTable,
 }

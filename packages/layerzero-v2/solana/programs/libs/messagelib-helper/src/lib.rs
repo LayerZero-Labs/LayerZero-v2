@@ -1,7 +1,7 @@
 pub mod endpoint_verify;
 pub mod packet_v1_codec;
 
-pub use endpoint_interface as endpoint;
+pub use endpoint;
 pub use messagelib_interface;
 pub use utils;
 

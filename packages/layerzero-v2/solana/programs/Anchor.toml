@@ -1,22 +1,15 @@
 [toolchain]
-anchor_version = "0.31.1"
-solana_version = "2.2.20"
+anchor_version = "0.29.0"
+solana_version = "1.17.31"
 
 [features]
 seeds = false
-# Setting skip-lint to true disables Anchor's automatic linting during build.
-# This is useful when working with multiple programs that may not all be updated
-# to the latest Anchor version (0.31.1). Without this, you would need to manually
-# update each program to ensure compatibility with the current Anchor version.
-skip-lint = true
-# https://github.com/solana-foundation/anchor/issues/2903#issuecomment-2053637446
-resolution = false
+skip-lint = false
 
 [programs.localnet]
 blocked_messagelib = "2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB"
 dvn = "HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW"
 endpoint = "76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6"
-endpoint_interface = "FGNZea2SzeNM8pdugux1qnrMwRzdNb4McX25FtKWe72y"
 executor = "6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn"
 worker_interface = "2iENutMTfTfxdFEjEQSbFCBstZqakXFZQCLZLLk4Ti58"
 messagelib_interface = "J8tfaWEsewRGacgvAeQsXLTRTuUQz5FGyUuqDW2TpiTJ"
