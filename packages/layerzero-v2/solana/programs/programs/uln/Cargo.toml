@@ -14,21 +14,13 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-idl-build = [
-    "anchor-spl/idl-build",
-    "messagelib-helper/idl-build",
-    "worker-interface/idl-build",
-]
-custom-heap = []
-custom-panic = []
-anchor-debug = []
-
+idl-build = ["anchor-spl/idl-build", "messagelib-helper/idl-build", "worker-interface/idl-build"]
 
 [dependencies]
-anchor-lang = { workspace = true }
-anchor-spl = { workspace = true }
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
 primitive-types = { version = "0.12.1", default-features = false }
-solana-helper = { workspace = true }
-messagelib-helper = { workspace = true }
-worker-interface = { workspace = true, features = ["cpi"] }
-utils = { workspace = true }
+solana-helper = "0.1.0"
+messagelib-helper = { path = "../../libs/messagelib-helper" }
+worker-interface = { path = "../worker-interface", features = ["cpi"] }
+utils = { path = "../../libs/utils" }

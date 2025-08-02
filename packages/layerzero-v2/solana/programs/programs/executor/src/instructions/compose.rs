@@ -2,8 +2,8 @@ use crate::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke, system_program};
 use oapp::{
     endpoint::{
-        self, cpi::accounts::LzComposeAlert, instructions::LzComposeAlertParams,
-        program::EndpointInterface as Endpoint, ConstructCPIContext,
+        self, cpi::accounts::LzComposeAlert, instructions::LzComposeAlertParams, program::Endpoint,
+        ConstructCPIContext,
     },
     LzComposeParams,
 };
