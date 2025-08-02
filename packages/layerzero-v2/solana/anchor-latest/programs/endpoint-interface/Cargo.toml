@@ -1,0 +1,27 @@
+[package]
+name = "endpoint-interface"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "endpoint_interface"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = ["cpi"]
+idl-build = ["anchor-lang/idl-build"]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
+
+[dependencies]
+anchor-lang = { workspace = true, features = ["event-cpi"] }
+solana-helper = { workspace = true }
+cpi-helper = { workspace = true }
+utils = { workspace = true }
+messagelib-interface = { workspace = true, features = ["cpi"] }
