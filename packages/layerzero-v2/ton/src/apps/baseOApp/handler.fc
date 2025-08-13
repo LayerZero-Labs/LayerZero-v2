@@ -85,8 +85,17 @@ int _getChannelAddress(cell $path) impure inline method_id {
 }
 
 ;; Assert the caller of the current transaction is a valid channel
-() assertChannelAddress(cell $channelStorageInit) impure inline {
-    int channelAddress = _getChannelAddressFromStorageInit($channelStorageInit);
+() assertChannelAddress(cell $ChannelStorageInit) impure inline {
+    ;; Validate that the input contains the correct owner inside this channel storage
+    throw_unless(
+        ERROR::WrongChannelOwner,
+        $ChannelStorageInit
+            .Channel::getBaseStorage()
+            .BaseStorage::getOwner()
+        == getBaseOAppStorage().cl::get<address>(BaseOApp::controllerAddress)
+    );
+
+    int channelAddress = _getChannelAddressFromStorageInit($ChannelStorageInit);
     throw_unless(ERROR::WrongChannel, channelAddress == getCaller());
 }
 
