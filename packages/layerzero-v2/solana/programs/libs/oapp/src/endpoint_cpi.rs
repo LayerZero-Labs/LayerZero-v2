@@ -4,10 +4,12 @@ use anchor_lang::{
 };
 use endpoint::{
     self,
-    cpi::accounts::{Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate},
+    cpi::accounts::{
+        Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate, Skip,
+    },
     instructions::{
         ClearComposeParams, ClearParams, QuoteParams, RegisterOAppParams, SendComposeParams,
-        SendParams, SetDelegateParams,
+        SendParams, SetDelegateParams, SkipParams,
     },
     ConstructCPIContext, MessagingFee, MessagingReceipt, COMPOSED_MESSAGE_HASH_SEED, ENDPOINT_SEED,
     NONCE_SEED, OAPP_SEED, PAYLOAD_HASH_SEED,
@@ -112,6 +114,16 @@ pub fn clear_compose(
     }
     let cpi_ctx = ClearCompose::construct_context(endpoint_program, accounts)?;
     endpoint::cpi::clear_compose(cpi_ctx.with_signer(&[&seeds]), params)
+}
+
+pub fn skip_nonce(
+    endpoint_program: Pubkey,
+    accounts: &[AccountInfo],
+    seeds: &[&[u8]],
+    params: SkipParams,
+) -> Result<()> {
+    let cpi_ctx = Skip::construct_context(endpoint_program, accounts)?;
+    endpoint::cpi::skip(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
 pub fn get_accounts_for_clear(
