@@ -1,0 +1,33 @@
+[workspace]
+members = ["programs/*", "libs/*"]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 20
+[profile.release.build-override]
+opt-level = 0
+incremental = false
+codegen-units = 20
+
+
+[profile.fast]
+codegen-units = 20
+inherits = "release"
+[profile.fast.build-override]
+opt-level = 0
+codegen-units = 20
+
+
+[workspace.dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
+solana-program = "2.3.0"
+solana-helper = "0.1.0"
+oapp = { path = "libs/oapp", package = "oapp-latest" }
+cpi-helper = { path = "../programs/libs/cpi-helper" }
+messagelib-helper = { path = "libs/messagelib-helper", package = "messagelib-helper-latest" }
+utils = { path = "libs/utils", package = "utils-latest" }
+endpoint-interface = { path = "programs/endpoint-interface" }
+messagelib-interface = { path = "programs/messagelib-interface", package = "messagelib-interface-latest" }

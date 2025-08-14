@@ -1,0 +1,26 @@
+[toolchain]
+anchor_version = "0.31.1"
+solana_version = "2.2.20"
+
+[features]
+seeds = false
+# Setting skip-lint to true disables Anchor's automatic linting during build.
+# This is useful when working with multiple programs that may not all be updated
+# to the latest Anchor version (0.31.1). Without this, you would need to manually
+# update each program to ensure compatibility with the current Anchor version.
+skip-lint = true
+# https://github.com/solana-foundation/anchor/issues/2903#issuecomment-2053637446
+resolution = false
+
+[programs.localnet]
+endpoint_interface = "76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -b -p ./tsconfig.json -t 10000000 tests/**/*.test.ts"

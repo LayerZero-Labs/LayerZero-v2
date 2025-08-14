@@ -1,0 +1,11 @@
+[package]
+name = "oapp-latest"
+version = "0.2.0"
+edition = "2021"
+
+[features]
+idl-build = ["anchor-lang/idl-build", 'endpoint-interface/idl-build']
+
+[dependencies]
+anchor-lang = { workspace = true }
+endpoint-interface = { workspace = true }
