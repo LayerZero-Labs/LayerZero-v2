@@ -1,135 +1,69 @@
 [move]
 version = 3
-manifest_digest = "18BA3A156540C9B5E8E6B9F67528E67E399405F059BAE8C4CD5CEFF5C83E99EB"
+manifest_digest = "592C842A2B34112905483CCDA621AA0A79B8351D88233E94EE97292DE71EF046"
 deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
-
-[[move.dependencies]]
-id = "Bridge"
-name = "Bridge"
-
-[[move.dependencies]]
-id = "Call"
-name = "Call"
-
-[[move.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.dependencies]]
-id = "Sui"
-name = "Sui"
-
-[[move.dependencies]]
-id = "SuiSystem"
-name = "SuiSystem"
-
-[[move.dependencies]]
-id = "Utils"
-name = "Utils"
+dependencies= [
+  { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
 
 [[move.package]]
 id = "Bridge"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
 
-[move.package.source]
-git = "https://github.com/MystenLabs/sui.git"
-rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
-subdir = "crates/sui-framework/packages/bridge"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Sui"
-name = "Sui"
-
-[[move.package.dependencies]]
-id = "SuiSystem"
-name = "SuiSystem"
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
 
 [[move.package]]
 id = "Call"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
 
-[move.package.source]
-local = "../../call"
-
-[[move.package.dependencies]]
-id = "Bridge"
-name = "Bridge"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Sui"
-name = "Sui"
-
-[[move.package.dependencies]]
-id = "SuiSystem"
-name = "SuiSystem"
-
-[[move.package.dependencies]]
-id = "Utils"
-name = "Utils"
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
 
 [[move.package]]
 id = "MoveStdlib"
-
-[move.package.source]
-git = "https://github.com/MystenLabs/sui.git"
-rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
-subdir = "crates/sui-framework/packages/move-stdlib"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
 
 [[move.package]]
 id = "Sui"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
 
-[move.package.source]
-git = "https://github.com/MystenLabs/sui.git"
-rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
-subdir = "crates/sui-framework/packages/sui-framework"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
 
 [[move.package]]
 id = "SuiSystem"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
 
-[move.package.source]
-git = "https://github.com/MystenLabs/sui.git"
-rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
-subdir = "crates/sui-framework/packages/sui-system"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Sui"
-name = "Sui"
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+]
 
 [[move.package]]
 id = "Utils"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
-[move.package.source]
-local = "../../utils"
-
-[[move.package.dependencies]]
-id = "Bridge"
-name = "Bridge"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Sui"
-name = "Sui"
-
-[[move.package.dependencies]]
-id = "SuiSystem"
-name = "SuiSystem"
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
 
 [move.toolchain-version]
 compiler-version = "1.54.1"
