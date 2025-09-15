@@ -1,0 +1,18 @@
+[package]
+name = "DvnFeeLib"
+edition = "2024.beta"
+version = "0.0.1"
+
+
+[dependencies]
+Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "sui-vm" }
+WorkerCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common", rev = "sui-vm" }
+DvnCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type", rev = "sui-vm" }
+PriceFeedCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types", rev = "sui-vm" }
+
+[addresses]
+dvn_fee_lib = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

@@ -1414,6 +1414,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@layerzerolabs/layerzero-v2-sui@workspace:packages/layerzero-v2/sui/contracts":
+  version: 0.0.0-use.local
+  resolution: "@layerzerolabs/layerzero-v2-sui@workspace:packages/layerzero-v2/sui/contracts"
+  dependencies:
+    glob: "npm:^10.3.10"
+    zx: "npm:^8.1.3"
+  languageName: unknown
+  linkType: soft
+
 "@layerzerolabs/layerzero-v2-ton@workspace:packages/layerzero-v2/ton":
   version: 0.0.0-use.local
   resolution: "@layerzerolabs/layerzero-v2-ton@workspace:packages/layerzero-v2/ton"
@@ -12221,5 +12230,14 @@ __metadata:
   version: 3.24.2
   resolution: "zod@npm:3.24.2"
   checksum: 604c62a8cf8e330d78b106a557f4b44f5d14845d20b1360a423ccc09b58cb8525ccf7e4b40cf1bd4852d22393d2c67774b5817ec5a2fedab25f543b36ed15943
+  languageName: node
+  linkType: hard
+
+"zx@npm:^8.1.3":
+  version: 8.8.1
+  resolution: "zx@npm:8.8.1"
+  bin:
+    zx: build/cli.js
+  checksum: 615860a8deeec35d247c9bab3f9ab6c4801eac150cb09a3e09a3c79d1c8429fbaa3f7497cfa933ce8d75b48308ef531067f9a756610d69acf022bafe251bc7c1
   languageName: node
   linkType: hard

@@ -1,0 +1,16 @@
+[package]
+name = "Uln302"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+MessageLibCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common", rev = "sui-vm", override = true }
+Treasury = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/treasury", rev = "sui-vm" }
+Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "sui-vm", override = true }
+
+[addresses]
+uln_302 = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

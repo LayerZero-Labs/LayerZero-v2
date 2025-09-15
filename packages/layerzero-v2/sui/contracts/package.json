@@ -1,0 +1,14 @@
+{
+  "name": "@layerzerolabs/layerzero-v2-sui",
+  "private": true,
+  "license": "LZBL-1.2",
+  "scripts": {
+    "build": "./build_and_test.mjs compile \"$@\" && $npm_execpath postBuild",
+    "postBuild": "find . \\( -path \"*/debug_info/package.json\" -o -path \"*/debug_info/*/package.json\" \\) -type f -delete",
+    "test": "./build_and_test.mjs test \"$@\" && $npm_execpath postBuild"
+  },
+  "devDependencies": {
+    "glob": "^10.3.10",
+    "zx": "^8.1.3"
+  }
+}

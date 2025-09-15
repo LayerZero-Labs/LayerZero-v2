@@ -1,0 +1,21 @@
+[package]
+name = "PackageWhitelistValidator"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+BlockedMessageLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib", rev = "sui-vm" }
+EndpointV2 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2", rev = "sui-vm" }
+SimpleMessageLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib", rev = "sui-vm" }
+Treasury = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/treasury", rev = "sui-vm" }
+Uln302 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/uln-302", rev = "sui-vm" }
+Uln302PtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder", rev = "sui-vm" }
+Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "sui-vm" }
+
+
+[addresses]
+package_whitelist_validator = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

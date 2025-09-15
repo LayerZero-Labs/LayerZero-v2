@@ -1,0 +1,15 @@
+[package]
+name = "BlockedMsglibPtbBuilder"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+EndpointPtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder", rev = "sui-vm" }
+BlockedMessageLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib", rev = "sui-vm" }
+
+[addresses]
+blocked_msglib_ptb_builder = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
