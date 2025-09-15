@@ -4,8 +4,8 @@ edition = "2024.beta"
 version = "0.0.1"
 
 [dependencies]
-EndpointPtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder", rev = "main" }
-SimpleMessageLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib", rev = "main" }
+EndpointPtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder", rev = "sui-vm" }
+SimpleMessageLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib", rev = "sui-vm" }
 
 [addresses]
 simple_msglib_ptb_builder = "0x0"

@@ -5,7 +5,7 @@ edition = "2024.beta"
 
 
 [dependencies]
-Dvn = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn", rev = "main" }
+Dvn = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn", rev = "sui-vm" }
 
 [addresses]
 dvn_layerzero = "0x0"

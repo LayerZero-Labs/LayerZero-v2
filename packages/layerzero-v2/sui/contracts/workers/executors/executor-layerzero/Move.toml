@@ -5,7 +5,7 @@ edition = "2024.beta"
 
 
 [dependencies]
-Executor = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor", rev = "main" }
+Executor = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor", rev = "sui-vm" }
 
 [addresses]
 executor_layerzero = "0x0"
