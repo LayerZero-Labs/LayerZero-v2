@@ -807,7 +807,7 @@ fun test_verify_with_signatures() {
     let confirmations = 15u64;
     let clock = create_test_clock(1000000, scenario.ctx());
 
-    let uln302_address = @0x1234567890abcdef1234567890abcdef12345678;
+    let uln302_address = @0x0;
 
     dvn.verify(
         &admin_cap,
