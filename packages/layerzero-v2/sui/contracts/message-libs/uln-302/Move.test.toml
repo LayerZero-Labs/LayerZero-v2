@@ -1,0 +1,16 @@
+[package]
+name = "Uln302"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+MessageLibCommon = { local = "../message-lib-common", override = true }
+Treasury = { local = "../treasury" }
+Utils = { local = "../../utils", override = true }
+
+[addresses]
+uln_302 = "0x1234567890abcdef1234567890abcdef12345678"
+
+[dev-dependencies]
+
+[dev-addresses]

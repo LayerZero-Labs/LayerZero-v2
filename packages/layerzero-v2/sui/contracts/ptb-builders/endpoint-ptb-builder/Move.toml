@@ -1,0 +1,16 @@
+[package]
+name = "EndpointPtbBuilder"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+EndpointV2 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2", rev = "main", override = true }
+PtbMoveCall = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/ptb-move-call", rev = "main" }
+Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main", override = true }
+
+[addresses]
+endpoint_ptb_builder = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

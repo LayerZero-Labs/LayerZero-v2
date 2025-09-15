@@ -1,0 +1,18 @@
+[package]
+name = "Executor"
+version = "0.0.1"
+edition = "2024.beta"
+
+
+[dependencies]
+WorkerCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common", rev = "main" }
+Uln302 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/uln-302", rev = "main" }
+MsglibPtbBuilderCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types", rev = "main" }
+ExecutorCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type", rev = "main" }
+
+[addresses]
+executor = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
