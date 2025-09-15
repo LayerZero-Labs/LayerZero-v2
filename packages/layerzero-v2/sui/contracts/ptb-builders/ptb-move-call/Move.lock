@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "57E5F107D9E328B27333C5ED36D052117F99CF5A4A05F70B4E22A012F4E9E97A"
+manifest_digest = "C7717E388A41EC335F44922E62B9971AC24333DC0159FC8881497431132323B7"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
@@ -43,7 +43,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
