@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "976D3E3A8FAF152C6857DE994252D3D4249C4546ECE952FD2C09123C43DB7F9B"
+manifest_digest = "2665B744E53C6308C1E8BD3D25D7EBDDF3232BB78A0111E393060FBE15EE8A09"
 deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
 dependencies= [
   { id = "BlockedMessageLib", name = "BlockedMessageLib" },
@@ -13,7 +13,7 @@ dependencies= [
 
 [[move.package]]
 id = "BlockedMessageLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -47,7 +47,7 @@ dependencies = [
 
 [[move.package]]
 id = "EndpointPtbBuilder"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -75,7 +75,7 @@ dependencies = [
 
 [[move.package]]
 id = "MessageLibCommon"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
