@@ -4,12 +4,14 @@ edition = "2024.beta"
 version = "0.0.1"
 
 [dependencies]
-Dvn = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn", rev = "sui-vm" }
-DvnFeeLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-fee-lib", rev = "sui-vm" }
-DvnCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type", rev = "sui-vm" }
-PriceFeed = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed", rev = "sui-vm" }
-Uln302PtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder", rev = "sui-vm" }
-Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "sui-vm" }
+Dvn = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn", rev = "main" }
+DvnFeeLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-fee-lib", rev = "main" }
+DvnCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type", rev = "main", override = true }
+PriceFeed = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed", rev = "main", override = true }
+Uln302PtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder", rev = "main" }
+Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "main", override = true }
+Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main", override = true }
+PriceFeedCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types", rev = "main", override = true }
 
 [addresses]
 dvn_ptb_builder = "0x0"

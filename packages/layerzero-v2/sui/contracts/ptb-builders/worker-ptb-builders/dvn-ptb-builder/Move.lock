@@ -1,14 +1,16 @@
 [move]
 version = 3
-manifest_digest = "CCC3ED1BFE6606A1208FADA97E467005A2157EAA46638C3D005A65F00C5278A4"
-deps_digest = "CB99E3BEE139471F3765AE330F855F3B376156AA54F37DEDE11BBE5BB0D3BB74"
+manifest_digest = "D31A164BD87274BF004240512408EEE23213B35C05D2CA9274DD08B1A8C08D24"
+deps_digest = "8D8E72BAA06E63572166CA7E7F6E159CA2D11E27ADE3961B15E29922A04B0D32"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
   { id = "Dvn", name = "Dvn" },
   { id = "DvnCallType", name = "DvnCallType" },
   { id = "DvnFeeLib", name = "DvnFeeLib" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "PriceFeed", name = "PriceFeed" },
+  { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
   { id = "Uln302PtbBuilder", name = "Uln302PtbBuilder" },
@@ -27,7 +29,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -39,7 +41,7 @@ dependencies = [
 
 [[move.package]]
 id = "Dvn"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -54,7 +56,7 @@ dependencies = [
 
 [[move.package]]
 id = "DvnCallType"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -65,7 +67,7 @@ dependencies = [
 
 [[move.package]]
 id = "DvnFeeLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-fee-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-fee-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -136,7 +138,7 @@ dependencies = [
 
 [[move.package]]
 id = "PriceFeed"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -150,7 +152,7 @@ dependencies = [
 
 [[move.package]]
 id = "PriceFeedCallTypes"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -217,7 +219,7 @@ dependencies = [
 
 [[move.package]]
 id = "Uln302PtbBuilder"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -237,7 +239,7 @@ dev-dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },

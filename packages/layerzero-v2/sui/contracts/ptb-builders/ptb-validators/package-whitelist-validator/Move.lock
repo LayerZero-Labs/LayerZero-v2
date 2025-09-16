@@ -1,11 +1,13 @@
 [move]
 version = 3
-manifest_digest = "C2B3C96752758C2FAE470DF897F6A0CC1D8A954C7B253011E92F809C8B0AD8E5"
-deps_digest = "D7FB1F2E1A893B9A0E80A392473710373DE5791D3AC8F6D898803754B2ADAE6B"
+manifest_digest = "3A72AEF6E503A491E24637BF61D055C7D40EAD73051284755E25DFF91297B076"
+deps_digest = "59CF4C5FBF9CA9498217B3AC2BED47AD5D49696CE64F735BE1226EDCEF529664"
 dependencies= [
   { id = "BlockedMessageLib", name = "BlockedMessageLib" },
   { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
   { id = "EndpointV2", name = "EndpointV2" },
+  { id = "MessageLibCommon", name = "MessageLibCommon" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "SimpleMessageLib", name = "SimpleMessageLib" },
   { id = "Sui", name = "Sui" },
@@ -18,7 +20,7 @@ dependencies= [
 
 [[move.package]]
 id = "BlockedMessageLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/blocked-message-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -40,7 +42,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -66,7 +68,7 @@ dependencies = [
 
 [[move.package]]
 id = "EndpointV2"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -80,7 +82,7 @@ dependencies = [
 
 [[move.package]]
 id = "MessageLibCommon"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -120,7 +122,7 @@ dependencies = [
 
 [[move.package]]
 id = "SimpleMessageLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -150,7 +152,7 @@ dependencies = [
 
 [[move.package]]
 id = "Treasury"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/treasury" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/treasury" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -163,7 +165,7 @@ dependencies = [
 
 [[move.package]]
 id = "Uln302"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/uln-302" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/uln-302" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -177,7 +179,7 @@ dependencies = [
 
 [[move.package]]
 id = "Uln302PtbBuilder"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -197,7 +199,7 @@ dev-dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -208,7 +210,7 @@ dependencies = [
 
 [[move.package]]
 id = "Zro"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/zro" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/zro" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
