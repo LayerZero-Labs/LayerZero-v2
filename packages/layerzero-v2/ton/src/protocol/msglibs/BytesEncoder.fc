@@ -69,7 +69,7 @@ tuple BytesEncoder::feed(tuple self, slice data) impure inline {
         ;; data to the next item in the list.
         ifnot (data.slice_refs_empty?()) {
 
-            ;; if the current builder is full add a new builer on the tuple stack
+            ;; if the current builder is full add a new builder on the tuple stack
             if (fillsCurrentBuilder) {
                 self = self.tpush(begin_cell());
             }
