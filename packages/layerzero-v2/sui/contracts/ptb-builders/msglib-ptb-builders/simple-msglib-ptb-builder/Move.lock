@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "FC9EE7A6DAD70D0E451D661E5AE583A641139E1A1E18C9CAA2051C63525B2905"
+manifest_digest = "1390DE45969B4BE2DF4426D8DE95DBE8E6581F9692024D29160BF30FC83D4190"
 deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
@@ -35,7 +35,7 @@ dependencies = [
 
 [[move.package]]
 id = "EndpointPtbBuilder"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/endpoint-ptb-builder" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -91,7 +91,7 @@ dependencies = [
 
 [[move.package]]
 id = "SimpleMessageLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/simple-message-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },

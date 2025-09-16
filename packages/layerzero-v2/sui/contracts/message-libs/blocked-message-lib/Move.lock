@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "14F3F376C50816DC52B04AB3614F060364FBB499A6326A7F7A9DD9F09631E8C4"
+manifest_digest = "1C7753AE299CA0B0E62FFCDFAF0E46FD4298ECFA9818C5025E14AF6ED2FCEF4B"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
@@ -48,7 +48,7 @@ dependencies = [
 
 [[move.package]]
 id = "MessageLibCommon"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
