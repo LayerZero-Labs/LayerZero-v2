@@ -1,17 +1,20 @@
 [move]
 version = 3
-manifest_digest = "E280AC70DF1F29B57C4FB922E2292CFB6BEB99CF7F30A18EC64F2F2E31D8D772"
-deps_digest = "8227D341C0550A37580C10FA45FE148A465225149C69D179737E0FE454AD6AEC"
+manifest_digest = "D5A469C0E9796933769A432D960C89EAAD384C598E958124BDF8CB256719BDCB"
+deps_digest = "8D8E72BAA06E63572166CA7E7F6E159CA2D11E27ADE3961B15E29922A04B0D32"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
   { id = "Executor", name = "Executor" },
   { id = "ExecutorCallType", name = "ExecutorCallType" },
   { id = "ExecutorFeeLib", name = "ExecutorFeeLib" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "PriceFeed", name = "PriceFeed" },
+  { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
   { id = "Uln302PtbBuilder", name = "Uln302PtbBuilder" },
+  { id = "Utils", name = "Utils" },
 ]
 
 [[move.package]]
@@ -26,7 +29,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -66,7 +69,7 @@ dependencies = [
 
 [[move.package]]
 id = "Executor"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -81,7 +84,7 @@ dependencies = [
 
 [[move.package]]
 id = "ExecutorCallType"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -92,7 +95,7 @@ dependencies = [
 
 [[move.package]]
 id = "ExecutorFeeLib"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-fee-lib" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-fee-lib" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -135,7 +138,7 @@ dependencies = [
 
 [[move.package]]
 id = "PriceFeed"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -149,7 +152,7 @@ dependencies = [
 
 [[move.package]]
 id = "PriceFeedCallTypes"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -216,7 +219,7 @@ dependencies = [
 
 [[move.package]]
 id = "Uln302PtbBuilder"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -236,7 +239,7 @@ dev-dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
