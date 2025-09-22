@@ -231,6 +231,8 @@ solana-verify get-program-hash -u  https://api.mainnet-beta.solana.com 76y77prsi
 
 Now, compare the program hash of the built program and the on-chain program. They should match if the deployed bytecode is identical to your local build.
 
+## Program Hash
+
 | Program            | Address                                      | Commit  | Platform             | Program Hash                                                     |
 | ------------------ | -------------------------------------------- | ------- | -------------------- | ---------------------------------------------------------------- |
 | blocked-messagelib | 2XrYqmhBMPJgDsb4SVbjV1PnJBprurd5bzRCkHwiFCJB | 37c598b | aarch64-apple-darwin | e8f5412527e5138f626299c9b78a2e2f859d306f4c744472d7a2fde34988f3b1 |
