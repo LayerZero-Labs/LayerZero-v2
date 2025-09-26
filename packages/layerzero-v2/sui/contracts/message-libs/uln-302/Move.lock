@@ -1,0 +1,135 @@
+[move]
+version = 3
+manifest_digest = "99EFFC60B142DC05BA69662C6208CB33C10DE01A4D20D27E02029FB9E43AD523"
+deps_digest = "CAFAD8A7CF51067FB4358215BECB86BD100DD64E57C2AC8A7AE7D74B688F5965"
+dependencies= [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MessageLibCommon", name = "MessageLibCommon" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Treasury", name = "Treasury" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "Bridge"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Call"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "EndpointV2"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+  { id = "Zro", name = "Zro" },
+]
+
+[[move.package]]
+id = "MessageLibCommon"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "EndpointV2", name = "EndpointV2" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "Sui"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "SuiSystem"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "Treasury"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/treasury" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MessageLibCommon", name = "MessageLibCommon" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "Utils"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Zro"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/zro" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0x556bd8fba10ba9e8be88a3ed54b8cbeb8b512b95e5c107cde7d7b10b754069c2"
+latest-published-id = "0x556bd8fba10ba9e8be88a3ed54b8cbeb8b512b95e5c107cde7d7b10b754069c2"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0xd73c9d588717c32fa327335d9beaf59b983b808577a382e013d8c7161a323d8e"
+latest-published-id = "0xd73c9d588717c32fa327335d9beaf59b983b808577a382e013d8c7161a323d8e"
+published-version = "1"

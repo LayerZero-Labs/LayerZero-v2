@@ -1,0 +1,121 @@
+[move]
+version = 3
+manifest_digest = "87F5790FBDA528D909EC150AF72D72D6A13952B831EF995A18E9C9085D6B225A"
+deps_digest = "04732BFEF428F74DE262001DC455D76B909EBC394B034A9A15CC095E4BDD9CEF"
+dependencies= [
+  { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
+  { id = "ExecutorCallType", name = "ExecutorCallType" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "WorkerCommon", name = "WorkerCommon" },
+]
+
+[[move.package]]
+id = "Bridge"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Call"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "ExecutorCallType"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "PriceFeedCallTypes"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Sui"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "SuiSystem"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "Utils"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "WorkerCommon"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0x36a441e73ed70e9fc900d021381a3d833c8b15305b7a116dbd7a2d1a156432e1"
+latest-published-id = "0x36a441e73ed70e9fc900d021381a3d833c8b15305b7a116dbd7a2d1a156432e1"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0x4cdd97cf2dee8387b004915c293d0565577e0194fff4894e604a09db54ac62c7"
+latest-published-id = "0x4cdd97cf2dee8387b004915c293d0565577e0194fff4894e604a09db54ac62c7"
+published-version = "1"

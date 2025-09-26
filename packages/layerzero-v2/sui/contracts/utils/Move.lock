@@ -1,0 +1,59 @@
+[move]
+version = 3
+manifest_digest = "63737A970C2387C5A0C2DF1DAF6562283E397D9D0DA18FB104B7D148953D29BF"
+deps_digest = "F9B494B64F0615AED0E98FC12A85B85ECD2BC5185C22D30E7F67786BB52E507C"
+dependencies= [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Bridge"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "Sui"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "SuiSystem"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0x7129b63448e84ee4a5e1a05f0536861f92a4a6a2cb2447b9c4cf6fa3ea6b16dd"
+latest-published-id = "0x7129b63448e84ee4a5e1a05f0536861f92a4a6a2cb2447b9c4cf6fa3ea6b16dd"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0xcdad05867c25d6461e5813071116fa3f26d56a9b52ad053747457efb79d45714"
+latest-published-id = "0xcdad05867c25d6461e5813071116fa3f26d56a9b52ad053747457efb79d45714"
+published-version = "1"

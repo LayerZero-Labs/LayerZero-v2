@@ -1,0 +1,120 @@
+[move]
+version = 3
+manifest_digest = "1C7753AE299CA0B0E62FFCDFAF0E46FD4298ECFA9818C5025E14AF6ED2FCEF4B"
+deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
+dependencies= [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MessageLibCommon", name = "MessageLibCommon" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Bridge"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Call"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "EndpointV2"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "Call", name = "Call" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+  { id = "Utils", name = "Utils" },
+  { id = "Zro", name = "Zro" },
+]
+
+[[move.package]]
+id = "MessageLibCommon"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "EndpointV2", name = "EndpointV2" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "Sui"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "SuiSystem"
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "Utils"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[[move.package]]
+id = "Zro"
+source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/zro" }
+
+dependencies = [
+  { id = "Bridge", name = "Bridge" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Sui", name = "Sui" },
+  { id = "SuiSystem", name = "SuiSystem" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0xd3f0cab5eca2cfb870e5390b572e67ce1d0d96bc89d097d089914014bf581e5d"
+latest-published-id = "0xd3f0cab5eca2cfb870e5390b572e67ce1d0d96bc89d097d089914014bf581e5d"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0x9f6107b708d7650b1484ae10cb98340af343f46bd63793ea91c2379bab9a7abb"
+latest-published-id = "0x9f6107b708d7650b1484ae10cb98340af343f46bd63793ea91c2379bab9a7abb"
+published-version = "1"

@@ -1,0 +1,15 @@
+[package]
+name = "SimpleMessageLib"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+MessageLibCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/message-lib-common", rev = "main", override = true }
+Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "main", override = true }
+
+[addresses]
+simple_message_lib = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
