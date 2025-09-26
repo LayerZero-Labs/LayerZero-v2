@@ -8,7 +8,7 @@ use endpoint_interface::{
     cpi::accounts::{Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate},
     instructions::{
         ClearComposeParams, ClearParams, QuoteParams, RegisterOAppParams, SendComposeParams,
-        SendParams, SetDelegateParams,
+        SendParams, SetDelegateParams, SkipParams,
     },
     ConstructCPIContext, MessagingFee, MessagingReceipt, COMPOSED_MESSAGE_HASH_SEED, ENDPOINT_SEED,
     NONCE_SEED, OAPP_SEED, PAYLOAD_HASH_SEED,
