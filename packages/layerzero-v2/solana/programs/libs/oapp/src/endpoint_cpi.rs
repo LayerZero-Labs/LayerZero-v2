@@ -116,16 +116,6 @@ pub fn clear_compose(
     endpoint::cpi::clear_compose(cpi_ctx.with_signer(&[&seeds]), params)
 }
 
-pub fn skip_nonce(
-    endpoint_program: Pubkey,
-    accounts: &[AccountInfo],
-    seeds: &[&[u8]],
-    params: SkipParams,
-) -> Result<()> {
-    let cpi_ctx = Skip::construct_context(endpoint_program, accounts)?;
-    endpoint::cpi::skip(cpi_ctx.with_signer(&[&seeds]), params)
-}
-
 pub fn get_accounts_for_clear(
     endpoint_program: Pubkey,
     receiver: &Pubkey,
