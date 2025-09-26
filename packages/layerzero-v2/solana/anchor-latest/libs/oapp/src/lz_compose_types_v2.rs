@@ -9,6 +9,7 @@ pub const LZ_COMPOSE_TYPES_VERSION: u8 = 2;
 ///
 /// This structure is stored at a deterministic PDA and serves as the bridge between
 /// the version discovery phase and the actual execution planning phase of V2.
+///
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct LzComposeTypesV2Accounts {
     pub accounts: Vec<Pubkey>,

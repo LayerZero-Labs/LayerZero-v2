@@ -4,12 +4,10 @@ use anchor_lang::{
 };
 use endpoint::{
     self,
-    cpi::accounts::{
-        Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate, Skip,
-    },
+    cpi::accounts::{Clear, ClearCompose, Quote, RegisterOApp, Send, SendCompose, SetDelegate},
     instructions::{
         ClearComposeParams, ClearParams, QuoteParams, RegisterOAppParams, SendComposeParams,
-        SendParams, SetDelegateParams, SkipParams,
+        SendParams, SetDelegateParams,
     },
     ConstructCPIContext, MessagingFee, MessagingReceipt, COMPOSED_MESSAGE_HASH_SEED, ENDPOINT_SEED,
     NONCE_SEED, OAPP_SEED, PAYLOAD_HASH_SEED,
