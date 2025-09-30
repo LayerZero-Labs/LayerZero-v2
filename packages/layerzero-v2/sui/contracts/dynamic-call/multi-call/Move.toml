@@ -1,0 +1,15 @@
+[package]
+name = "MultiCall"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main" }
+
+[addresses]
+multi_call = "0x0"
+
+[dev-dependencies]
+
+
+[dev-addresses]
