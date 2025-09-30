@@ -108,12 +108,16 @@ public fun init_eid(self: &mut EndpointV2, _admin: &AdminCap, eid: u32) {
 ///
 /// **Parameters**:
 /// - `oapp`: The OApp's address proving ownership and authorization
-/// - `lz_receive_info`: Execution metadata for lz_receive calls (method signatures, etc.)
-public fun register_oapp(self: &mut EndpointV2, oapp: &CallCap, lz_receive_info: vector<u8>, ctx: &mut TxContext) {
+/// - `oapp_info`: OApp information for the OApp, including lz_receive_info for lz_receive calls and extra oapp
+/// information. Can be empty and updated later via set_oapp_info() after registration.
+///
+/// **Returns**: The address of the created messaging channel
+public fun register_oapp(self: &mut EndpointV2, oapp: &CallCap, oapp_info: vector<u8>, ctx: &mut TxContext): address {
     // Safe to create messaging channel - oapp_registry has already checked if the oapp is already registered.
     let oapp_address = oapp.id();
     let messaging_channel_address = messaging_channel::create(oapp_address, ctx);
-    self.oapp_registry.register_oapp(oapp_address, messaging_channel_address, lz_receive_info)
+    self.oapp_registry.register_oapp(oapp_address, messaging_channel_address, oapp_info);
+    messaging_channel_address
 }
 
 /// Sets the delegate address for a registered OApp.
@@ -128,7 +132,7 @@ public fun set_delegate(self: &mut EndpointV2, oapp: &CallCap, new_delegate: add
     self.oapp_registry.set_delegate(oapp.id(), new_delegate);
 }
 
-/// Updates the lz_receive execution information for a registered OApp.
+/// Updates the oapp information for a registered OApp.
 ///
 /// This function allows OApps to update their execution metadata that
 /// the executor uses for message delivery.
@@ -136,10 +140,11 @@ public fun set_delegate(self: &mut EndpointV2, oapp: &CallCap, new_delegate: add
 /// **Parameters**:
 /// - `caller`: The caller's capability, which must be the OApp or its delegate
 /// - `oapp`: The OApp's address
-/// - `lz_receive_info`: New execution metadata for lz_receive calls
-public fun set_lz_receive_info(self: &mut EndpointV2, caller: &CallCap, oapp: address, lz_receive_info: vector<u8>) {
+/// - `oapp_info`: New OApp information for the OApp, including lz_receive_info for lz_receive calls and extra oapp
+/// information.
+public fun set_oapp_info(self: &mut EndpointV2, caller: &CallCap, oapp: address, oapp_info: vector<u8>) {
     self.assert_authorized(caller.id(), oapp);
-    self.oapp_registry.set_lz_receive_info(oapp, lz_receive_info);
+    self.oapp_registry.set_oapp_info(oapp, oapp_info);
 }
 
 /// Initializes a new channel path for communication between this OApp and a remote OApp.
@@ -537,14 +542,17 @@ public fun lz_receive_alert(
 ///
 /// **Parameters**:
 /// - `composer`: The composer's capability proving ownership and authorization
-/// - `lz_compose_info`: Execution metadata for lz_compose calls (method signatures, etc.)
+/// - `composer_info`: Composer information for the composer, including the lz_compose execution information
+/// Can be empty and updated later via set_composer_info() after registration.
+///
+/// **Returns**: The address of the created compose queue
 public fun register_composer(
     self: &mut EndpointV2,
     composer: &CallCap,
-    lz_compose_info: vector<u8>,
+    composer_info: vector<u8>,
     ctx: &mut TxContext,
-) {
-    self.composer_registry.register_composer(composer.id(), lz_compose_info, ctx)
+): address {
+    self.composer_registry.register_composer(composer.id(), composer_info, ctx)
 }
 
 /// Updates the lz_compose execution information for a registered composer.
@@ -555,9 +563,9 @@ public fun register_composer(
 ///
 /// **Parameters**:
 /// - `composer`: The composer's capability
-/// - `lz_compose_info`: New execution metadata for lz_compose calls
-public fun set_lz_compose_info(self: &mut EndpointV2, composer: &CallCap, lz_compose_info: vector<u8>) {
-    self.composer_registry.set_lz_compose_info(composer.id(), lz_compose_info);
+/// - `composer_info`: Composer information for the composer, including the lz_compose execution information
+public fun set_composer_info(self: &mut EndpointV2, composer: &CallCap, composer_info: vector<u8>) {
+    self.composer_registry.set_composer_info(composer.id(), composer_info);
 }
 
 /// Queues a compose message for sequential execution after lz_receive completes.
@@ -865,9 +873,9 @@ public fun get_messaging_channel(self: &EndpointV2, oapp: address): address {
     self.oapp_registry.get_messaging_channel(oapp)
 }
 
-/// Retrieves the lz_receive execution information for a registered OApp.
-public fun get_lz_receive_info(self: &EndpointV2, oapp: address): vector<u8> {
-    *self.oapp_registry.get_lz_receive_info(oapp)
+/// Retrieves the oapp information for a registered OApp.
+public fun get_oapp_info(self: &EndpointV2, oapp: address): vector<u8> {
+    *self.oapp_registry.get_oapp_info(oapp)
 }
 
 /// Retrieves the delegate address for a registered OApp.
@@ -887,9 +895,9 @@ public fun get_compose_queue(self: &EndpointV2, composer: address): address {
     self.composer_registry.get_compose_queue(composer)
 }
 
-/// Retrieves the lz_compose execution information for a registered composer.
-public fun get_lz_compose_info(self: &EndpointV2, composer: address): vector<u8> {
-    *self.composer_registry.get_lz_compose_info(composer)
+/// Retrieves the composer information for a registered composer.
+public fun get_composer_info(self: &EndpointV2, composer: address): vector<u8> {
+    *self.composer_registry.get_composer_info(composer)
 }
 
 // === Compose Queue Public View Functions ===

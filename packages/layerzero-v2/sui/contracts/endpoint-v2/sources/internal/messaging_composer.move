@@ -23,7 +23,6 @@ const EComposeMessageMismatch: u64 = 2;
 const EComposeNotFound: u64 = 3;
 const EComposerNotRegistered: u64 = 4;
 const EComposerRegistered: u64 = 5;
-const EInvalidLZComposeInfo: u64 = 6;
 
 // === Structs ===
 
@@ -31,19 +30,19 @@ const EInvalidLZComposeInfo: u64 = 6;
 /// Similar to OAppRegistry but specifically for compose message handlers.
 public struct ComposerRegistry has store {
     // Maps composer package address to its complete information
-    composers: Table<address, ComposerInfo>,
+    composers: Table<address, ComposerRegistration>,
 }
 
 /// Stores the complete registration information for a composer.
 /// This information is used throughout the system to:
 /// - Route compose messages to the correct queue
 /// - Validate that operations come from legitimate composers
-/// - Execute lz_compose with the correct parameters
-public struct ComposerInfo has store {
+/// - Track the composer information for the composer, including the lz_compose execution information
+public struct ComposerRegistration has store {
     // The address of the compose queue object that this composer uses to manage pending messages
     compose_queue: address,
-    // The lz_compose execution information for the composer
-    lz_compose_info: vector<u8>,
+    // The composer information for the composer
+    composer_info: vector<u8>,
 }
 
 /// Shared object that manages compose message queues for a specific composer.
@@ -99,12 +98,12 @@ public struct LzComposeAlertEvent has copy, drop {
 public struct ComposerRegisteredEvent has copy, drop {
     composer: address,
     compose_queue: address,
-    lz_compose_info: vector<u8>,
+    composer_info: vector<u8>,
 }
 
-public struct LzComposeInfoSetEvent has copy, drop {
+public struct ComposerInfoSetEvent has copy, drop {
     composer: address,
-    lz_compose_info: vector<u8>,
+    composer_info: vector<u8>,
 }
 
 // === Creation ===
@@ -121,11 +120,10 @@ public(package) fun new_composer_registry(ctx: &mut TxContext): ComposerRegistry
 public(package) fun register_composer(
     self: &mut ComposerRegistry,
     composer: address,
-    lz_compose_info: vector<u8>,
+    composer_info: vector<u8>,
     ctx: &mut TxContext,
-) {
+): address {
     assert!(!self.is_registered(composer), EComposerRegistered);
-    assert!(lz_compose_info.length() > 0, EInvalidLZComposeInfo);
 
     let compose_queue = ComposeQueue { id: object::new(ctx), composer, messages: table::new(ctx) };
     let compose_queue_address = object::id_address(&compose_queue);
@@ -133,7 +131,7 @@ public(package) fun register_composer(
         .composers
         .add(
             composer,
-            ComposerInfo { compose_queue: compose_queue_address, lz_compose_info },
+            ComposerRegistration { compose_queue: compose_queue_address, composer_info },
         );
 
     // Each composer has its own compose_queue shared object to enable parallel execution
@@ -141,17 +139,18 @@ public(package) fun register_composer(
     event::emit(ComposerRegisteredEvent {
         composer,
         compose_queue: compose_queue_address,
-        lz_compose_info,
+        composer_info,
     });
+
+    compose_queue_address
 }
 
-/// Updates the lz_compose execution information for a registered composer.
-/// This allows composers to modify their message execution parameters after registration.
-public(package) fun set_lz_compose_info(self: &mut ComposerRegistry, composer: address, lz_compose_info: vector<u8>) {
-    assert!(lz_compose_info.length() > 0, EInvalidLZComposeInfo);
-    let composer_info = table_ext::borrow_mut_or_abort!(&mut self.composers, composer, EComposerNotRegistered);
-    composer_info.lz_compose_info = lz_compose_info;
-    event::emit(LzComposeInfoSetEvent { composer, lz_compose_info });
+/// Updates the composer execution information for a registered composer.
+/// This allows composers to modify their information after registration.
+public(package) fun set_composer_info(self: &mut ComposerRegistry, composer: address, composer_info: vector<u8>) {
+    let registration = table_ext::borrow_mut_or_abort!(&mut self.composers, composer, EComposerNotRegistered);
+    registration.composer_info = composer_info;
+    event::emit(ComposerInfoSetEvent { composer, composer_info });
 }
 
 // === Core Functions ===
@@ -222,15 +221,15 @@ public(package) fun is_registered(self: &ComposerRegistry, composer: address): b
 /// Gets the compose queue address for a registered composer.
 /// The compose queue is used for managing compose message queues and parallel execution.
 public(package) fun get_compose_queue(self: &ComposerRegistry, composer: address): address {
-    let composer_info = table_ext::borrow_or_abort!(&self.composers, composer, EComposerNotRegistered);
-    composer_info.compose_queue
+    let registration = table_ext::borrow_or_abort!(&self.composers, composer, EComposerNotRegistered);
+    registration.compose_queue
 }
 
-/// Gets the lz_compose execution information for a registered composer.
+/// Gets the composer execution information for a registered composer.
 /// This contains version and payload data needed for compose message execution.
-public(package) fun get_lz_compose_info(self: &ComposerRegistry, composer: address): &vector<u8> {
-    let composer_info = table_ext::borrow_or_abort!(&self.composers, composer, EComposerNotRegistered);
-    &composer_info.lz_compose_info
+public(package) fun get_composer_info(self: &ComposerRegistry, composer: address): &vector<u8> {
+    let registration = table_ext::borrow_or_abort!(&self.composers, composer, EComposerNotRegistered);
+    &registration.composer_info
 }
 
 // === Compose Queue View Functions ===
@@ -299,17 +298,14 @@ public(package) fun create_lz_compose_alert_event(
 public(package) fun create_composer_registered_event(
     composer: address,
     compose_queue: address,
-    lz_compose_info: vector<u8>,
+    composer_info: vector<u8>,
 ): ComposerRegisteredEvent {
-    ComposerRegisteredEvent { composer, compose_queue, lz_compose_info }
+    ComposerRegisteredEvent { composer, compose_queue, composer_info }
 }
 
 #[test_only]
-public(package) fun create_lz_compose_info_set_event(
-    composer: address,
-    lz_compose_info: vector<u8>,
-): LzComposeInfoSetEvent {
-    LzComposeInfoSetEvent { composer, lz_compose_info }
+public(package) fun create_composer_info_set_event(composer: address, composer_info: vector<u8>): ComposerInfoSetEvent {
+    ComposerInfoSetEvent { composer, composer_info }
 }
 
 #[test_only]

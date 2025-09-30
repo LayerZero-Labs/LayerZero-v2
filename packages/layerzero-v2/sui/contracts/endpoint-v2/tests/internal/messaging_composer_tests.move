@@ -9,7 +9,7 @@ use endpoint_v2::messaging_composer::{
     ComposeDeliveredEvent,
     LzComposeAlertEvent,
     ComposerRegisteredEvent,
-    LzComposeInfoSetEvent
+    ComposerInfoSetEvent
 };
 use std::ascii;
 use sui::{event, test_scenario::{Self as ts, Scenario}, test_utils};
@@ -58,11 +58,11 @@ fun clean_registry(scenario: Scenario, registry: ComposerRegistry) {
     ts::end(scenario);
 }
 
-fun create_test_lz_compose_info(): vector<u8> {
+fun create_test_composer_info(): vector<u8> {
     vector[0x01, 0x02, 0x03, 0x04] // version + payload example
 }
 
-fun create_updated_lz_compose_info(): vector<u8> {
+fun create_updated_composer_info(): vector<u8> {
     vector[0x02, 0x05, 0x06, 0x07] // updated version + payload
 }
 
@@ -71,17 +71,17 @@ fun create_updated_lz_compose_info(): vector<u8> {
 #[test]
 fun test_register_composer() {
     let (mut scenario, mut registry) = setup_registry();
-    let lz_compose_info = create_test_lz_compose_info();
+    let composer_info = create_test_composer_info();
 
     // Initially composer should not be registered
     assert!(!registry.is_registered(COMPOSER_1), 0);
 
     // Register the composer
-    registry.register_composer(COMPOSER_1, lz_compose_info, scenario.ctx());
+    registry.register_composer(COMPOSER_1, composer_info, scenario.ctx());
 
     // Verify composer is now registered
     assert!(registry.is_registered(COMPOSER_1), 1);
-    assert!(*registry.get_lz_compose_info(COMPOSER_1) == lz_compose_info, 2);
+    assert!(*registry.get_composer_info(COMPOSER_1) == composer_info, 2);
 
     // Verify messaging composer address is valid
     let messaging_composer_addr = registry.get_compose_queue(COMPOSER_1);
@@ -91,7 +91,7 @@ fun test_register_composer() {
     let expected_event = messaging_composer::create_composer_registered_event(
         COMPOSER_1,
         messaging_composer_addr,
-        lz_compose_info,
+        composer_info,
     );
     let events = event::events_by_type<ComposerRegisteredEvent>();
     assert!(events.length() == 1, 4);
@@ -103,20 +103,20 @@ fun test_register_composer() {
 #[test]
 fun test_register_same_package_different_composers() {
     let (mut scenario, mut registry) = setup_registry();
-    let lz_compose_info_1 = create_test_lz_compose_info();
-    let lz_compose_info_2 = create_updated_lz_compose_info();
+    let composer_info_1 = create_test_composer_info();
+    let composer_info_2 = create_updated_composer_info();
 
     // Register two composers
-    registry.register_composer(COMPOSER_1, lz_compose_info_1, scenario.ctx());
-    registry.register_composer(COMPOSER_2, lz_compose_info_2, scenario.ctx());
+    registry.register_composer(COMPOSER_1, composer_info_1, scenario.ctx());
+    registry.register_composer(COMPOSER_2, composer_info_2, scenario.ctx());
 
     // Both should be registered successfully
     assert!(registry.is_registered(COMPOSER_1), 0);
     assert!(registry.is_registered(COMPOSER_2), 1);
 
     // Both should have different compose info and messaging composers
-    assert!(*registry.get_lz_compose_info(COMPOSER_1) == lz_compose_info_1, 2);
-    assert!(*registry.get_lz_compose_info(COMPOSER_2) == lz_compose_info_2, 3);
+    assert!(*registry.get_composer_info(COMPOSER_1) == composer_info_1, 2);
+    assert!(*registry.get_composer_info(COMPOSER_2) == composer_info_2, 3);
 
     let addr_1 = registry.get_compose_queue(COMPOSER_1);
     let addr_2 = registry.get_compose_queue(COMPOSER_2);
@@ -126,12 +126,12 @@ fun test_register_same_package_different_composers() {
     let expected_event_1 = messaging_composer::create_composer_registered_event(
         COMPOSER_1,
         addr_1,
-        lz_compose_info_1,
+        composer_info_1,
     );
     let expected_event_2 = messaging_composer::create_composer_registered_event(
         COMPOSER_2,
         addr_2,
-        lz_compose_info_2,
+        composer_info_2,
     );
     let events = event::events_by_type<ComposerRegisteredEvent>();
     assert!(events.length() == 2, 5);
@@ -145,51 +145,52 @@ fun test_register_same_package_different_composers() {
 #[expected_failure(abort_code = messaging_composer::EComposerRegistered)]
 fun test_register_composer_already_registered() {
     let (mut scenario, mut registry) = setup_registry();
-    let lz_compose_info = create_test_lz_compose_info();
+    let composer_info = create_test_composer_info();
 
     // Register composer first time
-    registry.register_composer(COMPOSER_1, lz_compose_info, scenario.ctx());
+    registry.register_composer(COMPOSER_1, composer_info, scenario.ctx());
 
     // Try to register the same composer again - should fail
-    registry.register_composer(COMPOSER_1, lz_compose_info, scenario.ctx());
+    registry.register_composer(COMPOSER_1, composer_info, scenario.ctx());
 
     clean_registry(scenario, registry);
 }
 
 #[test]
-#[expected_failure(abort_code = messaging_composer::EInvalidLZComposeInfo)]
-fun test_register_composer_empty_lz_compose_info() {
+fun test_register_composer_empty_composer_info() {
     let (mut scenario, mut registry) = setup_registry();
     let empty_info = vector::empty<u8>();
 
-    // Register composer with empty lz_compose_info - should fail
+    // Register composer with empty composer_info - should work
     registry.register_composer(COMPOSER_1, empty_info, scenario.ctx());
+    assert!(registry.is_registered(COMPOSER_1), 0);
+    assert!(*registry.get_composer_info(COMPOSER_1) == empty_info, 1);
 
     clean_registry(scenario, registry);
 }
 
 #[test]
-fun test_set_lz_compose_info() {
+fun test_set_composer_info() {
     let (mut scenario, mut registry) = setup_registry();
-    let initial_info = create_test_lz_compose_info();
-    let updated_info = create_updated_lz_compose_info();
+    let initial_info = create_test_composer_info();
+    let updated_info = create_updated_composer_info();
 
     // Register composer first
     registry.register_composer(COMPOSER_1, initial_info, scenario.ctx());
 
-    // Update lz_compose_info
-    registry.set_lz_compose_info(COMPOSER_1, updated_info);
+    // Update composer_info
+    registry.set_composer_info(COMPOSER_1, updated_info);
 
     // Verify the info was updated
-    assert!(*registry.get_lz_compose_info(COMPOSER_1) == updated_info, 0);
+    assert!(*registry.get_composer_info(COMPOSER_1) == updated_info, 0);
 
     // Verify event was emitted
-    let expected_event = messaging_composer::create_lz_compose_info_set_event(
+    let expected_event = messaging_composer::create_composer_info_set_event(
         COMPOSER_1,
         updated_info,
     );
-    let events = event::events_by_type<LzComposeInfoSetEvent>();
-    // Should have 1 event (from set_lz_compose_info, not from register_composer)
+    let events = event::events_by_type<ComposerInfoSetEvent>();
+    // Should have 1 event (from set_composer_info, not from register_composer)
     assert!(events.length() >= 1, 1);
     test_utils::assert_eq(events[events.length() - 1], expected_event);
 
@@ -198,27 +199,27 @@ fun test_set_lz_compose_info() {
 
 #[test]
 #[expected_failure(abort_code = messaging_composer::EComposerNotRegistered)]
-fun test_set_lz_compose_info_unregistered_composer() {
+fun test_set_composer_info_unregistered_composer() {
     let (scenario, mut registry) = setup_registry();
-    let new_info = create_test_lz_compose_info();
+    let new_info = create_test_composer_info();
 
-    registry.set_lz_compose_info(COMPOSER_1, new_info);
+    registry.set_composer_info(COMPOSER_1, new_info);
 
     clean_registry(scenario, registry);
 }
 
 #[test]
-#[expected_failure(abort_code = messaging_composer::EInvalidLZComposeInfo)]
-fun test_set_empty_lz_compose_info() {
+fun test_set_empty_composer_info() {
     let (mut scenario, mut registry) = setup_registry();
-    let initial_info = create_test_lz_compose_info();
+    let initial_info = create_test_composer_info();
     let empty_info = vector::empty<u8>();
 
     // Register composer first
     registry.register_composer(COMPOSER_1, initial_info, scenario.ctx());
 
-    // Try to set empty lz_compose_info - should fail
-    registry.set_lz_compose_info(COMPOSER_1, empty_info);
+    // Set empty composer_info - should work
+    registry.set_composer_info(COMPOSER_1, empty_info);
+    assert!(*registry.get_composer_info(COMPOSER_1) == empty_info, 0);
 
     clean_registry(scenario, registry);
 }
@@ -236,11 +237,11 @@ fun test_get_messaging_composer_not_registered() {
 
 #[test]
 #[expected_failure(abort_code = messaging_composer::EComposerNotRegistered)]
-fun test_get_lz_compose_info_not_registered() {
+fun test_get_composer_info_not_registered() {
     let (scenario, registry) = setup_registry();
 
-    // Try to get lz_compose_info for unregistered composer
-    registry.get_lz_compose_info(COMPOSER_1);
+    // Try to get composer_info for unregistered composer
+    registry.get_composer_info(COMPOSER_1);
 
     clean_registry(scenario, registry);
 }

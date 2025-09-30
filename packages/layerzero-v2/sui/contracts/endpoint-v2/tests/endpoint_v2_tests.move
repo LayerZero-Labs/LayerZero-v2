@@ -825,7 +825,7 @@ fun test_register_oapp() {
     // Verify oapp was registered
     assert!(endpoint.is_oapp_registered(oapp_address), 0);
     // OApp package tracking functions have been removed
-    assert!(endpoint.get_lz_receive_info(oapp_address) == lz_receive_info, 2);
+    assert!(endpoint.get_oapp_info(oapp_address) == lz_receive_info, 2);
 
     // Verify messaging channel was created
     let messaging_channel_address = endpoint.get_messaging_channel(oapp_address);
@@ -868,7 +868,7 @@ fun test_register_composer() {
     // Verify composer was registered
     assert!(endpoint.is_composer_registered(composer_address), 0);
     // Composer package tracking functions have been removed
-    assert!(endpoint.get_lz_compose_info(composer_address) == lz_compose_info, 2);
+    assert!(endpoint.get_composer_info(composer_address) == lz_compose_info, 2);
 
     // Verify messaging composer was created
     let compose_queue_address = endpoint.get_compose_queue(composer_address);
@@ -1194,7 +1194,7 @@ fun test_set_default_receive_library_timeout() {
 }
 
 #[test]
-fun test_set_lz_receive_info() {
+fun test_set_oapp_info() {
     let (mut scenario, admin_cap, mut endpoint, messaging_channel, oapp_cap) = setup(false);
     let test_oapp_cap = call_cap::new_package_cap_for_test(scenario.ctx());
     let oapp_address = test_oapp_cap.id();
@@ -1205,13 +1205,13 @@ fun test_set_lz_receive_info() {
     endpoint.register_oapp(&test_oapp_cap, initial_info, scenario.ctx());
 
     // Verify initial info
-    assert!(endpoint.get_lz_receive_info(oapp_address) == initial_info, 0);
+    assert!(endpoint.get_oapp_info(oapp_address) == initial_info, 0);
 
-    // Update lz_receive_info
-    endpoint.set_lz_receive_info(&test_oapp_cap, oapp_address, updated_info);
+    // Update oapp_info
+    endpoint.set_oapp_info(&test_oapp_cap, oapp_address, updated_info);
 
     // Verify info was updated
-    assert!(endpoint.get_lz_receive_info(oapp_address) == updated_info, 1);
+    assert!(endpoint.get_oapp_info(oapp_address) == updated_info, 1);
 
     // Verify other properties remain unchanged
     assert!(endpoint.is_oapp_registered(oapp_address), 2);
@@ -1230,8 +1230,8 @@ fun test_set_lz_receive_info() {
 
     // Delegate should be able to update lz_receive_info
     let delegate_updated_info = b"delegate_updated_lz_receive_info";
-    endpoint.set_lz_receive_info(&delegate_cap, oapp_address, delegate_updated_info);
-    assert!(endpoint.get_lz_receive_info(oapp_address) == delegate_updated_info, 6);
+    endpoint.set_oapp_info(&delegate_cap, oapp_address, delegate_updated_info);
+    assert!(endpoint.get_oapp_info(oapp_address) == delegate_updated_info, 6);
 
     test_utils::destroy(test_oapp_cap);
     test_utils::destroy(delegate_cap);
@@ -1239,7 +1239,7 @@ fun test_set_lz_receive_info() {
 }
 
 #[test]
-fun test_set_lz_compose_info() {
+fun test_set_composer_info() {
     let (mut scenario, admin_cap, mut endpoint, messaging_channel, oapp_cap) = setup(false);
     let composer_cap = call_cap::new_package_cap_for_test(scenario.ctx());
     let composer_address = composer_cap.id();
@@ -1250,13 +1250,13 @@ fun test_set_lz_compose_info() {
     endpoint.register_composer(&composer_cap, initial_info, scenario.ctx());
 
     // Verify initial info
-    assert!(endpoint.get_lz_compose_info(composer_address) == initial_info, 0);
+    assert!(endpoint.get_composer_info(composer_address) == initial_info, 0);
 
-    // Update lz_compose_info
-    endpoint.set_lz_compose_info(&composer_cap, updated_info);
+    // Update composer_info
+    endpoint.set_composer_info(&composer_cap, updated_info);
 
     // Verify info was updated
-    assert!(endpoint.get_lz_compose_info(composer_address) == updated_info, 1);
+    assert!(endpoint.get_composer_info(composer_address) == updated_info, 1);
 
     // Verify other properties remain unchanged
     assert!(endpoint.is_composer_registered(composer_address), 2);
@@ -1416,14 +1416,14 @@ fun refund(refund_address_option: Option<address>) {
 }
 
 #[test, expected_failure(abort_code = endpoint_v2::EUnauthorizedOApp)]
-fun test_unauthorized_set_lz_receive_info() {
+fun test_unauthorized_set_oapp_info() {
     let (mut scenario, admin_cap, mut endpoint, messaging_channel, oapp_cap) = setup(false);
     let unauthorized_cap = call_cap::new_individual_cap(scenario.ctx());
     let oapp_address = oapp_cap.id();
     let updated_info = b"updated_info";
 
-    // Unauthorized caller should not be able to set lz_receive_info
-    endpoint.set_lz_receive_info(&unauthorized_cap, oapp_address, updated_info);
+    // Unauthorized caller should not be able to set oapp_info
+    endpoint.set_oapp_info(&unauthorized_cap, oapp_address, updated_info);
 
     test_utils::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
