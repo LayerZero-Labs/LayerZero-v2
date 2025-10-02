@@ -20,4 +20,6 @@ pub enum ExecutorError {
     EidNotSupported,
     ExecutorIsAdmin,
     InvalidOwner,
+    InvalidInstructionSequence,
+    ContextAccountAlreadyInitialized,
 }

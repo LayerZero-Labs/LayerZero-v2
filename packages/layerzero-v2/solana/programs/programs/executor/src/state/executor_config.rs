@@ -6,7 +6,8 @@ use worker_interface::worker_utils::insert_or_remove_sorted_pubkey_list;
 pub const ADMINS_MAX_LEN: usize = 5;
 pub const EXECUTOR_MAX_LEN: usize = 8;
 pub const MSGLIBS_MAX_LEN: usize = 10;
-pub const DST_CONFIG_MAX_LEN: usize = 140;
+pub const DST_CONFIG_DEFAULT_LEN: usize = 140;
+pub const DST_CONFIG_MAX_LEN: usize = 290;
 
 #[account]
 #[derive(InitSpace)]
@@ -25,7 +26,7 @@ pub struct ExecutorConfig {
     // set by admin
     pub default_multiplier_bps: u16,
     pub price_feed: Pubkey,
-    #[max_len(DST_CONFIG_MAX_LEN)]
+    #[max_len(DST_CONFIG_DEFAULT_LEN)]
     pub dst_configs: Vec<DstConfig>,
 }
 
@@ -55,12 +56,12 @@ impl ExecutorConfig {
         Ok(())
     }
 
-    pub fn set_dst_configs(&mut self, dst_configs: Vec<DstConfig>) -> Result<()> {
+    pub fn set_dst_configs(&mut self, max_len: usize, dst_configs: Vec<DstConfig>) -> Result<()> {
         for config in &dst_configs {
             sorted_list_helper::insert_or_update_sorted_list_by_eid(
                 &mut self.dst_configs,
                 config.clone(),
-                DST_CONFIG_MAX_LEN,
+                max_len,
             )?;
         }
         Ok(())
@@ -83,3 +84,15 @@ impl sorted_list_helper::EID for DstConfig {
     }
 }
 utils::generate_account_size_test!(ExecutorConfig, executor_config_test);
+
+// This struct must maintain exact field-by-field compatibility with oapp::lz_receive_types_v2::ExecutionContextV1
+// to ensure proper serialization/deserialization between the two types.
+// Any changes to this struct must be synchronized with the corresponding struct in the oapp crate.
+#[account]
+#[derive(InitSpace)]
+pub struct ExecutionContextV1 {
+    pub initial_payer_balance: u64,
+    /// The maximum total lamports allowed to be used by all instructions in this execution.
+    /// This is a hard cap for the sum of lamports consumed by all instructions in the execution batch.
+    pub fee_limit: u64,
+}

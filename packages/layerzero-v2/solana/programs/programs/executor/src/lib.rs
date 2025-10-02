@@ -24,6 +24,10 @@ const EXECUTOR_CONFIG_SEED: &[u8] = b"ExecutorConfig";
 pub mod executor {
     use super::*;
 
+    pub fn version(_ctx: Context<GetVersion>) -> Result<Version> {
+        Ok(Version { major: 2, minor: 0 })
+    }
+
     /// --------------------------- Owner Instructions ---------------------------
     pub fn init_executor(mut ctx: Context<InitExecutor>, params: InitExecutorParams) -> Result<()> {
         InitExecutor::apply(&mut ctx, &params)
@@ -42,6 +46,10 @@ pub mod executor {
         params: AdminSetConfigParams,
     ) -> Result<()> {
         AdminSetConfig::apply(&mut ctx, &params)
+    }
+
+    pub fn extend_executor_config(mut ctx: Context<ExtendExecutorConfig>) -> Result<()> {
+        ExtendExecutorConfig::apply(&mut ctx)
     }
 
     pub fn native_drop<'c: 'info, 'info>(
@@ -70,4 +78,21 @@ pub mod executor {
     ) -> Result<ExecutionState> {
         Executable::apply(&ctx, &params)
     }
+
+    pub fn pre_execute(mut ctx: Context<PreExecute>, param: PreExecuteParams) -> Result<()> {
+        PreExecute::apply(&mut ctx, &param)
+    }
+
+    pub fn post_execute(mut ctx: Context<PostExecute>, params: PostExecuteParams) -> Result<()> {
+        PostExecute::apply(&mut ctx, &params)
+    }
+}
+
+#[derive(Accounts)]
+pub struct GetVersion {}
+
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct Version {
+    pub major: u64,
+    pub minor: u8,
 }
