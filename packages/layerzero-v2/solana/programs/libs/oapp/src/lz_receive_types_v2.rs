@@ -10,27 +10,23 @@ use endpoint::{
 
 pub const LZ_RECEIVE_TYPES_VERSION: u8 = 2;
 
-/// The payload returned from `lz_receive_types_info` when version == 2.
-/// Provides information needed to construct the call to `lz_receive_types_v2`.
+/// Return payload of `lz_receive_types_info` (version == 2).
+/// Used by the Executor to construct the call to `lz_receive_types_v2`.
 ///
-/// This structure is stored at a deterministic PDA and serves as the bridge between
-/// the version discovery phase and the actual execution planning phase of V2.
+/// `lz_receive_types_info` accounts:
+/// 1. `oapp_account`: the OApp identity/account.
+/// 2. `lz_receive_types_accounts`: PDA derived with `seeds = [LZ_RECEIVE_TYPES_SEED,
+///    &oapp_account.key().to_bytes()]`.
+/// The program reads this PDA to compute and return `LzReceiveTypesV2Accounts`.
 ///
-/// # Execution Flow
-/// 1. **Version Discovery**: The Executor calls `lz_receive_types_info` using the PDA. If the
-///    version is 2, it decodes the returned payload into LzReceiveTypesV2Accounts.
-/// 2. **Execution Planning**: The Executor constructs the accounts from LzReceiveTypesV2Accounts to
-///    call `lz_receive_types_v2`, which returns the complete execution plan.
+/// Execution flow:
+/// 1. Version discovery: call `lz_receive_types_info`; when version is 2, decode into
+///    `LzReceiveTypesV2Accounts`.
+/// 2. Execution planning: build the account metas for `lz_receive_types_v2` from the decoded value;
+///    calling `lz_receive_types_v2` returns the complete execution plan.
 ///
-/// # Storage Location
-/// This data is stored at a PDA derived using:
-/// ```
-/// seeds = [LZ_RECEIVE_TYPES_SEED, &oapp_address.to_bytes()]
-/// ```
-///
-/// # Fields
-/// - `accounts`: A vector of `Pubkey` containing the static accounts needed to construct the
-///   `lz_receive_types_v2` instruction.
+/// Fields:
+/// - `accounts`: `Pubkey`s returned by `lz_receive_types_info`.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct LzReceiveTypesV2Accounts {
     pub accounts: Vec<Pubkey>,

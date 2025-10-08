@@ -4,12 +4,23 @@ use endpoint::COMPOSED_MESSAGE_HASH_SEED;
 
 pub const LZ_COMPOSE_TYPES_VERSION: u8 = 2;
 
-/// The payload returned from `lz_compose_types_info` when version == 2.
-/// Provides information needed to construct the call to `lz_compose_types_v2`.
+/// Return payload of `lz_compose_types_info` (version == 2).
+/// Used by the Executor to construct the call to `lz_compose_types_v2`.
 ///
-/// This structure is stored at a deterministic PDA and serves as the bridge between
-/// the version discovery phase and the actual execution planning phase of V2.
+/// `lz_compose_types_info` accounts:
+/// 1. `composer_account`: the Composer identity/account.
+/// 2. `lz_compose_types_accounts`: PDA derived with `seeds = [LZ_COMPOSE_TYPES_SEED,
+///    &composer_account.key().to_bytes()]`.
+/// The program reads this PDA to compute and return `LzComposeTypesV2Accounts`.
 ///
+/// Execution flow:
+/// 1. Version discovery: call `lz_compose_types_info`; when version is 2, decode into
+///    `LzComposeTypesV2Accounts`.
+/// 2. Execution planning: build the account metas for `lz_compose_types_v2` from the decoded value;
+///    calling `lz_compose_types_v2` returns the complete execution plan.
+///
+/// Fields:
+/// - `accounts`: `Pubkey`s returned by `lz_compose_types_info`.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct LzComposeTypesV2Accounts {
     pub accounts: Vec<Pubkey>,
@@ -17,7 +28,7 @@ pub struct LzComposeTypesV2Accounts {
 
 /// Output of the lz_compose_types_v2 instruction.
 ///
-/// This structure enables the multi-instruction execution model where OApps can
+/// This structure enables the multi-instruction execution model where Composer can
 /// define multiple instructions to be executed atomically by the Executor.
 /// The Executor constructs a single transaction containing all returned instructions.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -38,8 +49,8 @@ pub struct LzComposeTypesV2Result {
 /// The list of instructions that can be executed in the LzCompose transaction.
 ///
 /// V2's multi-instruction model enables complex patterns such as:
-/// - Preprocessing steps before lz_receive (e.g., account initialization)
-/// - Postprocessing steps after lz_receive (e.g., verification, cleanup)
+/// - Preprocessing steps before lz_compose (e.g., account initialization)
+/// - Postprocessing steps after lz_compose (e.g., verification, cleanup)
 /// - ABA messaging patterns with additional LayerZero sends
 /// - Conditional execution flows based on message content
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -52,7 +63,7 @@ pub enum Instruction {
         accounts: Vec<AccountMetaRef>,
     },
     /// Arbitrary custom instruction for preprocessing/postprocessing
-    /// Enables OApps to implement complex execution flows
+    /// Enables Composer to implement complex execution flows
     Standard {
         /// Target program ID for the custom instruction        
         program_id: Pubkey,
