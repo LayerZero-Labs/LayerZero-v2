@@ -1,0 +1,4 @@
+## Usage
+```python
+print('Hello!')
+```

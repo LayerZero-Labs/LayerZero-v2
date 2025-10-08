@@ -1,0 +1,6 @@
+app:
+  name: testapp
+  debug: true
+logging:
+  level: INFO
+  path: ./logs
