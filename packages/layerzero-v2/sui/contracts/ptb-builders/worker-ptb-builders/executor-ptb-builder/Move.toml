@@ -2,7 +2,6 @@
 name = "ExecutorPtbBuilder"
 edition = "2024.beta"
 version = "0.0.1"
-license = "MIT"
 
 [dependencies]
 Executor = { local = "../../../workers/executors/executor" }

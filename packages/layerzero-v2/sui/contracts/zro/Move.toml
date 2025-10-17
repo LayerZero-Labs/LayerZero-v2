@@ -2,7 +2,6 @@
 name = "Zro"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 version = "0.0.1"
-license = "MIT"
 
 [dependencies]
 

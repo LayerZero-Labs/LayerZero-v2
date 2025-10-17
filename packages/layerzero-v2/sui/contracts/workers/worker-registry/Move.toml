@@ -2,7 +2,6 @@
 name = "WorkerRegistry"
 version = "0.0.1"
 edition = "2024.beta"
-license = "MIT"
 
 [dependencies]
 Call = { local = "../../dynamic-call/call" }

@@ -2,7 +2,6 @@
 name = "MsglibPtbBuilderCallTypes"
 edition = "2024.beta"
 version = "0.0.1"
-license = "MIT"
 
 [dependencies]
 PtbMoveCall = { local = "../../ptb-move-call" }

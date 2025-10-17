@@ -2,7 +2,6 @@
 name = "SimpleMessageLib"
 edition = "2024.beta"
 version = "0.0.1"
-license = "MIT"
 
 [dependencies]
 MessageLibCommon = { local = "../message-lib-common" }

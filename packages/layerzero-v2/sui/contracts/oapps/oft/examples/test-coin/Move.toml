@@ -2,7 +2,6 @@
 name = "TestCoin"
 version = "0.0.1"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
-license = "MIT"       # e.g., "MIT", "GPL", "Apache 2.0"
 
 [dependencies]
 

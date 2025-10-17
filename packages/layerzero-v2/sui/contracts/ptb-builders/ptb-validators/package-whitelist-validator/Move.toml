@@ -2,7 +2,6 @@
 name = "PackageWhitelistValidator"
 edition = "2024.beta"
 version = "0.0.1"
-license = "MIT"
 
 [dependencies]
 BlockedMessageLib = { local = "../../../message-libs/blocked-message-lib" }
