@@ -46,6 +46,17 @@ public fun create_quorum_change_admin_hash(admin: address, active: bool, vid: u3
     hash::keccak256!(&payload)
 }
 
+/// Create a hash for a set_supported_message_lib function call
+public fun create_set_supported_message_lib_hash(
+    message_lib: address,
+    supported: bool,
+    vid: u32,
+    expiration: u64,
+): Bytes32 {
+    let payload = build_set_supported_message_lib_payload(message_lib, supported, vid, expiration);
+    hash::keccak256!(&payload)
+}
+
 /// Create a hash for a set_allowlist function call
 public fun create_set_allowlist_hash(oapp: address, allowed: bool, vid: u32, expiration: u64): Bytes32 {
     let payload = build_set_allowlist_payload(oapp, allowed, vid, expiration);
@@ -79,6 +90,12 @@ public fun create_set_ptb_builder_move_calls_hash(
         vid,
         expiration,
     );
+    hash::keccak256!(&payload)
+}
+
+/// Create a hash for a set_worker_info function call
+public fun create_set_worker_info_hash(worker_info: vector<u8>, vid: u32, expiration: u64): Bytes32 {
+    let payload = build_set_worker_info_payload(worker_info, vid, expiration);
     hash::keccak256!(&payload)
 }
 
@@ -138,6 +155,23 @@ public fun build_quorum_change_admin_payload(admin: address, active: bool, vid: 
     writer.to_bytes()
 }
 
+/// Build the serialized payload for a set_supported_message_lib function call (for procuring a hash)
+public fun build_set_supported_message_lib_payload(
+    message_lib: address,
+    supported: bool,
+    vid: u32,
+    expiration: u64,
+): vector<u8> {
+    let mut writer = buffer_writer::new();
+    writer
+        .write_bytes(get_function_signature(b"set_supported_message_lib"))
+        .write_address(message_lib)
+        .write_bool(supported)
+        .write_u32(vid)
+        .write_u64(expiration);
+    writer.to_bytes()
+}
+
 /// Build the serialized payload for a set_allowlist function call (for procuring a hash)
 public fun build_set_allowlist_payload(oapp: address, allowed: bool, vid: u32, expiration: u64): vector<u8> {
     let mut writer = buffer_writer::new();
@@ -183,6 +217,17 @@ public fun build_set_ptb_builder_move_calls_payload(
         .write_address(target_ptb_builder)
         .write_bytes(hash::keccak256!(&bcs::to_bytes(&get_fee_move_calls)).to_bytes())
         .write_bytes(hash::keccak256!(&bcs::to_bytes(&assign_job_move_calls)).to_bytes())
+        .write_u32(vid)
+        .write_u64(expiration);
+    writer.to_bytes()
+}
+
+/// Build the serialized payload for a set_worker_info function call (for procuring a hash)
+public fun build_set_worker_info_payload(worker_info: vector<u8>, vid: u32, expiration: u64): vector<u8> {
+    let mut writer = buffer_writer::new();
+    writer
+        .write_bytes(get_function_signature(b"set_worker_info"))
+        .write_bytes(hash::keccak256!(&worker_info).to_bytes())
         .write_u32(vid)
         .write_u64(expiration);
     writer.to_bytes()

@@ -17,7 +17,7 @@
 /// - Admin controls for system-wide default configurations
 module uln_302::uln_302;
 
-use call::{call::{Call, Void}, call_cap::{Self, CallCap}, multi_call::{Self, MultiCall}};
+use call::{call::{Call, Void}, call_cap::{Self, CallCap}};
 use endpoint_v2::{
     endpoint_send::SendParam as EndpointSendParam,
     endpoint_v2::{Self, EndpointV2},
@@ -29,18 +29,22 @@ use endpoint_v2::{
     messaging_receipt::MessagingReceipt
 };
 use message_lib_common::fee_recipient::FeeRecipient;
+use multi_call::multi_call::{Self, MultiCall};
 use sui::clock::Clock;
 use treasury::treasury::Treasury;
 use uln_302::{
-    dvn_assign_job::AssignJobParam as DvnAssignJobParam,
-    dvn_get_fee::GetFeeParam as DvnGetFeeParam,
-    executor_assign_job::AssignJobParam as ExecutorAssignJobParam,
     executor_config::{Self, ExecutorConfig},
-    executor_get_fee::GetFeeParam as ExecutorGetFeeParam,
     oapp_uln_config::{Self, OAppUlnConfig},
     receive_uln::{Self, ReceiveUln, Verification},
     send_uln::{Self, SendUln},
     uln_config::UlnConfig
+};
+use uln_common::{
+    dvn_assign_job::AssignJobParam as DvnAssignJobParam,
+    dvn_get_fee::GetFeeParam as DvnGetFeeParam,
+    dvn_verify::VerifyParam as DvnVerifyParam,
+    executor_assign_job::AssignJobParam as ExecutorAssignJobParam,
+    executor_get_fee::GetFeeParam as ExecutorGetFeeParam
 };
 use utils::{bytes32::Bytes32, package};
 
@@ -144,6 +148,7 @@ public fun confirm_quote(
     executor_call: Call<ExecutorGetFeeParam, u64>,
     dvn_multi_call: MultiCall<DvnGetFeeParam, u64>,
 ) {
+    send_library_call.assert_caller(endpoint!());
     let dvn_fees = dvn_multi_call.destroy(&self.call_cap).map!(|dvn_call| {
         let (_, _, dvn_fee) = send_library_call.destroy_child(&self.call_cap, dvn_call);
         dvn_fee
@@ -204,6 +209,7 @@ public fun confirm_send(
     dvn_multi_call: MultiCall<DvnAssignJobParam, FeeRecipient>,
     ctx: &mut TxContext,
 ) {
+    send_library_call.assert_caller(endpoint!());
     // Destroy DVN calls and extract fee recipient information
     let (mut dvns, mut dvn_recipients) = (vector[], vector[]);
     dvn_multi_call.destroy(&self.call_cap).do!(|dvn_call| {
@@ -280,18 +286,11 @@ public fun set_config(self: &mut Uln302, call: Call<MessageLibSetConfigParam, Vo
 ///
 /// **Parameters**:
 /// - `verification`: Verification storage tracking all DVN confirmations
-/// - `dvn`: The DVN's capability proving their authorization
-/// - `packet_header`: Encoded packet header containing routing information
-/// - `payload_hash`: Hash of the message payload for integrity verification
-/// - `confirmations`: Number of block confirmations the DVN observed
-public fun verify(
-    verification: &mut Verification,
-    dvn: &CallCap,
-    packet_header: vector<u8>,
-    payload_hash: Bytes32,
-    confirmations: u64,
-) {
-    receive_uln::verify(verification, dvn.id(), packet_header, payload_hash, confirmations)
+/// - `call`: Call containing the DVN verification parameters
+public fun verify(self: &Uln302, verification: &mut Verification, call: Call<DvnVerifyParam, Void>) {
+    let dvn = call.caller();
+    let param = call.complete_and_destroy(&self.call_cap);
+    receive_uln::verify(verification, dvn, *param.packet_header(), param.payload_hash(), param.confirmations())
 }
 
 /// Commits verification and delivers the message once sufficient DVN confirmations are received.
@@ -474,7 +473,14 @@ macro fun endpoint(): address {
 
 #[test_only]
 public fun init_for_test(ctx: &mut TxContext) {
-    init(sui::test_utils::create_one_time_witness<ULN_302>(), ctx);
+    let uln_302 = Uln302 {
+        id: object::new(ctx),
+        call_cap: call_cap::new_package_cap_for_test(ctx),
+        send_uln: send_uln::new_send_uln(ctx),
+        receive_uln: receive_uln::new_receive_uln(ctx),
+    };
+    transfer::share_object(uln_302);
+    transfer::transfer(AdminCap { id: object::new(ctx) }, ctx.sender());
 }
 
 #[test_only]

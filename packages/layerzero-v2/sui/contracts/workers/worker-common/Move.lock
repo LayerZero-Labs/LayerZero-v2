@@ -1,14 +1,13 @@
 [move]
 version = 3
-manifest_digest = "9ACF5F286CB41F1E704C1C04E3CC0F88D6943D9968CA7DDE4E05A02C27EE9C09"
-deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
+manifest_digest = "50BD891E0A3AB9D07F5EB58CEDB34558568DD32E6C9FF310D67ABCB92A5698E4"
+deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
   { id = "Call", name = "Call" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
 ]
 
 [[move.package]]
@@ -23,7 +22,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { local = "../../dynamic-call/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -56,7 +55,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { local = "../../utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -73,12 +72,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0xbd1b4591ff06b36113c28ec2f5ce10151b6a2998699e3d8364ec9f77efe950c8"
-latest-published-id = "0xbd1b4591ff06b36113c28ec2f5ce10151b6a2998699e3d8364ec9f77efe950c8"
+original-published-id = "0x9e60db99cfda71312eeb6fff4ce9682ce1d4a3c3a0051c430c5de7d373b85889"
+latest-published-id = "0x9e60db99cfda71312eeb6fff4ce9682ce1d4a3c3a0051c430c5de7d373b85889"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x6b29b0abf9da88be53a9ea1dfab8f600930b9ab6961eee65d67c1eecdd8cb695"
-latest-published-id = "0x6b29b0abf9da88be53a9ea1dfab8f600930b9ab6961eee65d67c1eecdd8cb695"
+original-published-id = "0x601523f0fbdb81de1cb79b24d001a8aa85b9a848c337d51ab815fb476630b86c"
+latest-published-id = "0x601523f0fbdb81de1cb79b24d001a8aa85b9a848c337d51ab815fb476630b86c"
 published-version = "1"

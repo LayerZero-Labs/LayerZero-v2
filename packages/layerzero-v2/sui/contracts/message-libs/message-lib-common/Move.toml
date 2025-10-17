@@ -4,7 +4,7 @@ edition = "2024.beta"
 version = "0.0.1"
 
 [dependencies]
-EndpointV2 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2", rev = "main", override = true }
+EndpointV2 = { local = "../../endpoint-v2" }
 
 [addresses]
 message_lib_common = "0x0"

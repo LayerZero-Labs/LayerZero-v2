@@ -3,7 +3,7 @@ module endpoint_v2::oapp_registry_tests;
 
 use endpoint_v2::{
     messaging_channel,
-    oapp_registry::{Self, OAppRegistry, OAppRegisteredEvent, LzReceiveInfoSetEvent, DelegateSetEvent}
+    oapp_registry::{Self, OAppRegistry, OAppRegisteredEvent, OAppInfoSetEvent, DelegateSetEvent}
 };
 use sui::{event, test_scenario::{Self, Scenario}, test_utils};
 
@@ -16,11 +16,11 @@ const DELEGATE_2: address = @0xd2d2;
 
 // === Test Data ===
 
-fun create_test_lz_receive_info(): vector<u8> {
+fun create_test_oapp_info(): vector<u8> {
     vector[0x01, 0x02, 0x03, 0x04] // version + payload example
 }
 
-fun create_updated_lz_receive_info(): vector<u8> {
+fun create_updated_oapp_info(): vector<u8> {
     vector[0x02, 0x05, 0x06, 0x07] // updated version + payload
 }
 
@@ -42,8 +42,8 @@ fun clean(scenario: Scenario, registry: OAppRegistry) {
 #[test]
 fun test_full_oapp_lifecycle() {
     let (mut scenario, mut registry) = setup();
-    let initial_info = create_test_lz_receive_info();
-    let updated_info = create_updated_lz_receive_info();
+    let initial_info = create_test_oapp_info();
+    let updated_info = create_updated_oapp_info();
 
     // Step 1: Register oapp
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
@@ -59,23 +59,23 @@ fun test_full_oapp_lifecycle() {
 
     // Step 2: Verify initial state
     assert!(registry.is_registered(OAPP_1), 0);
-    assert!(*registry.get_lz_receive_info(OAPP_1) == initial_info, 1);
+    assert!(*registry.get_oapp_info(OAPP_1) == initial_info, 1);
     let initial_channel = registry.get_messaging_channel(OAPP_1);
     assert!(initial_channel != @0x0, 2);
 
-    // Step 3: Update lz_receive_info
-    registry.set_lz_receive_info(OAPP_1, updated_info);
+    // Step 3: Update oapp_info
+    registry.set_oapp_info(OAPP_1, updated_info);
 
-    // Verify LzReceiveInfoSetEvent was emitted
-    let expected_info_set_event = oapp_registry::create_lz_receive_info_set_event(
+    // Verify OAppInfoSetEvent was emitted
+    let expected_info_set_event = oapp_registry::create_oapp_info_set_event(
         OAPP_1,
         updated_info,
     );
-    test_utils::assert_eq(event::events_by_type<LzReceiveInfoSetEvent>()[0], expected_info_set_event);
+    test_utils::assert_eq(event::events_by_type<OAppInfoSetEvent>()[0], expected_info_set_event);
 
     // Step 4: Verify updated state
     assert!(registry.is_registered(OAPP_1), 3);
-    assert!(*registry.get_lz_receive_info(OAPP_1) == updated_info, 4); // Info updated
+    assert!(*registry.get_oapp_info(OAPP_1) == updated_info, 4); // Info updated
     let final_channel = registry.get_messaging_channel(OAPP_1);
     assert!(final_channel == initial_channel, 5); // Channel unchanged
 
@@ -86,51 +86,51 @@ fun test_full_oapp_lifecycle() {
 #[expected_failure(abort_code = oapp_registry::EOAppRegistered)]
 fun test_register_oapp_already_registered() {
     let (mut scenario, mut registry) = setup();
-    let lz_receive_info = create_test_lz_receive_info();
+    let oapp_info = create_test_oapp_info();
 
     // Register oapp first time
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
-    registry.register_oapp(OAPP_1, messaging_channel, lz_receive_info);
+    registry.register_oapp(OAPP_1, messaging_channel, oapp_info);
 
     // Try to register the same oapp again - should fail
-    registry.register_oapp(OAPP_1, messaging_channel, lz_receive_info);
+    registry.register_oapp(OAPP_1, messaging_channel, oapp_info);
 
     clean(scenario, registry);
 }
 
 #[test]
-fun test_set_lz_receive_info_new() {
+fun test_set_oapp_info_new() {
     let (mut scenario, mut registry) = setup();
-    let initial_info = create_test_lz_receive_info();
-    let updated_info = create_updated_lz_receive_info();
+    let initial_info = create_test_oapp_info();
+    let updated_info = create_updated_oapp_info();
 
     // Register oapp first
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
     registry.register_oapp(OAPP_1, messaging_channel, initial_info);
 
-    // Update lz_receive_info
-    registry.set_lz_receive_info(OAPP_1, updated_info);
+    // Update oapp_info
+    registry.set_oapp_info(OAPP_1, updated_info);
 
     // Verify the info was updated
-    assert!(*registry.get_lz_receive_info(OAPP_1) == updated_info, 0);
+    assert!(*registry.get_oapp_info(OAPP_1) == updated_info, 0);
 
-    // Verify LzReceiveInfoSetEvent was emitted
-    let expected_event = oapp_registry::create_lz_receive_info_set_event(
+    // Verify OAppInfoSetEvent was emitted
+    let expected_event = oapp_registry::create_oapp_info_set_event(
         OAPP_1,
         updated_info,
     );
-    test_utils::assert_eq(event::events_by_type<LzReceiveInfoSetEvent>()[0], expected_event);
+    test_utils::assert_eq(event::events_by_type<OAppInfoSetEvent>()[0], expected_event);
 
     clean(scenario, registry);
 }
 
 #[test]
 #[expected_failure(abort_code = oapp_registry::EOAppNotRegistered)]
-fun test_set_lz_receive_info_unregistered_oapp() {
+fun test_set_oapp_info_unregistered_oapp() {
     let (scenario, mut registry) = setup();
-    let new_info = create_test_lz_receive_info();
+    let new_info = create_test_oapp_info();
 
-    registry.set_lz_receive_info(OAPP_1, new_info);
+    registry.set_oapp_info(OAPP_1, new_info);
 
     clean(scenario, registry);
 }
@@ -148,24 +148,25 @@ fun test_get_messaging_channel_not_registered() {
 
 #[test]
 #[expected_failure(abort_code = oapp_registry::EOAppNotRegistered)]
-fun test_get_lz_receive_info_not_registered() {
+fun test_get_oapp_info_not_registered() {
     let (scenario, registry) = setup();
 
-    // Try to get lz_receive_info for unregistered oapp
-    registry.get_lz_receive_info(OAPP_1);
+    // Try to get oapp_info for unregistered oapp
+    registry.get_oapp_info(OAPP_1);
 
     clean(scenario, registry);
 }
 
 #[test]
-#[expected_failure(abort_code = oapp_registry::EInvalidLZReceiveInfo)]
-fun test_empty_lz_receive_info() {
+fun test_empty_oapp_info() {
     let (mut scenario, mut registry) = setup();
     let empty_info = vector::empty<u8>();
 
-    // Register oapp with empty lz_receive_info - should fail
+    // Register oapp with empty oapp_info - should work
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
     registry.register_oapp(OAPP_1, messaging_channel, empty_info);
+    assert!(registry.is_registered(OAPP_1), 0);
+    assert!(*registry.get_oapp_info(OAPP_1) == empty_info, 1);
 
     clean(scenario, registry);
 }
@@ -173,14 +174,14 @@ fun test_empty_lz_receive_info() {
 #[test]
 fun test_same_package_different_oapps() {
     let (mut scenario, mut registry) = setup();
-    let lz_receive_info_1 = create_test_lz_receive_info();
-    let lz_receive_info_2 = create_updated_lz_receive_info();
+    let oapp_info_1 = create_test_oapp_info();
+    let oapp_info_2 = create_updated_oapp_info();
 
     // Register multiple oapps with the same package address
     let messaging_channel_1 = messaging_channel::create(OAPP_1, scenario.ctx());
     let messaging_channel_2 = messaging_channel::create(OAPP_2, scenario.ctx());
-    registry.register_oapp(OAPP_1, messaging_channel_1, lz_receive_info_1);
-    registry.register_oapp(OAPP_2, messaging_channel_2, lz_receive_info_2);
+    registry.register_oapp(OAPP_1, messaging_channel_1, oapp_info_1);
+    registry.register_oapp(OAPP_2, messaging_channel_2, oapp_info_2);
 
     // Verify both OAppRegisteredEvents were emitted
     let events = event::events_by_type<OAppRegisteredEvent>();
@@ -188,12 +189,12 @@ fun test_same_package_different_oapps() {
     let expected_event_1 = oapp_registry::create_oapp_registered_event(
         OAPP_1,
         messaging_channel_1,
-        lz_receive_info_1,
+        oapp_info_1,
     );
     let expected_event_2 = oapp_registry::create_oapp_registered_event(
         OAPP_2,
         messaging_channel_2,
-        lz_receive_info_2,
+        oapp_info_2,
     );
     test_utils::assert_eq(events[0], expected_event_1);
     test_utils::assert_eq(events[1], expected_event_2);
@@ -213,11 +214,11 @@ fun test_same_package_different_oapps() {
 #[test]
 fun test_set_delegate() {
     let (mut scenario, mut registry) = setup();
-    let lz_receive_info = create_test_lz_receive_info();
+    let oapp_info = create_test_oapp_info();
 
     // Register oapp first
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
-    registry.register_oapp(OAPP_1, messaging_channel, lz_receive_info);
+    registry.register_oapp(OAPP_1, messaging_channel, oapp_info);
 
     // Initially delegate should be @0x0
     assert!(registry.get_delegate(OAPP_1) == @0x0, 0);

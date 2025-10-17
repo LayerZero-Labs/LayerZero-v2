@@ -4,14 +4,10 @@ edition = "2024.beta"
 version = "0.0.1"
 
 [dependencies]
-Executor = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor", rev = "main" }
-ExecutorFeeLib = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-fee-lib", rev = "main" }
-ExecutorCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type", rev = "main", override = true }
-PriceFeed = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed", rev = "main" }
-Uln302PtbBuilder = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/uln-302-ptb-builder", rev = "main" }
-Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main", override = true }
-PriceFeedCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types", rev = "main", override = true }
-Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "main", override = true }
+Executor = { local = "../../../workers/executors/executor" }
+ExecutorFeeLib = { local = "../../../workers/executors/executor-fee-lib" }
+PriceFeed = { local = "../../../workers/price-feed" }
+Uln302PtbBuilder = { local = "../../../ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
 
 [addresses]
 executor_ptb_builder = "0x0"

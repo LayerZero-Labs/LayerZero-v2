@@ -15,6 +15,8 @@ use worker_common::worker_common::{
     EWorkerNotOnAllowlist,
     EWorkerAlreadyOnDenylist,
     EWorkerNotOnDenylist,
+    EWorkerMessageLibAlreadySupported,
+    EWorkerMessageLibNotSupported,
     EWorkerNotAllowed,
     EWorkerIsPaused,
     EWorkerNoAdminsProvided,
@@ -30,6 +32,7 @@ const USER3: address = @0x3;
 const DEPOSIT_ADDR: address = @0xdead;
 const PRICE_FEED_ADDR: address = @0xfeed;
 const WORKER_FEE_LIB_ADDR: address = @0xfee;
+const MESSAGE_LIB_ADDR: address = @0x333;
 
 // === Helper Functions ===
 
@@ -43,10 +46,12 @@ fun clean(scenario: ts::Scenario) {
 
 fun create_test_worker(scenario: &mut Scenario): (Worker, OwnerCap) {
     let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let worker_cap = call::call_cap::new_package_cap_for_test(scenario.ctx());
     worker_common::create_worker(
         worker_cap,
         DEPOSIT_ADDR,
+        supported_message_libs,
         PRICE_FEED_ADDR,
         WORKER_FEE_LIB_ADDR,
         1000u16, // 10% multiplier
@@ -112,10 +117,12 @@ fun test_create_worker_basic() {
     let mut scenario = setup();
 
     let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let worker_cap = call::call_cap::new_package_cap_for_test(scenario.ctx());
     let (worker, owner_cap) = worker_common::create_worker(
         worker_cap,
         DEPOSIT_ADDR,
+        supported_message_libs,
         PRICE_FEED_ADDR,
         WORKER_FEE_LIB_ADDR,
         500u16,
@@ -140,10 +147,12 @@ fun test_create_worker_with_empty_admins() {
     let mut scenario = setup();
 
     let empty_admins = vector::empty<address>();
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let worker_cap = call::call_cap::new_package_cap_for_test(scenario.ctx());
     let (worker, owner_cap) = worker_common::create_worker(
         worker_cap,
         DEPOSIT_ADDR,
+        supported_message_libs,
         PRICE_FEED_ADDR,
         WORKER_FEE_LIB_ADDR,
         1000u16,
@@ -414,6 +423,95 @@ fun test_set_denylist_remove_nonexistent() {
 
     test_utils::destroy(worker);
     test_utils::destroy(owner_cap);
+    clean(scenario);
+}
+
+// === Supported Message Library Tests ===
+
+#[test]
+fun test_set_supported_message_lib() {
+    let mut scenario = setup();
+    let (mut worker, owner_cap) = create_test_worker(&mut scenario);
+
+    // Initially MESSAGE_LIB_ADDR is not supported
+    assert!(!worker.is_supported_message_lib(MESSAGE_LIB_ADDR), 1);
+
+    // Add MESSAGE_LIB_ADDR to supported message libs
+    worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, true);
+
+    // Verify MESSAGE_LIB_ADDR is now supported
+    assert!(worker.is_supported_message_lib(MESSAGE_LIB_ADDR), 2);
+
+    // Verify SetSupportedMessageLibEvent was emitted for addition
+    let expected_add_event = worker_common::create_set_supported_message_lib_event(&worker, MESSAGE_LIB_ADDR, true);
+    test_utils::assert_eq(event::events_by_type<worker_common::SetSupportedMessageLibEvent>()[0], expected_add_event);
+
+    // Remove MESSAGE_LIB_ADDR from supported message libs
+    worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, false);
+
+    // Verify MESSAGE_LIB_ADDR is no longer supported
+    assert!(!worker.is_supported_message_lib(MESSAGE_LIB_ADDR), 3);
+
+    // Verify SetSupportedMessageLibEvent was emitted for removal
+    let expected_remove_event = worker_common::create_set_supported_message_lib_event(&worker, MESSAGE_LIB_ADDR, false);
+    test_utils::assert_eq(
+        event::events_by_type<worker_common::SetSupportedMessageLibEvent>()[1],
+        expected_remove_event,
+    );
+
+    test_utils::destroy(worker);
+    test_utils::destroy(owner_cap);
+    clean(scenario);
+}
+
+#[test]
+#[expected_failure(abort_code = EWorkerMessageLibAlreadySupported)]
+fun test_set_supported_message_lib_add_existing() {
+    let mut scenario = setup();
+    let (mut worker, owner_cap) = create_test_worker(&mut scenario);
+
+    // Add MESSAGE_LIB_ADDR to supported message libs
+    worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, true);
+
+    // Try to add MESSAGE_LIB_ADDR again
+    worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, true);
+
+    test_utils::destroy(worker);
+    test_utils::destroy(owner_cap);
+    clean(scenario);
+}
+
+#[test]
+#[expected_failure(abort_code = EWorkerMessageLibNotSupported)]
+fun test_set_supported_message_lib_remove_nonexistent() {
+    let mut scenario = setup();
+    let (mut worker, owner_cap) = create_test_worker(&mut scenario);
+
+    // Try to remove MESSAGE_LIB_ADDR (not supported)
+    worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, false);
+
+    test_utils::destroy(worker);
+    test_utils::destroy(owner_cap);
+    clean(scenario);
+}
+
+#[test]
+#[expected_failure(abort_code = EWorkerUnauthorized)]
+fun test_set_supported_message_lib_unauthorized() {
+    let mut scenario = setup();
+    let (mut worker1, owner_cap1) = create_test_worker(&mut scenario);
+    let (worker2, owner_cap2) = create_test_worker(&mut scenario);
+
+    scenario.next_tx(USER2); // USER2 is not the owner
+
+    let new_message_lib = @0x777;
+    // Try to use worker2's owner cap on worker1 (should fail)
+    worker1.set_supported_message_lib(&owner_cap2, new_message_lib, true);
+
+    test_utils::destroy(worker1);
+    test_utils::destroy(worker2);
+    test_utils::destroy(owner_cap1);
+    test_utils::destroy(owner_cap2);
     clean(scenario);
 }
 

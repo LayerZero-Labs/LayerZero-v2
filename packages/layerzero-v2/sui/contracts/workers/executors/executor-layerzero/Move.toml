@@ -3,9 +3,8 @@ name = "ExecutorLayerZero"
 version = "0.0.1"
 edition = "2024.beta"
 
-
 [dependencies]
-Executor = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor", rev = "main" }
+Executor = { local = "../executor" }
 
 [addresses]
 executor_layerzero = "0x0"

@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "8413F691ACAD978A6251C5C0A49D788D009687ED61384F2133A14E62AD317AEF"
+manifest_digest = "00A1BAC792189932ED1F889B50F21F29F0E2F9D019B1077736AA6FA259EC2E8F"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
@@ -22,7 +22,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { local = "../../dynamic-call/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -34,7 +34,7 @@ dependencies = [
 
 [[move.package]]
 id = "EndpointV2"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/endpoint-v2" }
+source = { local = "../../endpoint-v2" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -42,7 +42,6 @@ dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
   { id = "Zro", name = "Zro" },
 ]
 
@@ -69,7 +68,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { local = "../../utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -80,7 +79,7 @@ dependencies = [
 
 [[move.package]]
 id = "Zro"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "sui-vm", subdir = "packages/layerzero-v2/sui/contracts/zro" }
+source = { local = "../../zro" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -97,12 +96,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0xd4f4a48672c410085ad531efa1d3e19aaa21483da02fe1c8888ef6fa8d8ee330"
-latest-published-id = "0xd4f4a48672c410085ad531efa1d3e19aaa21483da02fe1c8888ef6fa8d8ee330"
+original-published-id = "0x54ef384c5f9095b27f1a521ffc378f85184366ec3e65400988a5d901dc243a7b"
+latest-published-id = "0x54ef384c5f9095b27f1a521ffc378f85184366ec3e65400988a5d901dc243a7b"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x5ccc92487b6d38cf5e327c8c5178776d48dbf82020f25b2f766dcf3dfd669752"
-latest-published-id = "0x5ccc92487b6d38cf5e327c8c5178776d48dbf82020f25b2f766dcf3dfd669752"
+original-published-id = "0x9de6d60206bfbc7b6f4c898b7d7c12dc749973098a9c346bca9d0cfa365be0d3"
+latest-published-id = "0x9de6d60206bfbc7b6f4c898b7d7c12dc749973098a9c346bca9d0cfa365be0d3"
 published-version = "1"

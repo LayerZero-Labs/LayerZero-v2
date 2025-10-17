@@ -1,7 +1,7 @@
 #[test_only]
 module uln_302::uln_302_tests;
 
-use call::{call::{Self, Call}, call_cap::{Self, CallCap}, multi_call};
+use call::{call::{Self, Call}, call_cap::{Self, CallCap}};
 use endpoint_v2::{
     endpoint_v2::{Self, EndpointV2, AdminCap as EndpointAdminCap},
     message_lib_quote,
@@ -12,18 +12,16 @@ use endpoint_v2::{
     outbound_packet
 };
 use message_lib_common::{fee_recipient::{Self, FeeRecipient}, packet_v1_codec};
+use multi_call::multi_call;
 use sui::{bcs, clock, test_scenario, test_utils};
 use treasury::treasury::{Self, Treasury};
-use uln_302::{
+use uln_302::{executor_config, oapp_uln_config, receive_uln, uln_302::{Self, Uln302, AdminCap}, uln_config};
+use uln_common::{
     dvn_assign_job,
-    dvn_get_fee,
+    dvn_get_fee::GetFeeParam as DvnGetFeeParam,
+    dvn_verify,
     executor_assign_job,
-    executor_config,
-    executor_get_fee,
-    oapp_uln_config,
-    receive_uln,
-    uln_302::{Self, Uln302, AdminCap},
-    uln_config
+    executor_get_fee
 };
 use utils::{bytes32, hash, package};
 
@@ -130,7 +128,7 @@ public fun executor_get_fee(
 }
 
 /// Mock DVN get_fee implementation - completes the call with a mock fee
-public fun dvn_get_fee(dvn: &MockDVN, call: &mut Call<dvn_get_fee::GetFeeParam, u64>, _ctx: &mut TxContext) {
+public fun dvn_get_fee(dvn: &MockDVN, call: &mut Call<DvnGetFeeParam, u64>, _ctx: &mut TxContext) {
     let mock_fee = 500u64;
     call.complete(&dvn.call_cap, mock_fee);
 }
@@ -481,8 +479,30 @@ fun test_verification_and_verifiable() {
     // 2. Now add DVN confirmations to make the packet verifiable
     // The test ULN config now uses our DVN addresses with 15 confirmations each
     // We use the uln_302 API (proper way to add DVN confirmations)
-    uln_302::verify(&mut verification, &dvn1_cap, packet_header, payload_hash, 15);
-    uln_302::verify(&mut verification, &dvn2_cap, packet_header, payload_hash, 15);
+    let dvn_call1 = call::create(
+        &dvn1_cap,
+        uln_302::get_call_cap(&uln302).id(),
+        true,
+        dvn_verify::create_param(
+            packet_header,
+            payload_hash,
+            15,
+        ),
+        scenario.ctx(),
+    );
+    uln302.verify(&mut verification, dvn_call1);
+    let dvn_call2 = call::create(
+        &dvn2_cap,
+        uln_302::get_call_cap(&uln302).id(),
+        true,
+        dvn_verify::create_param(
+            packet_header,
+            payload_hash,
+            15,
+        ),
+        scenario.ctx(),
+    );
+    uln302.verify(&mut verification, dvn_call2);
 
     // 3. Now the packet should be verifiable (all required DVNs have confirmed)
     let is_verifiable_after = uln_302::verifiable(
@@ -519,8 +539,30 @@ fun test_verification_and_verifiable() {
     assert!(is_verifiable_different == false, 2);
 
     // 5. Add confirmations for the different packet and verify it becomes verifiable too
-    uln_302::verify(&mut verification, &dvn1_cap, different_packet_header, different_payload_hash, 15);
-    uln_302::verify(&mut verification, &dvn2_cap, different_packet_header, different_payload_hash, 15);
+    let dvn_call1 = call::create(
+        &dvn1_cap,
+        uln_302::get_call_cap(&uln302).id(),
+        true,
+        dvn_verify::create_param(
+            different_packet_header,
+            different_payload_hash,
+            15,
+        ),
+        scenario.ctx(),
+    );
+    uln302.verify(&mut verification, dvn_call1);
+    let dvn_call2 = call::create(
+        &dvn2_cap,
+        uln_302::get_call_cap(&uln302).id(),
+        true,
+        dvn_verify::create_param(
+            different_packet_header,
+            different_payload_hash,
+            15,
+        ),
+        scenario.ctx(),
+    );
+    uln302.verify(&mut verification, dvn_call2);
 
     let is_verifiable_different_after = uln_302::verifiable(
         &uln302,
@@ -1096,7 +1138,7 @@ fun test_uln302_quote() {
     assert!(dvn_calls.length() == 2, 6);
 
     // Process each DVN call and collect completed ones for recreation of MultiCall
-    let mut completed_dvn_calls = vector::empty<Call<dvn_get_fee::GetFeeParam, u64>>();
+    let mut completed_dvn_calls = vector::empty<Call<DvnGetFeeParam, u64>>();
     dvn_calls.do!(|mut dvn_call| {
         // Determine which DVN this call belongs to and get the appropriate CallCap
         let callee = call::callee(&dvn_call);

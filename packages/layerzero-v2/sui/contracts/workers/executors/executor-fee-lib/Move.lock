@@ -1,10 +1,9 @@
 [move]
 version = 3
-manifest_digest = "87F5790FBDA528D909EC150AF72D72D6A13952B831EF995A18E9C9085D6B225A"
-deps_digest = "04732BFEF428F74DE262001DC455D76B909EBC394B034A9A15CC095E4BDD9CEF"
+manifest_digest = "60EEF61974D7A39E9EB26F810B7DADE592A6EE8EA85A37A44E6601212908036E"
+deps_digest = "CAFAD8A7CF51067FB4358215BECB86BD100DD64E57C2AC8A7AE7D74B688F5965"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
-  { id = "Call", name = "Call" },
   { id = "ExecutorCallType", name = "ExecutorCallType" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
@@ -25,7 +24,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { local = "../../../dynamic-call/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -37,7 +36,7 @@ dependencies = [
 
 [[move.package]]
 id = "ExecutorCallType"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type" }
+source = { local = "../executor-call-type" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -52,7 +51,7 @@ source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f
 
 [[move.package]]
 id = "PriceFeedCallTypes"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
+source = { local = "../../price-feed-call-types" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -80,7 +79,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { local = "../../../utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -91,7 +90,7 @@ dependencies = [
 
 [[move.package]]
 id = "WorkerCommon"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common" }
+source = { local = "../../worker-common" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -99,7 +98,6 @@ dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
 ]
 
 [move.toolchain-version]
@@ -110,12 +108,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0x36a441e73ed70e9fc900d021381a3d833c8b15305b7a116dbd7a2d1a156432e1"
-latest-published-id = "0x36a441e73ed70e9fc900d021381a3d833c8b15305b7a116dbd7a2d1a156432e1"
+original-published-id = "0xa99c7ca780a6cedfc27d9274c031741b68014886cba04dafe8335c72eeeed0b5"
+latest-published-id = "0xa99c7ca780a6cedfc27d9274c031741b68014886cba04dafe8335c72eeeed0b5"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x4cdd97cf2dee8387b004915c293d0565577e0194fff4894e604a09db54ac62c7"
-latest-published-id = "0x4cdd97cf2dee8387b004915c293d0565577e0194fff4894e604a09db54ac62c7"
+original-published-id = "0x63e8c59b39720d833bffca2f50e51e48ef426ac0c6ab8e92cf6475c42f5bd24e"
+latest-published-id = "0x63e8c59b39720d833bffca2f50e51e48ef426ac0c6ab8e92cf6475c42f5bd24e"
 published-version = "1"

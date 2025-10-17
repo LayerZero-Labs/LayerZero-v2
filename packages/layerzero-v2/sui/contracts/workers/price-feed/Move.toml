@@ -3,11 +3,9 @@ name = "PriceFeed"
 edition = "2024.beta"
 version = "0.0.1"
 
-
 [dependencies]
-Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main" }
-Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "main" }
-PriceFeedCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types", rev = "main" }
+Call = { local = "../../dynamic-call/call" }
+PriceFeedCallTypes = { local = "../price-feed-call-types" }
 
 [addresses]
 price_feed = "0x0"

@@ -1,7 +1,7 @@
 [move]
 version = 3
-manifest_digest = "C06E9C9B74C88B9821A66728C59837B61DA6850EC8808712314EA4D812B09E8A"
-deps_digest = "CAFAD8A7CF51067FB4358215BECB86BD100DD64E57C2AC8A7AE7D74B688F5965"
+manifest_digest = "B8BA78B19EE978373937E5AE956A332A0AA18C60B6469546E0DB106889D261D2"
+deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
   { id = "Call", name = "Call" },
@@ -9,7 +9,6 @@ dependencies= [
   { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
 ]
 
 [[move.package]]
@@ -24,7 +23,7 @@ dependencies = [
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
+source = { local = "../../dynamic-call/call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -40,7 +39,7 @@ source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f
 
 [[move.package]]
 id = "PriceFeedCallTypes"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
+source = { local = "../price-feed-call-types" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -68,7 +67,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { local = "../../utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -85,12 +84,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0x703efe3215e8249a490b4889d20bff10f09838d200835d53d056bbf30a80fe37"
-latest-published-id = "0x703efe3215e8249a490b4889d20bff10f09838d200835d53d056bbf30a80fe37"
+original-published-id = "0xa4f8f126dc7e2a763676eab3a6f0a12afaf334baa0f37b41a1e93890cf95ea4c"
+latest-published-id = "0xa4f8f126dc7e2a763676eab3a6f0a12afaf334baa0f37b41a1e93890cf95ea4c"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x9f12f79a355fca76492bc1908fc7a9a8518d2a83e65cffc93f134144dfa4e5bb"
-latest-published-id = "0x9f12f79a355fca76492bc1908fc7a9a8518d2a83e65cffc93f134144dfa4e5bb"
+original-published-id = "0xea932d79771b24103a1cda8e87a65068d6116c047f9dccc3e487cf8316625576"
+latest-published-id = "0xea932d79771b24103a1cda8e87a65068d6116c047f9dccc3e487cf8316625576"
 published-version = "1"

@@ -1,6 +1,6 @@
 [move]
 version = 3
-manifest_digest = "4DC85919338238EDF18D32F44FCF941183F8F8222A989B53B75D43B89BFCC955"
+manifest_digest = "23F030200B968F1C0812E2230FEFEE5BA35F29A59EB62FC9657BD6710DE3EDF1"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies= [
   { id = "Bridge", name = "Bridge" },
@@ -26,7 +26,7 @@ source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f
 
 [[move.package]]
 id = "PtbMoveCall"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/ptb-move-call" }
+source = { local = "../../ptb-move-call" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -55,7 +55,7 @@ dependencies = [
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
+source = { local = "../../../utils" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -72,12 +72,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0xc333a722752d990e1e331c1b57b9b9241e958a8bd13a20e38677b8551e96188e"
-latest-published-id = "0xc333a722752d990e1e331c1b57b9b9241e958a8bd13a20e38677b8551e96188e"
+original-published-id = "0xe6b2d773258f2130f38a5398c24a2832a173bc685502fba397f104eb3b7868e5"
+latest-published-id = "0xe6b2d773258f2130f38a5398c24a2832a173bc685502fba397f104eb3b7868e5"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0xea847a7eee0e55f52a121829cc6ede9603649a39290e6d46566e9206d5e9761f"
-latest-published-id = "0xea847a7eee0e55f52a121829cc6ede9603649a39290e6d46566e9206d5e9761f"
+original-published-id = "0xd412a95bfe4645ddb920e3c08cfb8f7cfe9c8fe9897e957ca161cc6b85987fc5"
+latest-published-id = "0xd412a95bfe4645ddb920e3c08cfb8f7cfe9c8fe9897e957ca161cc6b85987fc5"
 published-version = "1"

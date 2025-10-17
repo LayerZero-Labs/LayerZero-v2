@@ -4,11 +4,13 @@ version = "0.0.1"
 edition = "2024.beta"
 
 [dependencies]
-WorkerCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common", rev = "main" }
-Uln302 = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/message-libs/uln-302", rev = "main" }
-MsglibPtbBuilderCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types", rev = "main" }
-DvnCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/dvns/dvn-call-type", rev = "main" }
-Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main", override = true }
+WorkerCommon = { local = "../../worker-common" }
+WorkerRegistry = { local = "../../worker-registry" }
+MessageLibCommon = { local = "../../../message-libs/message-lib-common" }
+UlnCommon = { local = "../../../message-libs/uln-common" }
+MsglibPtbBuilderCallTypes = { local = "../../../ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types" }
+DvnCallType = { local = "../dvn-call-type" }
+MultiCall = { local = "../../../dynamic-call/multi-call" }
 
 [addresses]
 dvn = "0x0"

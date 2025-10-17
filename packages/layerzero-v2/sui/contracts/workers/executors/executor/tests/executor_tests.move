@@ -3,6 +3,7 @@ module executor::executor_tests;
 
 use call::call_cap;
 use executor::{
+    executor_info_v1,
     executor_type,
     executor_worker::{Self, Executor, DstConfigSetEvent, NativeDropAppliedEvent},
     native_drop_type::{Self, NativeDropParams}
@@ -11,16 +12,21 @@ use ptb_move_call::{argument::{Self as argument, Argument}, move_call::{Self as 
 use std::{ascii, type_name};
 use sui::{coin, event, sui::SUI, test_scenario::{Self, Scenario}, test_utils};
 use utils::bytes32::{Self, Bytes32};
-use worker_common::worker_common::{
-    Self,
-    OwnerCap,
-    AdminCap,
-    SetAdminEvent,
-    SetAllowlistEvent,
-    SetDenylistEvent,
-    PausedEvent,
-    UnpausedEvent
+use worker_common::{
+    worker_common::{
+        Self,
+        OwnerCap,
+        AdminCap,
+        SetAdminEvent,
+        SetAllowlistEvent,
+        SetDenylistEvent,
+        SetSupportedMessageLibEvent,
+        PausedEvent,
+        UnpausedEvent
+    },
+    worker_info_v1
 };
+use worker_registry::worker_registry;
 
 // === Test Constants ===
 
@@ -30,6 +36,7 @@ const OAPP: address = @0xddd;
 const PRICE_FEED: address = @0xfff;
 const WORKER_FEE_LIB: address = @0x111;
 const DEPOSIT_ADDRESS: address = @0x222;
+const MESSAGE_LIB: address = @0x333;
 
 const SRC_EID: u32 = 101;
 const DST_EID: u32 = 102;
@@ -49,25 +56,27 @@ fun create_test_executor(scenario: &mut Scenario): (Executor, OwnerCap, AdminCap
     scenario.next_tx(OWNER);
 
     let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty vector for test
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
 
-    let executor = executor_worker::create_executor(
+    executor_worker::create_executor(
         worker_cap,
         DEPOSIT_ADDRESS,
+        supported_message_libs,
         PRICE_FEED,
         WORKER_FEE_LIB,
         DEFAULT_MULTIPLIER_BPS,
         OWNER,
         admins,
+        &mut worker_registry,
         scenario.ctx(),
     );
-
-    // Share the executor object for testing
-    sui::transfer::public_share_object(executor);
 
     scenario.next_tx(OWNER);
     let executor = test_scenario::take_shared<Executor>(scenario);
     let owner_cap = test_scenario::take_from_sender<OwnerCap>(scenario);
+    test_utils::destroy(worker_registry);
 
     scenario.next_tx(ADMIN);
     let admin_cap = test_scenario::take_from_sender<AdminCap>(scenario);
@@ -195,11 +204,17 @@ fun test_complete_executor_functionality() {
     assert!(executor.is_denylisted(OAPP), 23);
     assert!(!executor.has_acl(OAPP), 24); // Denylist overrides allowlist
 
+    // Test set_supported_message_lib
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, true);
+    assert!(executor.is_supported_message_lib(MESSAGE_LIB), 25);
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, false);
+    assert!(!executor.is_supported_message_lib(MESSAGE_LIB), 26);
+
     // Test set_paused
     executor.set_paused(&owner_cap, true);
-    assert!(executor.is_paused(), 25);
+    assert!(executor.is_paused(), 27);
     executor.set_paused(&owner_cap, false);
-    assert!(!executor.is_paused(), 26);
+    assert!(!executor.is_paused(), 28);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -447,6 +462,35 @@ fun test_remove_from_denylist_not_exists() {
 }
 
 #[test]
+#[expected_failure(abort_code = worker_common::EWorkerMessageLibAlreadySupported)]
+fun test_add_to_supported_message_lib_already_exists() {
+    let mut scenario = setup_scenario();
+    let (mut executor, owner_cap, admin_cap) = create_test_executor(&mut scenario);
+
+    // Add to supported message lib first time
+    scenario.next_tx(OWNER);
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, true);
+
+    // Try to add to supported message lib again (should fail)
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, true);
+
+    clean(scenario, executor, owner_cap, admin_cap);
+}
+
+#[test]
+#[expected_failure(abort_code = worker_common::EWorkerMessageLibNotSupported)]
+fun test_remove_from_supported_message_lib_not_exists() {
+    let mut scenario = setup_scenario();
+    let (mut executor, owner_cap, admin_cap) = create_test_executor(&mut scenario);
+
+    // Try to remove from supported message lib without adding first (should fail)
+    scenario.next_tx(OWNER);
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, false);
+
+    clean(scenario, executor, owner_cap, admin_cap);
+}
+
+#[test]
 #[expected_failure(abort_code = worker_common::EWorkerNoAdminsProvided)]
 fun test_create_executor_with_empty_admins() {
     let mut scenario = setup_scenario();
@@ -455,21 +499,60 @@ fun test_create_executor_with_empty_admins() {
     scenario.next_tx(OWNER);
 
     let empty_admins = vector::empty<address>();
+    let supported_message_libs = vector[]; // Empty vector for test
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
 
-    let executor = executor_worker::create_executor(
+    executor_worker::create_executor(
         worker_cap,
         DEPOSIT_ADDRESS,
+        supported_message_libs,
         PRICE_FEED,
         WORKER_FEE_LIB,
         DEFAULT_MULTIPLIER_BPS,
         OWNER,
         empty_admins,
+        &mut worker_registry,
         scenario.ctx(),
     );
 
     // This should never be reached due to expected failure
-    test_utils::destroy(executor);
+    test_utils::destroy(worker_registry);
+    scenario.end();
+}
+
+#[test]
+fun test_create_executor_will_set_worker_info() {
+    let mut scenario = setup_scenario();
+
+    // Try to create executor with empty admins vector (should fail)
+    scenario.next_tx(OWNER);
+
+    let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty vector for test
+    let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let worker_address = worker_cap.id();
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
+
+    let executor_object = executor_worker::create_executor(
+        worker_cap,
+        DEPOSIT_ADDRESS,
+        supported_message_libs,
+        PRICE_FEED,
+        WORKER_FEE_LIB,
+        DEFAULT_MULTIPLIER_BPS,
+        OWNER,
+        admins,
+        &mut worker_registry,
+        scenario.ctx(),
+    );
+    let worker_info = worker_registry.get_worker_info(worker_address);
+    let worker_info_bytes = worker_info_v1::decode(*worker_info).worker_info();
+    let executor_info = executor_info_v1::decode(*worker_info_bytes);
+    assert!(executor_info.executor_object() == executor_object, 0);
+
+    // This should never be reached due to expected failure
+    test_utils::destroy(worker_registry);
     scenario.end();
 }
 
@@ -789,23 +872,34 @@ fun test_event_emissions() {
     );
     assert!(denylist_events[0] == expected_denylist_event, 12);
 
+    // Test SetSupportedMessageLibEvent
+    executor.set_supported_message_lib(&owner_cap, MESSAGE_LIB, true);
+    let supported_message_lib_events = event::events_by_type<SetSupportedMessageLibEvent>();
+    assert!(vector::length(&supported_message_lib_events) == 1, 13);
+    let expected_supported_message_lib_event = worker_common::create_set_supported_message_lib_event(
+        executor_worker::get_worker_for_testing(&executor),
+        MESSAGE_LIB,
+        true,
+    );
+    assert!(supported_message_lib_events[0] == expected_supported_message_lib_event, 14);
+
     // Test PausedEvent
     executor.set_paused(&owner_cap, true);
     let pause_events = event::events_by_type<PausedEvent>();
-    assert!(vector::length(&pause_events) == 1, 10);
+    assert!(vector::length(&pause_events) == 1, 15);
     let expected_pause_event = worker_common::create_paused_event(
         executor_worker::get_worker_for_testing(&executor),
     );
-    assert!(pause_events[0] == expected_pause_event, 13);
+    assert!(pause_events[0] == expected_pause_event, 16);
 
     // Test UnpausedEvent
     executor.set_paused(&owner_cap, false);
     let unpause_events = event::events_by_type<UnpausedEvent>();
-    assert!(vector::length(&unpause_events) == 1, 14);
+    assert!(vector::length(&unpause_events) == 1, 17);
     let expected_unpause_event = worker_common::create_unpaused_event(
         executor_worker::get_worker_for_testing(&executor),
     );
-    assert!(unpause_events[0] == expected_unpause_event, 15);
+    assert!(unpause_events[0] == expected_unpause_event, 18);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }

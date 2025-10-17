@@ -1,21 +1,22 @@
 /// DVN (Decentralized Verification Network) implementation for LayerZero v2
 module dvn::dvn;
 
-use call::{call::{Self, Call, Void}, call_cap::CallCap, multi_call::MultiCall};
-use dvn::{hashes, multisig::{Self, MultiSig}};
+use call::{call::{Self, Call, Void}, call_cap::CallCap};
+use dvn::{dvn_info_v1, hashes, multisig::{Self, MultiSig}};
 use dvn_call_type::dvn_feelib_get_fee::{Self, FeelibGetFeeParam};
 use message_lib_common::fee_recipient::{Self, FeeRecipient};
 use msglib_ptb_builder_call_types::set_worker_ptb::{Self, SetWorkerPtbParam};
+use multi_call::multi_call::MultiCall;
 use ptb_move_call::move_call::MoveCall;
 use sui::{clock::Clock, event, table::{Self, Table}, vec_set::VecSet};
-use uln_302::{
-    dvn_assign_job::AssignJobParam,
-    dvn_get_fee::GetFeeParam,
-    receive_uln::Verification,
-    uln_302::{Self, ULN_302}
-};
-use utils::{bytes32::Bytes32, hash, package, table_ext};
-use worker_common::worker_common::{Self, Worker, OwnerCap, AdminCap};
+use uln_common::{dvn_assign_job::AssignJobParam, dvn_get_fee::GetFeeParam, dvn_verify::{Self, VerifyParam}};
+use utils::{bytes32::Bytes32, hash, table_ext};
+use worker_common::{worker_common::{Self, Worker, OwnerCap, AdminCap}, worker_info_v1};
+use worker_registry::worker_registry::WorkerRegistry;
+
+// === Constants ===
+
+const DVN_WORKER_ID: u8 = 2;
 
 // === Errors ===
 
@@ -37,9 +38,9 @@ public struct SetDstConfigEvent has copy, drop {
 // === Structs ===
 
 /// DVN configuration and state
-public struct DVN has key, store {
+public struct DVN has key {
     id: UID,
-    /// Unique identifier for this DVN instance
+    /// Unique DVN identifier: endpoint v1 eid if available, otherwise endpoint v2 eid % 30,000
     vid: u32,
     /// Worker object (contains worker_cap)
     worker: Worker,
@@ -72,17 +73,20 @@ public fun create_dvn(
     worker_cap: CallCap,
     vid: u32,
     deposit_address: address,
+    supported_message_libs: vector<address>,
     price_feed: address,
     worker_fee_lib: address,
     default_multiplier_bps: u16,
     admins: vector<address>,
     signers: vector<vector<u8>>,
     quorum: u64,
+    worker_registry: &mut WorkerRegistry,
     ctx: &mut TxContext,
-): DVN {
+): address {
     let (worker, owner_cap) = worker_common::create_worker(
         worker_cap,
         deposit_address,
+        supported_message_libs,
         price_feed,
         worker_fee_lib,
         default_multiplier_bps,
@@ -102,8 +106,13 @@ public fun create_dvn(
         owner_cap,
         ptb_builder_initialized: false,
     };
+    let dvn_object_address = object::id_address(&dvn);
+    let dvn_info_bytes = dvn_info_v1::create(dvn_object_address).encode();
+    let worker_info_bytes = worker_info_v1::create(DVN_WORKER_ID, dvn_info_bytes).encode();
+    worker_registry.set_worker_info(dvn.worker.worker_cap(), worker_info_bytes);
 
-    dvn
+    transfer::share_object(dvn);
+    dvn_object_address
 }
 
 // === Admin Only Functions ===
@@ -182,6 +191,24 @@ public fun init_ptb_builder_move_calls(
 }
 
 // === Admin with Signatures Functions ===
+
+/// Set supported message library (admin with signatures)
+public fun set_supported_message_lib(
+    self: &mut DVN,
+    admin_cap: &AdminCap,
+    message_lib: address,
+    supported: bool,
+    expiration: u64,
+    signatures: vector<u8>,
+    clock: &Clock,
+) {
+    self.worker.assert_admin(admin_cap);
+
+    let payload = hashes::build_set_supported_message_lib_payload(message_lib, supported, self.vid, expiration);
+    self.assert_all_and_add_to_history(&signatures, expiration, payload, clock);
+
+    self.worker.set_supported_message_lib(&self.owner_cap, message_lib, supported);
+}
 
 /// Set allowlist for an oapp sender (admin with signatures)
 public fun set_allowlist(
@@ -277,33 +304,29 @@ public fun set_dvn_signer(
 public fun verify(
     self: &mut DVN,
     admin_cap: &AdminCap,
-    verification: &mut Verification,
+    target_message_lib: address,
     packet_header: vector<u8>,
     payload_hash: Bytes32,
     confirmations: u64,
     expiration: u64,
     signatures: vector<u8>,
     clock: &Clock,
-) {
+    ctx: &mut TxContext,
+): Call<VerifyParam, Void> {
     self.worker.assert_admin(admin_cap);
 
     let payload = hashes::build_verify_payload(
         packet_header,
         payload_hash.to_bytes(),
         confirmations,
-        uln302!(),
+        target_message_lib,
         self.vid,
         expiration,
     );
     self.assert_all_and_add_to_history(&signatures, expiration, payload, clock);
 
-    uln_302::verify(
-        verification,
-        self.worker.worker_cap(),
-        packet_header,
-        payload_hash,
-        confirmations,
-    );
+    let param = dvn_verify::create_param(packet_header, payload_hash, confirmations);
+    call::create(self.worker.worker_cap(), target_message_lib, true, param, ctx)
 }
 
 /// Set PTB builder move calls (admin with signatures)
@@ -336,6 +359,24 @@ public fun set_ptb_builder_move_calls(
     )
 }
 
+/// Set worker info (admin with signatures)
+public fun set_worker_info(
+    self: &mut DVN,
+    admin_cap: &AdminCap,
+    worker_registry: &mut WorkerRegistry,
+    worker_info: vector<u8>,
+    expiration: u64,
+    signatures: vector<u8>,
+    clock: &Clock,
+) {
+    self.worker.assert_admin(admin_cap);
+
+    let payload = hashes::build_set_worker_info_payload(worker_info, self.vid, expiration);
+    self.assert_all_and_add_to_history(&signatures, expiration, payload, clock);
+
+    worker_registry.set_worker_info(self.worker.worker_cap(), worker_info);
+}
+
 // === Job Assignment and Fee Functions ===
 
 /// Assign job for DVN (called via PTB with MultiCall created by send function in ULN302)
@@ -344,7 +385,7 @@ public fun assign_job(
     dvn_multi_call: &mut MultiCall<AssignJobParam, FeeRecipient>,
     ctx: &mut TxContext,
 ): Call<FeelibGetFeeParam, u64> {
-    let dvn_call = dvn_multi_call.borrow_mut(self.worker.worker_cap());
+    let dvn_call = dvn_multi_call.borrow_next(self.worker.worker_cap(), false);
     let param = *dvn_call.param().base();
     self.create_feelib_get_fee_call(dvn_call, param, ctx)
 }
@@ -355,7 +396,7 @@ public fun confirm_assign_job(
     dvn_multi_call: &mut MultiCall<AssignJobParam, FeeRecipient>,
     feelib_call: Call<FeelibGetFeeParam, u64>,
 ) {
-    let dvn_call = dvn_multi_call.borrow_mut(self.worker.worker_cap());
+    let dvn_call = dvn_multi_call.borrow_next(self.worker.worker_cap(), true);
     let (_, _, fee) = dvn_call.destroy_child(self.worker.worker_cap(), feelib_call);
     dvn_call.complete(self.worker.worker_cap(), fee_recipient::create(fee, self.worker.deposit_address()));
 }
@@ -366,7 +407,7 @@ public fun get_fee(
     dvn_multi_call: &mut MultiCall<GetFeeParam, u64>,
     ctx: &mut TxContext,
 ): Call<FeelibGetFeeParam, u64> {
-    let dvn_call = dvn_multi_call.borrow_mut(self.worker.worker_cap());
+    let dvn_call = dvn_multi_call.borrow_next(self.worker.worker_cap(), false);
     let param = *dvn_call.param();
     self.create_feelib_get_fee_call(dvn_call, param, ctx)
 }
@@ -377,7 +418,7 @@ public fun confirm_get_fee(
     dvn_multi_call: &mut MultiCall<GetFeeParam, u64>,
     feelib_call: Call<FeelibGetFeeParam, u64>,
 ) {
-    let dvn_call = dvn_multi_call.borrow_mut(self.worker.worker_cap());
+    let dvn_call = dvn_multi_call.borrow_next(self.worker.worker_cap(), true);
     let (_, _, fee) = dvn_call.destroy_child(self.worker.worker_cap(), feelib_call);
     dvn_call.complete(self.worker.worker_cap(), fee);
 }
@@ -441,6 +482,11 @@ public fun is_admin(self: &DVN, admin_cap: &AdminCap): bool {
 /// Check if an address is admin
 public fun is_admin_address(self: &DVN, admin: address): bool {
     self.worker.is_admin_address(admin)
+}
+
+/// Check if a message library is supported
+public fun is_supported_message_lib(self: &DVN, message_lib: address): bool {
+    self.worker.is_supported_message_lib(message_lib)
 }
 
 /// Check if an address is in the allowlist
@@ -541,7 +587,7 @@ fun create_feelib_get_fee_call<Param, Result>(
     ctx: &mut TxContext,
 ): Call<FeelibGetFeeParam, u64> {
     // Perform all validation in one place
-    call.assert_caller(uln302!());
+    self.worker.assert_supported_message_lib(call.caller());
     self.worker.assert_acl(param.sender());
     self.worker.assert_worker_unpaused();
 
@@ -577,10 +623,6 @@ fun set_ptb_builder_move_calls_internal(
     self.ptb_builder_initialized = true;
     let param = set_worker_ptb::create_param(get_fee_move_calls, assign_job_move_calls);
     call::create(self.worker.worker_cap(), target_ptb_builder, true, param, ctx)
-}
-
-macro fun uln302(): address {
-    package::original_package_of_type<ULN_302>()
 }
 
 // === Test Only Functions ===
