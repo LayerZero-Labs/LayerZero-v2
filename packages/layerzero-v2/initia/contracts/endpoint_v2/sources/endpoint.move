@@ -154,7 +154,7 @@ module endpoint_v2::endpoint {
     /// This will be passed to the Message Library to calculate the fee of the message and emit messages that trigger
     /// offchain entities to deliver and verify the message. If `zro_token` is not option::none, whatever component of
     /// the fee that can be paid in ZRO will be paid in ZRO.
-    /// If the amounts provided are insuffient, the transaction will revert
+    /// If the amounts provided are insufficient, the transaction will revert
     public fun send(
         call_ref: &CallRef<EndpointV2SendingTarget>,
         dst_eid: u32,
@@ -191,10 +191,10 @@ module endpoint_v2::endpoint {
         WrappedGuidAndIndex { guid, index }
     }
 
-    /// Get the guid from a WrappedGuid without destorying the WrappedGuid
+    /// Get the guid from a WrappedGuid without destroying the WrappedGuid
     public fun get_guid_from_wrapped(wrapped: &WrappedGuid): Bytes32 { wrapped.guid }
 
-    /// Get the guid and index from a WrappedGuidAndIndex without destorying the WrappedGuidAndIndex
+    /// Get the guid and index from a WrappedGuidAndIndex without destroying the WrappedGuidAndIndex
     public fun get_guid_and_index_from_wrapped(wrapped: &WrappedGuidAndIndex): (Bytes32, u16) {
         (wrapped.guid, wrapped.index)
     }
@@ -297,7 +297,7 @@ module endpoint_v2::endpoint {
     }
 
     /// This maintains a packet's status as verified but prevents delivery until the packet is verified again
-    /// A non-verified nonce can be nilified by passing 0x00*32 as the payload hashs
+    /// A non-verified nonce can be nilified by passing 0x00*32 as the payload hashes
     public fun nilify(
         call_ref: &CallRef<EndpointV2ReceivingTarget>,
         src_eid: u32,
@@ -428,7 +428,7 @@ module endpoint_v2::endpoint {
 
     /// Confirms that a message has a payload hash (has been verified).
     ///
-    /// This generally suggests that the message can be delievered, with the exeption of the case where the message has
+    /// This generally suggests that the message can be delivered, with the exeption of the case where the message has
     /// been nilified
     public fun has_payload_hash(
         src_eid: u32,
