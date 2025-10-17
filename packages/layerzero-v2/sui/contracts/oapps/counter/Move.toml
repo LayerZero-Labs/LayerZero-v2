@@ -1,0 +1,23 @@
+[package]
+name = "Counter"
+version = "0.0.1"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+license = "MIT"       # e.g., "MIT", "GPL", "Apache 2.0"
+
+[dependencies]
+OApp = { local = "../oapp" }
+EndpointPtbBuilder = { local = "../../ptb-builders/endpoint-ptb-builder" }
+
+[addresses]
+counter = "0x0"
+
+[dev-dependencies]
+SimpleMessageLib = { local = "../../message-libs/simple-message-lib" }
+Uln302 = { local = "../../message-libs/uln-302" }
+DVN = { local = "../../workers/dvns/dvn" }
+DVNFeeLib = { local = "../../workers/dvns/dvn-fee-lib" }
+Executor = { local = "../../workers/executors/executor" }
+ExecutorFeeLib = { local = "../../workers/executors/executor-fee-lib" }
+PriceFeed = { local = "../../workers/price-feed" }
+
+[dev-addresses]

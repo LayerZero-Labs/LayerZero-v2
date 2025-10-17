@@ -19,12 +19,15 @@ const EWorkerAlreadyOnDenylist: u64 = 4;
 const EWorkerAttemptingToRemoveOnlyAdmin: u64 = 5;
 const EWorkerInvalidDepositAddress: u64 = 6;
 const EWorkerIsPaused: u64 = 7;
-const EWorkerNoAdminsProvided: u64 = 8;
-const EWorkerNotAllowed: u64 = 9;
-const EWorkerNotOnAllowlist: u64 = 10;
-const EWorkerNotOnDenylist: u64 = 11;
-const EWorkerPauseStatusUnchanged: u64 = 12;
-const EWorkerUnauthorized: u64 = 13;
+const EWorkerMessageLibAlreadySupported: u64 = 8;
+const EWorkerMessageLibNotSupported: u64 = 9;
+const EWorkerNoAdminsProvided: u64 = 10;
+const EWorkerNotAllowed: u64 = 11;
+const EWorkerNotOnAllowlist: u64 = 12;
+const EWorkerNotOnDenylist: u64 = 13;
+const EWorkerPauseStatusUnchanged: u64 = 14;
+const EWorkerUnauthorized: u64 = 15;
+const EWorkerUnsupportedMessageLib: u64 = 16;
 
 // === Structs ===
 
@@ -52,9 +55,11 @@ public struct AdminRegistry has store {
 public struct Worker has store {
     /// Address where fees are deposited
     deposit_address: address,
-    /// Object ID of the worker fee lib object
+    /// Message library package addresses
+    message_libs: VecSet<address>,
+    /// Fee library package address
     worker_fee_lib: address,
-    /// Object ID of the price feed object
+    /// Price feed package address
     price_feed: address,
     /// Default multiplier in basis points for fee calculation
     default_multiplier_bps: u16,
@@ -84,6 +89,12 @@ public struct SetAdminEvent has copy, drop {
     worker: address,
     admin: address,
     active: bool,
+}
+
+public struct SetSupportedMessageLibEvent has copy, drop {
+    worker: address,
+    message_lib: address,
+    supported: bool,
 }
 
 public struct SetAllowlistEvent has copy, drop {
@@ -134,6 +145,7 @@ public struct UnpausedEvent has copy, drop {
 public fun create_worker(
     worker_cap: CallCap,
     deposit_address: address,
+    supported_message_libs: vector<address>,
     price_feed: address,
     worker_fee_lib: address,
     default_multiplier_bps: u16,
@@ -151,6 +163,7 @@ public fun create_worker(
     // Create worker struct
     let mut worker = Worker {
         deposit_address,
+        message_libs: vec_set::empty(),
         worker_fee_lib,
         price_feed,
         default_multiplier_bps,
@@ -169,6 +182,9 @@ public fun create_worker(
 
     // Set admins
     admins.do!(|admin| worker.set_admin(&owner_cap, admin, true, ctx));
+
+    // Set supported message libs
+    supported_message_libs.do!(|lib| worker.set_supported_message_lib(&owner_cap, lib, true));
 
     (worker, owner_cap)
 }
@@ -214,6 +230,19 @@ public fun set_admin(worker: &mut Worker, owner_cap: &OwnerCap, admin: address, 
         admin,
         active,
     });
+}
+
+/// Set supported message library
+public fun set_supported_message_lib(worker: &mut Worker, owner_cap: &OwnerCap, message_lib: address, supported: bool) {
+    assert_owner(worker, owner_cap);
+    if (supported) {
+        assert!(!worker.is_supported_message_lib(message_lib), EWorkerMessageLibAlreadySupported);
+        worker.message_libs.insert(message_lib);
+    } else {
+        assert!(worker.is_supported_message_lib(message_lib), EWorkerMessageLibNotSupported);
+        worker.message_libs.remove(&message_lib);
+    };
+    event::emit(SetSupportedMessageLibEvent { worker: worker.worker_cap_address(), message_lib, supported });
 }
 
 /// Set allowlist status for a sender
@@ -330,6 +359,16 @@ public fun set_worker_fee_lib(worker: &mut Worker, admin_cap: &AdminCap, worker_
 }
 
 // === View Functions ===
+
+/// Check if a message library is supported
+public fun is_supported_message_lib(worker: &Worker, message_lib: address): bool {
+    worker.message_libs.contains(&message_lib)
+}
+
+/// Assert that a message library is supported
+public fun assert_supported_message_lib(worker: &Worker, message_lib: address) {
+    assert!(worker.is_supported_message_lib(message_lib), EWorkerUnsupportedMessageLib);
+}
 
 /// Get allowlist size
 public fun allowlist_size(worker: &Worker): u64 {
@@ -534,6 +573,19 @@ public fun create_set_supported_option_types_event(
         worker: worker.worker_cap_address(),
         dst_eid,
         option_types,
+    }
+}
+
+#[test_only]
+public fun create_set_supported_message_lib_event(
+    worker: &Worker,
+    message_lib: address,
+    supported: bool,
+): SetSupportedMessageLibEvent {
+    SetSupportedMessageLibEvent {
+        worker: worker.worker_cap_address(),
+        message_lib,
+        supported,
     }
 }
 

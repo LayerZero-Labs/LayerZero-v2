@@ -10,16 +10,21 @@ use endpoint_v2::{
     messaging_composer::ComposeQueue,
     utils
 };
-use executor::{executor_type::DstConfig, native_drop_type::NativeDropParams};
+use executor::{executor_info_v1, executor_type::DstConfig, native_drop_type::NativeDropParams};
 use executor_call_type::executor_feelib_get_fee::{Self, FeelibGetFeeParam};
 use message_lib_common::fee_recipient::{Self, FeeRecipient};
 use msglib_ptb_builder_call_types::set_worker_ptb::{Self, SetWorkerPtbParam};
 use ptb_move_call::move_call::MoveCall;
 use std::ascii::String;
 use sui::{coin::Coin, event, sui::SUI, table::{Self, Table}, vec_set::VecSet};
-use uln_302::{executor_assign_job::AssignJobParam, executor_get_fee::GetFeeParam, uln_302::ULN_302};
-use utils::{bytes32::Bytes32, package, table_ext};
-use worker_common::worker_common::{Self, Worker, OwnerCap, AdminCap};
+use uln_common::{executor_assign_job::AssignJobParam, executor_get_fee::GetFeeParam};
+use utils::{bytes32::Bytes32, table_ext};
+use worker_common::{worker_common::{Self, Worker, OwnerCap, AdminCap}, worker_info_v1};
+use worker_registry::worker_registry::WorkerRegistry;
+
+// === Constants ===
+
+const EXECUTOR_WORKER_ID: u8 = 1;
 
 // === Errors ===
 
@@ -28,7 +33,7 @@ const EInvalidNativeDropAmount: u64 = 2;
 
 // === Structs ===
 
-public struct Executor has key, store {
+public struct Executor has key {
     id: UID,
     worker: Worker,
     dst_configs: Table<u32, DstConfig>,
@@ -59,16 +64,19 @@ public struct NativeDropAppliedEvent has copy, drop {
 public fun create_executor(
     worker_cap: CallCap,
     deposit_address: address,
+    supported_message_libs: vector<address>,
     price_feed: address,
     worker_fee_lib: address,
     default_multiplier_bps: u16,
     owner: address,
     admins: vector<address>,
+    worker_registry: &mut WorkerRegistry,
     ctx: &mut TxContext,
-): Executor {
+): address {
     let (worker, owner_cap) = worker_common::create_worker(
         worker_cap,
         deposit_address,
+        supported_message_libs,
         price_feed,
         worker_fee_lib,
         default_multiplier_bps,
@@ -83,8 +91,14 @@ public fun create_executor(
     };
 
     transfer::public_transfer(owner_cap, owner);
+    // Create executor info and register with worker registry
+    let executor_object_address = object::id_address(&executor);
+    let executor_info_bytes = executor_info_v1::create(executor_object_address).encode();
+    let worker_info_bytes = worker_info_v1::create(EXECUTOR_WORKER_ID, executor_info_bytes).encode();
+    worker_registry.set_worker_info(executor.worker.worker_cap(), worker_info_bytes);
 
-    executor
+    transfer::share_object(executor);
+    executor_object_address
 }
 
 // === Core Functions of Send Side ===
@@ -330,6 +344,11 @@ public fun set_admin(self: &mut Executor, owner_cap: &OwnerCap, admin: address, 
     self.worker.set_admin(owner_cap, admin, active, ctx);
 }
 
+/// Set supported message library (owner only)
+public fun set_supported_message_lib(self: &mut Executor, owner_cap: &OwnerCap, message_lib: address, supported: bool) {
+    self.worker.set_supported_message_lib(owner_cap, message_lib, supported);
+}
+
 /// Set allowlist for an oapp sender (owner only)
 public fun set_allowlist(self: &mut Executor, owner_cap: &OwnerCap, oapp: address, allowed: bool) {
     self.worker.set_allowlist(owner_cap, oapp, allowed);
@@ -357,6 +376,17 @@ public fun set_ptb_builder_move_calls(
     self.worker.assert_owner(owner_cap);
     let param = set_worker_ptb::create_param(get_fee_move_calls, assign_job_move_calls);
     call::create(self.worker.worker_cap(), target_ptb_builder, true, param, ctx)
+}
+
+/// Set worker info (owner only)
+public fun set_worker_info(
+    self: &Executor,
+    owner_cap: &OwnerCap,
+    worker_registry: &mut WorkerRegistry,
+    worker_info: vector<u8>,
+) {
+    self.worker.assert_owner(owner_cap);
+    worker_registry.set_worker_info(self.worker.worker_cap(), worker_info);
 }
 
 // === View Functions ===
@@ -398,6 +428,11 @@ public fun is_admin(self: &Executor, admin_cap: &AdminCap): bool {
 
 public fun is_admin_address(self: &Executor, admin: address): bool {
     self.worker.is_admin_address(admin)
+}
+
+/// Check if a message library is supported
+public fun is_supported_message_lib(self: &Executor, message_lib: address): bool {
+    self.worker.is_supported_message_lib(message_lib)
 }
 
 /// Check if an address is in the allowlist
@@ -449,7 +484,7 @@ fun create_feelib_get_fee_call<Param, Result>(
     ctx: &mut TxContext,
 ): Call<FeelibGetFeeParam, u64> {
     // Perform all validation in one place
-    call.assert_caller(uln302!());
+    self.worker.assert_supported_message_lib(call.caller());
     self.worker.assert_acl(param.sender());
     self.worker.assert_worker_unpaused();
 
@@ -521,10 +556,6 @@ fun native_drop_internal(
         params: native_drop_params,
         success,
     });
-}
-
-macro fun uln302(): address {
-    package::original_package_of_type<ULN_302>()
 }
 
 // === Test Helper Functions ===

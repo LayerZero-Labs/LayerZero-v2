@@ -7,7 +7,6 @@ use sui::{coin, event, sui::SUI, test_scenario::{Self, Scenario}, test_utils};
 use treasury::treasury;
 use uln_302::{
     executor_config::{Self, ExecutorConfig},
-    executor_get_fee,
     oapp_uln_config,
     send_uln::{
         Self,
@@ -21,6 +20,7 @@ use uln_302::{
     },
     uln_config::{Self, UlnConfig}
 };
+use uln_common::executor_get_fee;
 use utils::bytes32;
 use zro::zro::ZRO;
 

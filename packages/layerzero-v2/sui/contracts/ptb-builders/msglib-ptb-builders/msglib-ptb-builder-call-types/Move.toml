@@ -2,9 +2,10 @@
 name = "MsglibPtbBuilderCallTypes"
 edition = "2024.beta"
 version = "0.0.1"
+license = "MIT"
 
 [dependencies]
-PtbMoveCall = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/ptb-builders/ptb-move-call", rev = "main" }
+PtbMoveCall = { local = "../../ptb-move-call" }
 
 [addresses]
 msglib_ptb_builder_call_types = "0x0"

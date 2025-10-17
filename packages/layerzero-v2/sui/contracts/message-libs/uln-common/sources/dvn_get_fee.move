@@ -2,7 +2,7 @@
 ///
 /// This module defines parameters for querying DVN verification fees. It provides the data
 /// structure needed to request fee calculations from DVN for cross-chain message verification.
-module uln_302::dvn_get_fee;
+module uln_common::dvn_get_fee;
 
 use utils::bytes32::Bytes32;
 
@@ -27,7 +27,7 @@ public struct GetFeeParam has copy, drop, store {
 // === Creation ===
 
 /// Creates a new GetFeeParam with the specified parameters.
-public(package) fun create_param(
+public fun create_param(
     dst_eid: u32,
     packet_header: vector<u8>,
     payload_hash: Bytes32,
@@ -50,9 +50,9 @@ public fun packet_header(self: &GetFeeParam): &vector<u8> {
     &self.packet_header
 }
 
-/// Returns a reference to the payload hash.
-public fun payload_hash(self: &GetFeeParam): &Bytes32 {
-    &self.payload_hash
+/// Returns the payload hash.
+public fun payload_hash(self: &GetFeeParam): Bytes32 {
+    self.payload_hash
 }
 
 /// Returns the number of confirmations required.

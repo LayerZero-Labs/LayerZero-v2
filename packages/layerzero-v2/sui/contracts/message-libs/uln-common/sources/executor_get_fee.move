@@ -3,7 +3,7 @@
 /// This module defines parameters for querying executor fees. It provides the data
 /// structure needed to request fee calculations from executors for cross-chain
 /// message execution.
-module uln_302::executor_get_fee;
+module uln_common::executor_get_fee;
 
 // === Structs ===
 
@@ -22,7 +22,7 @@ public struct GetFeeParam has copy, drop, store {
 // === Creation ===
 
 /// Creates a new GetFeeParam with the specified parameters.
-public(package) fun create_param(dst_eid: u32, sender: address, calldata_size: u64, options: vector<u8>): GetFeeParam {
+public fun create_param(dst_eid: u32, sender: address, calldata_size: u64, options: vector<u8>): GetFeeParam {
     GetFeeParam { dst_eid, sender, calldata_size, options }
 }
 

@@ -1,0 +1,202 @@
+[move]
+version = 3
+manifest_digest = "96FEB9318EE8BFC653742ECB7045C540449A810EEC727D14E52AF7E0E13FACE5"
+deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
+
+[[move.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.dependencies]]
+id = "EndpointV2"
+name = "EndpointV2"
+
+[[move.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Bridge"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Call"
+
+[move.package.source]
+local = "../../dynamic-call/call"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "EndpointV2"
+
+[move.package.source]
+local = "../../endpoint-v2"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package.dependencies]]
+id = "Zro"
+name = "Zro"
+
+[[move.package]]
+id = "MoveStdlib"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/move-stdlib"
+
+[[move.package]]
+id = "Sui"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-framework"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "SuiSystem"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-system"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package]]
+id = "Utils"
+
+[move.package.source]
+local = "../../utils"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Zro"
+
+[move.package.source]
+local = "../../zro"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0x04c440985f5deab2fb7f821b3288d93225a3e637cf22dda476809836f0533751"
+latest-published-id = "0x04c440985f5deab2fb7f821b3288d93225a3e637cf22dda476809836f0533751"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0xfdc28afc0110cb2edb94e3e57f2b1ce69b5a99c503b06d15e51cfa212de56e24"
+latest-published-id = "0xfdc28afc0110cb2edb94e3e57f2b1ce69b5a99c503b06d15e51cfa212de56e24"
+published-version = "1"

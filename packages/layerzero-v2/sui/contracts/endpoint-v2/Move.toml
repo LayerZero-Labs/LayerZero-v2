@@ -1,11 +1,12 @@
 [package]
 name = "EndpointV2"
 version = "0.0.1"
-edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move     # e.g., "MIT", "GPL", "Apache 2.0"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+license = "MIT"       # e.g., "MIT", "GPL", "Apache 2.0"
 
 [dependencies]
-Zro = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/zro", rev = "main" }
-Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main" }
+Zro = { local = "../zro" }
+Call = { local = "../dynamic-call/call" }
 
 [addresses]
 endpoint_v2 = "0x0"

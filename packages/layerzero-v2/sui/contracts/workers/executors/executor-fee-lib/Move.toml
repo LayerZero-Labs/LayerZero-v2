@@ -2,12 +2,12 @@
 name = "ExecutorFeeLib"
 edition = "2024.beta"
 version = "0.0.1"
+license = "MIT"
 
 [dependencies]
-Call = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/call", rev = "main" }
-WorkerCommon = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/worker-common", rev = "main" }
-ExecutorCallType = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/executors/executor-call-type", rev = "main" }
-PriceFeedCallTypes = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types", rev = "main" }
+WorkerCommon = { local = "../../worker-common" }
+ExecutorCallType = { local = "../executor-call-type" }
+PriceFeedCallTypes = { local = "../../price-feed-call-types" }
 
 [addresses]
 executor_fee_lib = "0x0"

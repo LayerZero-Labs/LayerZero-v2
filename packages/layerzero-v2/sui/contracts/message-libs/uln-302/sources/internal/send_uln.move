@@ -14,14 +14,12 @@ use endpoint_v2::{
 use message_lib_common::{fee_recipient::FeeRecipient, packet_v1_codec, worker_options::{Self, DVNOptions}};
 use sui::{coin::Coin, event, sui::SUI, table::{Self, Table}};
 use treasury::treasury::Treasury;
-use uln_302::{
+use uln_302::{executor_config::{Self, ExecutorConfig}, oapp_uln_config::{Self, OAppUlnConfig}, uln_config::UlnConfig};
+use uln_common::{
     dvn_assign_job::{Self, AssignJobParam as DvnAssignJobParam},
     dvn_get_fee::{Self, GetFeeParam as DvnGetFeeParam},
     executor_assign_job::{Self, AssignJobParam as ExecutorAssignJobParam},
-    executor_config::{Self, ExecutorConfig},
-    executor_get_fee::{Self, GetFeeParam as ExecutorGetFeeParam},
-    oapp_uln_config::{Self, OAppUlnConfig},
-    uln_config::UlnConfig
+    executor_get_fee::{Self, GetFeeParam as ExecutorGetFeeParam}
 };
 use utils::{bytes32::Bytes32, table_ext};
 use zro::zro::ZRO;

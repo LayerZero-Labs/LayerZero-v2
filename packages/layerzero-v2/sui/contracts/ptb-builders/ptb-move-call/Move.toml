@@ -2,9 +2,10 @@
 name = "PtbMoveCall"
 edition = "2024.beta"
 version = "0.0.1"
+license = "MIT"
 
 [dependencies]
-Utils = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", subdir = "packages/layerzero-v2/sui/contracts/utils", rev = "main" }
+Utils = { local = "../../utils" }
 
 [addresses]
 ptb_move_call = "0x0"

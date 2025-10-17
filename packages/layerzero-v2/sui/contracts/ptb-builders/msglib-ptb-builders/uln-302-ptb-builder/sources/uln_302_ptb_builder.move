@@ -4,7 +4,7 @@
 /// for the ULN 302 message library in the LayerZero protocol.
 module uln_302_ptb_builder::uln_302_ptb_builder;
 
-use call::{call::{Call, Void}, call_cap::{Self, CallCap}, multi_call::MultiCall};
+use call::{call::{Call, Void}, call_cap::{Self, CallCap}};
 use endpoint_ptb_builder::{endpoint_ptb_builder, msglib_ptb_builder_info::{Self, MsglibPtbBuilderInfo}};
 use endpoint_v2::{
     endpoint_v2::EndpointV2,
@@ -14,16 +14,17 @@ use endpoint_v2::{
 };
 use message_lib_common::fee_recipient::FeeRecipient;
 use msglib_ptb_builder_call_types::set_worker_ptb::SetWorkerPtbParam;
+use multi_call::multi_call::MultiCall;
 use ptb_move_call::{argument, move_call::{Self, MoveCall}, move_calls_builder};
 use std::type_name;
 use sui::table;
 use treasury::treasury::Treasury;
-use uln_302::{
+use uln_302::uln_302::Uln302;
+use uln_common::{
     dvn_assign_job::AssignJobParam as DvnAssignJobParam,
     dvn_get_fee::GetFeeParam as DvnGetFeeParam,
     executor_assign_job::AssignJobParam as ExecutorAssignJobParam,
-    executor_get_fee::GetFeeParam as ExecutorGetFeeParam,
-    uln_302::Uln302
+    executor_get_fee::GetFeeParam as ExecutorGetFeeParam
 };
 use utils::{bytes32::Bytes32, hash, package, table_ext};
 

@@ -1,0 +1,580 @@
+[move]
+version = 3
+manifest_digest = "B06922631BBE9F51CA2EB9375773C4CFD758F1111A90027B30CBD772389816F2"
+deps_digest = "CAFAD8A7CF51067FB4358215BECB86BD100DD64E57C2AC8A7AE7D74B688F5965"
+
+[[move.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.dependencies]]
+id = "Uln302"
+name = "Uln302"
+
+[[move.dev-dependencies]]
+id = "Dvn"
+name = "Dvn"
+
+[[move.dev-dependencies]]
+id = "DvnFeeLib"
+name = "DvnFeeLib"
+
+[[move.package]]
+id = "Bridge"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Call"
+
+[move.package.source]
+local = "../dynamic-call/call"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Dvn"
+
+[move.package.source]
+local = "../workers/dvns/dvn"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "DvnCallType"
+name = "DvnCallType"
+
+[[move.package.dependencies]]
+id = "MessageLibCommon"
+name = "MessageLibCommon"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "MsglibPtbBuilderCallTypes"
+name = "MsglibPtbBuilderCallTypes"
+
+[[move.package.dependencies]]
+id = "MultiCall"
+name = "MultiCall"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "UlnCommon"
+name = "UlnCommon"
+
+[[move.package.dependencies]]
+id = "WorkerCommon"
+name = "WorkerCommon"
+
+[[move.package.dependencies]]
+id = "WorkerRegistry"
+name = "WorkerRegistry"
+
+[[move.package]]
+id = "DvnCallType"
+
+[move.package.source]
+local = "../workers/dvns/dvn-call-type"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "DvnFeeLib"
+
+[move.package.source]
+local = "../workers/dvns/dvn-fee-lib"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "DvnCallType"
+name = "DvnCallType"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "PriceFeedCallTypes"
+name = "PriceFeedCallTypes"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "WorkerCommon"
+name = "WorkerCommon"
+
+[[move.package]]
+id = "EndpointV2"
+
+[move.package.source]
+local = "../endpoint-v2"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package.dependencies]]
+id = "Zro"
+name = "Zro"
+
+[[move.package]]
+id = "MessageLibCommon"
+
+[move.package.source]
+local = "../message-libs/message-lib-common"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "EndpointV2"
+name = "EndpointV2"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "MoveStdlib"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/move-stdlib"
+
+[[move.package]]
+id = "MsglibPtbBuilderCallTypes"
+
+[move.package.source]
+local = "../ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "PtbMoveCall"
+name = "PtbMoveCall"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "MultiCall"
+
+[move.package.source]
+local = "../dynamic-call/multi-call"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "PriceFeedCallTypes"
+
+[move.package.source]
+local = "../workers/price-feed-call-types"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "PtbMoveCall"
+
+[move.package.source]
+local = "../ptb-builders/ptb-move-call"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Sui"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-framework"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "SuiSystem"
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-system"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package]]
+id = "Treasury"
+
+[move.package.source]
+local = "../message-libs/treasury"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Uln302"
+
+[move.package.source]
+local = "../message-libs/uln-302"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MessageLibCommon"
+name = "MessageLibCommon"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "MultiCall"
+name = "MultiCall"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Treasury"
+name = "Treasury"
+
+[[move.package.dependencies]]
+id = "UlnCommon"
+name = "UlnCommon"
+
+[[move.package]]
+id = "UlnCommon"
+
+[move.package.source]
+local = "../message-libs/uln-common"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Utils"
+
+[move.package.source]
+local = "../utils"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "WorkerCommon"
+
+[move.package.source]
+local = "../workers/worker-common"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "WorkerRegistry"
+
+[move.package.source]
+local = "../workers/worker-registry"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package]]
+id = "Zro"
+
+[move.package.source]
+local = "../zro"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[move.toolchain-version]
+compiler-version = "1.54.1"
+edition = "2024.beta"
+flavor = "sui"
+
+[env]
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0xaab2d0f2a54eef15fd00f03d70b87a015a41ebdc3fd85c0ceaffda969a400c9f"
+latest-published-id = "0xaab2d0f2a54eef15fd00f03d70b87a015a41ebdc3fd85c0ceaffda969a400c9f"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0xd4f403280fa2c05da6ec6e75c563e88b60326a0300ac71bfea91028772c12f85"
+latest-published-id = "0xd4f403280fa2c05da6ec6e75c563e88b60326a0300ac71bfea91028772c12f85"
+published-version = "1"

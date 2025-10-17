@@ -1,81 +1,157 @@
 [move]
 version = 3
-manifest_digest = "C06E9C9B74C88B9821A66728C59837B61DA6850EC8808712314EA4D812B09E8A"
-deps_digest = "CAFAD8A7CF51067FB4358215BECB86BD100DD64E57C2AC8A7AE7D74B688F5965"
-dependencies= [
-  { id = "Bridge", name = "Bridge" },
-  { id = "Call", name = "Call" },
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "PriceFeedCallTypes", name = "PriceFeedCallTypes" },
-  { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
-]
+manifest_digest = "5EFCB7134D13B8AAC42F98137C17D327279036D156D421B8A9A73C4CEE0D5F7F"
+deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
+
+[[move.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.dependencies]]
+id = "PriceFeedCallTypes"
+name = "PriceFeedCallTypes"
+
+[[move.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
 
 [[move.package]]
 id = "Bridge"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/bridge" }
 
-dependencies = [
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
-]
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
 
 [[move.package]]
 id = "Call"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/call" }
 
-dependencies = [
-  { id = "Bridge", name = "Bridge" },
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
-  { id = "Utils", name = "Utils" },
-]
+[move.package.source]
+local = "../../dynamic-call/call"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
 
 [[move.package]]
 id = "MoveStdlib"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/move-stdlib"
 
 [[move.package]]
 id = "PriceFeedCallTypes"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/workers/price-feed-call-types" }
 
-dependencies = [
-  { id = "Bridge", name = "Bridge" },
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
-]
+[move.package.source]
+local = "../price-feed-call-types"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
 
 [[move.package]]
 id = "Sui"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-framework" }
 
-dependencies = [
-  { id = "MoveStdlib", name = "MoveStdlib" },
-]
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-framework"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
 
 [[move.package]]
 id = "SuiSystem"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3", subdir = "crates/sui-framework/packages/sui-system" }
 
-dependencies = [
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "Sui", name = "Sui" },
-]
+[move.package.source]
+git = "https://github.com/MystenLabs/sui.git"
+rev = "db951a5ea6b125f6253a6b7f436ddba46eb0feb3"
+subdir = "crates/sui-framework/packages/sui-system"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
 
 [[move.package]]
 id = "Utils"
-source = { git = "https://github.com/LayerZero-Labs/LayerZero-v2.git", rev = "main", subdir = "packages/layerzero-v2/sui/contracts/utils" }
 
-dependencies = [
-  { id = "Bridge", name = "Bridge" },
-  { id = "MoveStdlib", name = "MoveStdlib" },
-  { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
-]
+[move.package.source]
+local = "../../utils"
+
+[[move.package.dependencies]]
+id = "Bridge"
+name = "Bridge"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Sui"
+name = "Sui"
+
+[[move.package.dependencies]]
+id = "SuiSystem"
+name = "SuiSystem"
 
 [move.toolchain-version]
 compiler-version = "1.54.1"
@@ -85,12 +161,12 @@ flavor = "sui"
 [env]
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0x703efe3215e8249a490b4889d20bff10f09838d200835d53d056bbf30a80fe37"
-latest-published-id = "0x703efe3215e8249a490b4889d20bff10f09838d200835d53d056bbf30a80fe37"
+original-published-id = "0xa4f8f126dc7e2a763676eab3a6f0a12afaf334baa0f37b41a1e93890cf95ea4c"
+latest-published-id = "0xa4f8f126dc7e2a763676eab3a6f0a12afaf334baa0f37b41a1e93890cf95ea4c"
 published-version = "1"
 
 [env.mainnet]
 chain-id = "35834a8a"
-original-published-id = "0x9f12f79a355fca76492bc1908fc7a9a8518d2a83e65cffc93f134144dfa4e5bb"
-latest-published-id = "0x9f12f79a355fca76492bc1908fc7a9a8518d2a83e65cffc93f134144dfa4e5bb"
+original-published-id = "0xea932d79771b24103a1cda8e87a65068d6116c047f9dccc3e487cf8316625576"
+latest-published-id = "0xea932d79771b24103a1cda8e87a65068d6116c047f9dccc3e487cf8316625576"
 published-version = "1"

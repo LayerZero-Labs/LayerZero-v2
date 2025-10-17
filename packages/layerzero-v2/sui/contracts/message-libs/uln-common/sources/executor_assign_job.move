@@ -3,9 +3,9 @@
 /// This module defines parameters for assigning execution jobs to executors.
 /// It extends the fee calculation parameters to include job assignment functionality
 /// for cross-chain message execution.
-module uln_302::executor_assign_job;
+module uln_common::executor_assign_job;
 
-use uln_302::executor_get_fee::GetFeeParam;
+use uln_common::executor_get_fee::GetFeeParam;
 
 // === Structs ===
 
@@ -20,7 +20,7 @@ public struct AssignJobParam has copy, drop, store {
 // === Creation ===
 
 /// Creates a new AssignJobParam from existing fee parameters.
-public(package) fun create_param(base: GetFeeParam): AssignJobParam {
+public fun create_param(base: GetFeeParam): AssignJobParam {
     AssignJobParam { base }
 }
 

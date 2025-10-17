@@ -1,0 +1,15 @@
+[package]
+name = "UlnCommon"
+edition = "2024.beta"
+version = "0.0.1"
+license = "MIT"
+
+[dependencies]
+Utils = { local = "../../utils" }
+
+[addresses]
+uln_common = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

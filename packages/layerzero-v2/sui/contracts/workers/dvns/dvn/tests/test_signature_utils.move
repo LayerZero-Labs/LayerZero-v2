@@ -168,6 +168,13 @@ public fun sign_set_ptb_builder_move_calls(
     sign_payload(&keypair, payload)
 }
 
+/// Generate signature for set_supported_message_lib(message_lib, supported)
+public fun sign_set_supported_message_lib(message_lib: address, supported: bool, signer_index: u8): vector<u8> {
+    let keypair = generate_test_keypair(signer_index);
+    let payload = hashes::build_set_supported_message_lib_payload(message_lib, supported, VID, TEST_EXPIRATION);
+    sign_payload(&keypair, payload)
+}
+
 /// Generate signature with expired timestamp
 public fun sign_set_allowlist_expired(oapp: address, allowed: bool, signer_index: u8): vector<u8> {
     let keypair = generate_test_keypair(signer_index);

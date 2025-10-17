@@ -2,14 +2,14 @@
 module dvn::dvn_tests;
 
 use call::{call::Call, call_cap::{Self, CallCap}};
-use dvn::{dvn::{Self, DVN}, hashes, multisig, test_signature_utils as sig_utils};
+use dvn::{dvn::{Self, DVN}, dvn_info_v1, hashes, multisig, test_signature_utils as sig_utils};
 use dvn_call_type::dvn_feelib_get_fee::FeelibGetFeeParam;
 use ptb_move_call::{argument, move_call};
 use std::{ascii, bcs, type_name};
 use sui::{clock::{Self, Clock}, event, test_scenario::{Self, Scenario}, test_utils};
-use uln_302::receive_uln;
 use utils::bytes32;
-use worker_common::worker_common::{Self, AdminCap as WorkerAdminCap};
+use worker_common::{worker_common::{Self, AdminCap as WorkerAdminCap}, worker_info_v1};
+use worker_registry::worker_registry;
 
 // use endpoint_v2::endpoint_v2::AdminCap; // Not needed, using worker_common::AdminCap
 
@@ -74,25 +74,28 @@ fun create_test_dvn(scenario: &mut Scenario): (DVN, WorkerAdminCap) {
     scenario.next_tx(OWNER);
 
     let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let signers = vector[signer1(), signer2()];
     let quorum = 1;
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
 
-    let dvn = dvn::create_dvn(
+    dvn::create_dvn(
         worker_cap,
         VID,
         DEPOSIT_ADDRESS,
+        supported_message_libs,
         PRICE_FEED,
         WORKER_FEE_LIB,
         DEFAULT_MULTIPLIER_BPS,
         admins,
         signers,
         quorum,
+        &mut worker_registry,
         scenario.ctx(),
     );
 
-    // Share the DVN object for testing
-    sui::transfer::public_share_object(dvn);
+    test_utils::destroy(worker_registry);
 
     scenario.next_tx(OWNER);
     (test_scenario::take_shared<DVN>(scenario), test_scenario::take_from_address<WorkerAdminCap>(scenario, ADMIN))
@@ -144,22 +147,29 @@ fun test_create_dvn_with_multiple_admins() {
     scenario.next_tx(OWNER);
 
     let admins = vector[ADMIN, ADMIN2];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let signers = vector[signer1(), signer2(), signer3()];
     let quorum = 2;
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
 
-    let dvn = dvn::create_dvn(
+    dvn::create_dvn(
         worker_cap,
         VID,
         DEPOSIT_ADDRESS,
+        supported_message_libs,
         PRICE_FEED,
         WORKER_FEE_LIB,
         DEFAULT_MULTIPLIER_BPS,
         admins,
         signers,
         quorum,
+        &mut worker_registry,
         scenario.ctx(),
     );
+
+    scenario.next_tx(OWNER);
+    let dvn = scenario.take_shared<DVN>();
 
     let admin_cap = admin_cap_for(ADMIN, &mut scenario);
     let admin2_cap = admin_cap_for(ADMIN2, &mut scenario);
@@ -171,6 +181,45 @@ fun test_create_dvn_with_multiple_admins() {
     // Share the DVN object for testing
     clean(dvn, admin_cap);
     test_scenario::return_to_address(ADMIN2, admin2_cap);
+    test_utils::destroy(worker_registry);
+    scenario.end();
+}
+
+#[test]
+fun test_create_dvn_will_set_worker_info() {
+    let mut scenario = setup_scenario();
+    scenario.next_tx(OWNER);
+
+    let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
+    let signers = vector[signer1(), signer2()];
+    let quorum = 2;
+    let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let worker_address = worker_cap.id();
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
+
+    let dvn_object = dvn::create_dvn(
+        worker_cap,
+        VID,
+        DEPOSIT_ADDRESS,
+        supported_message_libs,
+        PRICE_FEED,
+        WORKER_FEE_LIB,
+        DEFAULT_MULTIPLIER_BPS,
+        admins,
+        signers,
+        quorum,
+        &mut worker_registry,
+        scenario.ctx(),
+    );
+
+    let worker_info = worker_registry.get_worker_info(worker_address);
+    let worker_info_bytes = worker_info_v1::decode(*worker_info).worker_info();
+    let dvn_info = dvn_info_v1::decode(*worker_info_bytes);
+    assert!(dvn_info.dvn_object() == dvn_object, 0);
+
+    test_utils::destroy(admin_cap_for(ADMIN, &mut scenario));
+    test_utils::destroy(worker_registry);
     scenario.end();
 }
 
@@ -799,32 +848,73 @@ fun test_verify_with_signatures() {
 
     scenario.next_tx(ADMIN);
 
-    // Create mock verification
-    let mut verification = receive_uln::create_test_verification(scenario.ctx());
-
     let packet_header = x"0123456789abcdef";
     let payload_hash = bytes32::from_bytes(x"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
     let confirmations = 15u64;
     let clock = create_test_clock(1000000, scenario.ctx());
 
-    let uln302_address = @0x0;
+    let uln302_address = @0x1234567890abcdef1234567890abcdef12345678;
 
-    dvn.verify(
+    let verify_call = dvn.verify(
         &admin_cap,
-        &mut verification,
+        uln302_address,
         packet_header,
         payload_hash,
         confirmations,
         TEST_EXPIRATION,
         sig_utils::sign_verify(packet_header, payload_hash.to_bytes(), confirmations, uln302_address, 1),
         &clock,
+        scenario.ctx(),
     );
 
-    // Verify that the verification was processed
-    assert!(receive_uln::test_is_verified(&verification), 0);
+    test_utils::destroy(verify_call);
+    clean(dvn, admin_cap);
+    clock.destroy_for_testing();
+    scenario.end();
+}
+
+// === Message Library Management Tests ===
+
+#[test]
+fun test_set_supported_message_lib_basic() {
+    let mut scenario = setup_scenario();
+    let (mut dvn, admin_cap) = create_test_dvn(&mut scenario);
+
+    scenario.next_tx(ADMIN);
+    let clock = create_test_clock(1000000, scenario.ctx());
+
+    let test_message_lib = @0x123456;
+
+    // Initially the message lib should not be supported
+    assert!(!dvn.test_worker().is_supported_message_lib(test_message_lib), 0);
+
+    // Add the message lib using the actual function with signatures
+    dvn.set_supported_message_lib(
+        &admin_cap,
+        test_message_lib,
+        true,
+        TEST_EXPIRATION,
+        sig_utils::sign_set_supported_message_lib(test_message_lib, true, 1),
+        &clock,
+    );
+
+    // Verify it's now supported
+    assert!(dvn.test_worker().is_supported_message_lib(test_message_lib), 1);
+
+    // Remove the message lib using the actual function with signatures
+    dvn.set_supported_message_lib(
+        &admin_cap,
+        test_message_lib,
+        false,
+        TEST_EXPIRATION,
+        sig_utils::sign_set_supported_message_lib(test_message_lib, false, 1),
+        &clock,
+    );
+
+    // Verify it's no longer supported
+    assert!(!dvn.test_worker().is_supported_message_lib(test_message_lib), 2);
 
     clean(dvn, admin_cap);
-    receive_uln::destroy_test_verification(verification);
     clock.destroy_for_testing();
     scenario.end();
 }
@@ -1085,27 +1175,31 @@ fun test_invalid_signer_length() {
     scenario.next_tx(OWNER);
 
     let admins = vector[ADMIN];
+    let supported_message_libs = vector[]; // Empty supported message libs for test
     let invalid_signer = x"1234"; // Too short
     let signers = vector[invalid_signer];
     let quorum = 1;
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
+    let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
 
-    let dvn = dvn::create_dvn(
+    dvn::create_dvn(
         worker_cap,
         VID,
         DEPOSIT_ADDRESS,
+        supported_message_libs,
         PRICE_FEED,
         WORKER_FEE_LIB,
         DEFAULT_MULTIPLIER_BPS,
         admins,
         signers,
         quorum,
+        &mut worker_registry,
         scenario.ctx(),
     );
 
     // This test is expected to fail before DVN is created, so we won't reach here
     // But we need to consume the DVN to satisfy Move's type system
-    sui::transfer::public_share_object(dvn);
+    test_utils::destroy(worker_registry);
     scenario.end();
 }
 

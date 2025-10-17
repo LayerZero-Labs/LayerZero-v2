@@ -1,0 +1,18 @@
+[package]
+name = "OFT"
+version = "0.0.1"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+license = "MIT"       # e.g., "MIT", "GPL", "Apache 2.0"
+
+[dependencies]
+OApp = { local = "../../oapp" }
+OFTCommon = { local = "../oft-common" }
+PtbMoveCall = { local = "../../../ptb-builders/ptb-move-call" }
+
+[addresses]
+oft = "0x0"
+
+[dev-dependencies]
+SimpleMessageLib = { local = "../../../message-libs/simple-message-lib" }
+
+[dev-addresses]
