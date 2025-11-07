@@ -2,7 +2,7 @@
 
 [move]
 version = 3
-manifest_digest = "6B47A39AD290E8710F81E2022A259CDE707DE336C81F7EE642C88C69C3C6B71C"
+manifest_digest = "097CBD2C53397D1F76C3B895CEB82D6D972F5F7EB17BC4AEAC66BC21B2C4F8FA"
 deps_digest = "04732BFEF428F74DE262001DC455D76B909EBC394B034A9A15CC095E4BDD9CEF"
 dependencies = [
   { id = "Iota", name = "Iota" },
@@ -44,7 +44,7 @@ dependencies = [
 
 [[move.package]]
 id = "Iota"
-source = { git = "https://github.com/iotaledger/iota.git", rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3", subdir = "crates/iota-framework/packages/iota-framework" }
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-framework" }
 
 dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
@@ -52,7 +52,7 @@ dependencies = [
 
 [[move.package]]
 id = "IotaSystem"
-source = { git = "https://github.com/iotaledger/iota.git", rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3", subdir = "crates/iota-framework/packages/iota-system" }
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-system" }
 
 dependencies = [
   { id = "Iota", name = "Iota" },
@@ -73,7 +73,7 @@ dependencies = [
 
 [[move.package]]
 id = "MoveStdlib"
-source = { git = "https://github.com/iotaledger/iota.git", rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3", subdir = "crates/iota-framework/packages/move-stdlib" }
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/move-stdlib" }
 
 [[move.package]]
 id = "OApp"
@@ -125,7 +125,7 @@ dependencies = [
 
 [[move.package]]
 id = "Stardust"
-source = { git = "https://github.com/iotaledger/iota.git", rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3", subdir = "crates/iota-framework/packages/stardust" }
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/stardust" }
 
 dependencies = [
   { id = "Iota", name = "Iota" },

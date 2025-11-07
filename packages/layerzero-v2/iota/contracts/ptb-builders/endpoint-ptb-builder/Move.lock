@@ -1,209 +1,104 @@
 [move]
 version = 3
-manifest_digest = "14CBCD59791AB90D8FE98BAA78E7C29FFF4669BB5B7883D490DD668CA478F0B7"
+manifest_digest = "5BDB290A366D53BF6580BE74E8421D3E1F94947610EA5CB200DAA2529CCC025A"
 deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
-
-[[move.dependencies]]
-id = "EndpointV2"
-name = "EndpointV2"
-
-[[move.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.dependencies]]
-id = "PtbMoveCall"
-name = "PtbMoveCall"
-
-[[move.dependencies]]
-id = "Stardust"
-name = "Stardust"
+dependencies= [
+  { id = "EndpointV2", name = "EndpointV2" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "PtbMoveCall", name = "PtbMoveCall" },
+  { id = "Stardust", name = "Stardust" },
+]
 
 [[move.package]]
 id = "Call"
+source = { local = "../../dynamic-call/call" }
 
-[move.package.source]
-local = "../../dynamic-call/call"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Stardust"
-name = "Stardust"
-
-[[move.package.dependencies]]
-id = "Utils"
-name = "Utils"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Utils", name = "Utils" },
+]
 
 [[move.package]]
 id = "EndpointV2"
+source = { local = "../../endpoint-v2" }
 
-[move.package.source]
-local = "../../endpoint-v2"
-
-[[move.package.dependencies]]
-id = "Call"
-name = "Call"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Stardust"
-name = "Stardust"
-
-[[move.package.dependencies]]
-id = "Zro"
-name = "Zro"
+dependencies = [
+  { id = "Call", name = "Call" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Zro", name = "Zro" },
+]
 
 [[move.package]]
 id = "Iota"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-framework" }
 
-[move.package.source]
-git = "https://github.com/iotaledger/iota.git"
-rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
-subdir = "crates/iota-framework/packages/iota-framework"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
 
 [[move.package]]
 id = "IotaSystem"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-system" }
 
-[move.package.source]
-git = "https://github.com/iotaledger/iota.git"
-rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
-subdir = "crates/iota-framework/packages/iota-system"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
 
 [[move.package]]
 id = "MoveStdlib"
-
-[move.package.source]
-git = "https://github.com/iotaledger/iota.git"
-rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
-subdir = "crates/iota-framework/packages/move-stdlib"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/move-stdlib" }
 
 [[move.package]]
 id = "PtbMoveCall"
+source = { local = "../ptb-move-call" }
 
-[move.package.source]
-local = "../ptb-move-call"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Stardust"
-name = "Stardust"
-
-[[move.package.dependencies]]
-id = "Utils"
-name = "Utils"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Utils", name = "Utils" },
+]
 
 [[move.package]]
 id = "Stardust"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/stardust" }
 
-[move.package.source]
-git = "https://github.com/iotaledger/iota.git"
-rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
-subdir = "crates/iota-framework/packages/stardust"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
 
 [[move.package]]
 id = "Utils"
+source = { local = "../../utils" }
 
-[move.package.source]
-local = "../../utils"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Stardust"
-name = "Stardust"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
 
 [[move.package]]
 id = "Zro"
+source = { local = "../../zro" }
 
-[move.package.source]
-local = "../../zro"
-
-[[move.package.dependencies]]
-id = "Iota"
-name = "Iota"
-
-[[move.package.dependencies]]
-id = "IotaSystem"
-name = "IotaSystem"
-
-[[move.package.dependencies]]
-id = "MoveStdlib"
-name = "MoveStdlib"
-
-[[move.package.dependencies]]
-id = "Stardust"
-name = "Stardust"
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
 
 [move.toolchain-version]
 compiler-version = "1.9.2"
