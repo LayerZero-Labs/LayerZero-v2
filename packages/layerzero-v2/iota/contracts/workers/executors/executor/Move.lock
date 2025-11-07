@@ -1,0 +1,392 @@
+[move]
+version = 3
+manifest_digest = "E05A2170F45EE8D71D7375A9FCFEBD087DD591F3C72E2C393743F12AB711237E"
+deps_digest = "CB99E3BEE139471F3765AE330F855F3B376156AA54F37DEDE11BBE5BB0D3BB74"
+
+[[move.dependencies]]
+id = "ExecutorCallType"
+name = "ExecutorCallType"
+
+[[move.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.dependencies]]
+id = "MessageLibCommon"
+name = "MessageLibCommon"
+
+[[move.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.dependencies]]
+id = "MsglibPtbBuilderCallTypes"
+name = "MsglibPtbBuilderCallTypes"
+
+[[move.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.dependencies]]
+id = "UlnCommon"
+name = "UlnCommon"
+
+[[move.dependencies]]
+id = "WorkerCommon"
+name = "WorkerCommon"
+
+[[move.dependencies]]
+id = "WorkerRegistry"
+name = "WorkerRegistry"
+
+[[move.package]]
+id = "Call"
+
+[move.package.source]
+local = "../../../dynamic-call/call"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "EndpointV2"
+
+[move.package.source]
+local = "../../../endpoint-v2"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package.dependencies]]
+id = "Zro"
+name = "Zro"
+
+[[move.package]]
+id = "ExecutorCallType"
+
+[move.package.source]
+local = "../executor-call-type"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "Iota"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/iota-framework"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "IotaSystem"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/iota-system"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "MessageLibCommon"
+
+[move.package.source]
+local = "../../../message-libs/message-lib-common"
+
+[[move.package.dependencies]]
+id = "EndpointV2"
+name = "EndpointV2"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "MoveStdlib"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/move-stdlib"
+
+[[move.package]]
+id = "MsglibPtbBuilderCallTypes"
+
+[move.package.source]
+local = "../../../ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "PtbMoveCall"
+name = "PtbMoveCall"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "PtbMoveCall"
+
+[move.package.source]
+local = "../../../ptb-builders/ptb-move-call"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Stardust"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/stardust"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "UlnCommon"
+
+[move.package.source]
+local = "../../../message-libs/uln-common"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Utils"
+
+[move.package.source]
+local = "../../../utils"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "WorkerCommon"
+
+[move.package.source]
+local = "../../worker-common"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "WorkerRegistry"
+
+[move.package.source]
+local = "../../worker-registry"
+
+[[move.package.dependencies]]
+id = "Call"
+name = "Call"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.package]]
+id = "Zro"
+
+[move.package.source]
+local = "../../../zro"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[move.toolchain-version]
+compiler-version = "1.9.2"
+edition = "2024.beta"
+flavor = "iota"
+
+[env]
+[env.testnet]
+chain-id = "2304aa97"
+original-published-id = "0xab64bfcce4c5c357019e3b215f2502b6c7e60b6879ff5718240c7c157885708f"
+latest-published-id = "0xab64bfcce4c5c357019e3b215f2502b6c7e60b6879ff5718240c7c157885708f"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "6364aad5"
+original-published-id = "0xf38b350161c5d41fa7e95f1f1fc7884c645f8c087e0c4f1e9894843131d3d6da"
+latest-published-id = "0xf38b350161c5d41fa7e95f1f1fc7884c645f8c087e0c4f1e9894843131d3d6da"
+published-version = "1"

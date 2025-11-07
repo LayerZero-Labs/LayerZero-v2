@@ -1,0 +1,14 @@
+[package]
+name = "DvnLayerZero"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+Dvn = { local = "../dvn" }
+
+[addresses]
+dvn_layerzero = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

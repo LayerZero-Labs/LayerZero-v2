@@ -1,0 +1,116 @@
+[move]
+version = 3
+manifest_digest = "993E741ADB947F9A5D39866FDE93E498F193C220EB0166CAF24C27947F8F557F"
+deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
+
+[[move.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[[move.dependencies]]
+id = "Utils"
+name = "Utils"
+
+[[move.package]]
+id = "Iota"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/iota-framework"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "IotaSystem"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/iota-system"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "MoveStdlib"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/move-stdlib"
+
+[[move.package]]
+id = "Stardust"
+
+[move.package.source]
+git = "https://github.com/iotaledger/iota.git"
+rev = "bc1cbaf1049b94dde6f0b0cb9af89547132194c3"
+subdir = "crates/iota-framework/packages/stardust"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package]]
+id = "Utils"
+
+[move.package.source]
+local = "../../utils"
+
+[[move.package.dependencies]]
+id = "Iota"
+name = "Iota"
+
+[[move.package.dependencies]]
+id = "IotaSystem"
+name = "IotaSystem"
+
+[[move.package.dependencies]]
+id = "MoveStdlib"
+name = "MoveStdlib"
+
+[[move.package.dependencies]]
+id = "Stardust"
+name = "Stardust"
+
+[move.toolchain-version]
+compiler-version = "1.9.2"
+edition = "2024.beta"
+flavor = "iota"
+
+[env]
+[env.testnet]
+chain-id = "2304aa97"
+original-published-id = "0x927e622637832f38e879a9cd7436b85c8e1a129f09f1ff20c364d67c2cb2f9fa"
+latest-published-id = "0x927e622637832f38e879a9cd7436b85c8e1a129f09f1ff20c364d67c2cb2f9fa"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "6364aad5"
+original-published-id = "0x0a8ff628914b6f968a96754c9724b5d739dd0960d83bf76f98556919bc275866"
+latest-published-id = "0x0a8ff628914b6f968a96754c9724b5d739dd0960d83bf76f98556919bc275866"
+published-version = "1"

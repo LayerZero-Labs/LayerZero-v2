@@ -1,0 +1,13 @@
+[package]
+name = "PriceFeedCallTypes"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+price_feed_call_types = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

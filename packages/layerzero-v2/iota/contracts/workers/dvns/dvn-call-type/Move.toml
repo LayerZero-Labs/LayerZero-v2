@@ -1,0 +1,13 @@
+[package]
+name = "DvnCallType"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+dvn_call_type = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

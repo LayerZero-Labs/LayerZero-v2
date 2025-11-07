@@ -1,0 +1,13 @@
+[package]
+name = "ExecutorCallType"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+executor_call_type = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

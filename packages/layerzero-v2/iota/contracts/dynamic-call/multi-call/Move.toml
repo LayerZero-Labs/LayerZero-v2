@@ -1,0 +1,15 @@
+[package]
+name = "MultiCall"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+Call = { local = "../call" }
+
+[addresses]
+multi_call = "0x0"
+
+[dev-dependencies]
+
+
+[dev-addresses]

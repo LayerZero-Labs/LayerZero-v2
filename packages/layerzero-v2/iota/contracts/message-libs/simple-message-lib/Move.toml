@@ -1,0 +1,14 @@
+[package]
+name = "SimpleMessageLib"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+MessageLibCommon = { local = "../message-lib-common" }
+
+[addresses]
+simple_message_lib = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

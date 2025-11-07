@@ -1,0 +1,13 @@
+[package]
+name = "Treasury"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+
+[addresses]
+treasury = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

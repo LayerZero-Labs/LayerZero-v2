@@ -1,0 +1,17 @@
+[package]
+name = "Uln302"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+MessageLibCommon = { local = "../message-lib-common" }
+UlnCommon = { local = "../uln-common" }
+Treasury = { local = "../treasury" }
+MultiCall = { local = "../../dynamic-call/multi-call" }
+
+[addresses]
+uln_302 = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
