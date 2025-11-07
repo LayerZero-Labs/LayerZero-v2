@@ -1,0 +1,58 @@
+[move]
+version = 3
+manifest_digest = "FD14CB6E47A3E1EC9F397D852771DF0BE9FF178A24333E26B5CDFEC556309561"
+deps_digest = "F9B494B64F0615AED0E98FC12A85B85ECD2BC5185C22D30E7F67786BB52E507C"
+dependencies= [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "Iota"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "IotaSystem"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-system" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "Stardust"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/stardust" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.9.2"
+edition = "2024.beta"
+flavor = "iota"
+
+[env]
+[env.testnet]
+chain-id = "2304aa97"
+original-published-id = "0x50e04dda960d432cc5f98f5c51ec65e73d313f0e6c1ad13146215946524a56f3"
+latest-published-id = "0x50e04dda960d432cc5f98f5c51ec65e73d313f0e6c1ad13146215946524a56f3"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "6364aad5"
+original-published-id = "0xed5b4c39fa2e3c518e0ce03a40f9a05ac37f46b770c8f158f6984c6d8bf05698"
+latest-published-id = "0xed5b4c39fa2e3c518e0ce03a40f9a05ac37f46b770c8f158f6984c6d8bf05698"
+published-version = "1"

@@ -1,0 +1,15 @@
+[package]
+name = "PriceFeed"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+Call = { local = "../../dynamic-call/call" }
+PriceFeedCallTypes = { local = "../price-feed-call-types" }
+
+[addresses]
+price_feed = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

@@ -1,0 +1,58 @@
+[move]
+version = 3
+manifest_digest = "CAF037708F3F19B68BC16D9463CE39FBE4EE7D60A97FC833F8D9389A8996E936"
+deps_digest = "F9B494B64F0615AED0E98FC12A85B85ECD2BC5185C22D30E7F67786BB52E507C"
+dependencies= [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "Iota"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "IotaSystem"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-system" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "Stardust"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/stardust" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.9.2"
+edition = "2024.beta"
+flavor = "iota"
+
+[env]
+[env.testnet]
+chain-id = "2304aa97"
+original-published-id = "0xcfe166071cce0ac633dbefbb30d00d927b57171d47566be1db0a303cf05811fe"
+latest-published-id = "0xcfe166071cce0ac633dbefbb30d00d927b57171d47566be1db0a303cf05811fe"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "6364aad5"
+original-published-id = "0xa17119a55db88904f1dc17ebc506ee080be6eb309ec72f3fe33451c493b0a83f"
+latest-published-id = "0xa17119a55db88904f1dc17ebc506ee080be6eb309ec72f3fe33451c493b0a83f"
+published-version = "1"

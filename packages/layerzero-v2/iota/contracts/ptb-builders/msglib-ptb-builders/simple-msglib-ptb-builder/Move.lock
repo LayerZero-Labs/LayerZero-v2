@@ -1,0 +1,156 @@
+[move]
+version = 3
+manifest_digest = "AC0637B5691EEF85BBFE83BA69676D69DFDF8C5F71955591175F560427343CA8"
+deps_digest = "52B406A7A21811BEF51751CF88DA0E76DAEFFEAC888D4F4060B1A72BBE7D8D35"
+dependencies= [
+  { id = "EndpointPtbBuilder", name = "EndpointPtbBuilder" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "SimpleMessageLib", name = "SimpleMessageLib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "Call"
+source = { local = "../../../dynamic-call/call" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "EndpointPtbBuilder"
+source = { local = "../../endpoint-ptb-builder" }
+
+dependencies = [
+  { id = "EndpointV2", name = "EndpointV2" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "PtbMoveCall", name = "PtbMoveCall" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "EndpointV2"
+source = { local = "../../../endpoint-v2" }
+
+dependencies = [
+  { id = "Call", name = "Call" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Zro", name = "Zro" },
+]
+
+[[move.package]]
+id = "Iota"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-framework" }
+
+dependencies = [
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "IotaSystem"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/iota-system" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "MessageLibCommon"
+source = { local = "../../../message-libs/message-lib-common" }
+
+dependencies = [
+  { id = "EndpointV2", name = "EndpointV2" },
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "MoveStdlib"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "PtbMoveCall"
+source = { local = "../../ptb-move-call" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+  { id = "Utils", name = "Utils" },
+]
+
+[[move.package]]
+id = "SimpleMessageLib"
+source = { local = "../../../message-libs/simple-message-lib" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MessageLibCommon", name = "MessageLibCommon" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "Stardust"
+source = { git = "https://github.com/iotaledger/iota.git", rev = "79428efeb99e1bb60880a970a88d90621cb2ccff", subdir = "crates/iota-framework/packages/stardust" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+]
+
+[[move.package]]
+id = "Utils"
+source = { local = "../../../utils" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[[move.package]]
+id = "Zro"
+source = { local = "../../../zro" }
+
+dependencies = [
+  { id = "Iota", name = "Iota" },
+  { id = "IotaSystem", name = "IotaSystem" },
+  { id = "MoveStdlib", name = "MoveStdlib" },
+  { id = "Stardust", name = "Stardust" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.9.2"
+edition = "2024.beta"
+flavor = "iota"
+
+[env]
+[env.testnet]
+chain-id = "2304aa97"
+original-published-id = "0x092deaab52a07c9e752c90ecfcfc809860d493b9047f81d5ad51479e1b7fcc35"
+latest-published-id = "0x092deaab52a07c9e752c90ecfcfc809860d493b9047f81d5ad51479e1b7fcc35"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "6364aad5"
+original-published-id = "0x612a2eddcf0b06b5daeb0ebabaabf8c47732305cfe3be7103b1ea5d4fd5571e1"
+latest-published-id = "0x612a2eddcf0b06b5daeb0ebabaabf8c47732305cfe3be7103b1ea5d4fd5571e1"
+published-version = "1"

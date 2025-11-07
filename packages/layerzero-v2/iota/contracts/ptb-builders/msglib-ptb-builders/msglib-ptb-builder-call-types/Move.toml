@@ -1,0 +1,14 @@
+[package]
+name = "MsglibPtbBuilderCallTypes"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+PtbMoveCall = { local = "../../ptb-move-call" }
+
+[addresses]
+msglib_ptb_builder_call_types = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

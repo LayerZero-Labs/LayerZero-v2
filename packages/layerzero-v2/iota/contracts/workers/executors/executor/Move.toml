@@ -1,0 +1,19 @@
+[package]
+name = "Executor"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+WorkerCommon = { local = "../../worker-common" }
+WorkerRegistry = { local = "../../worker-registry" }
+MsglibPtbBuilderCallTypes = { local = "../../../ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types" }
+ExecutorCallType = { local = "../executor-call-type" }
+MessageLibCommon = { local = "../../../message-libs/message-lib-common" }
+UlnCommon = { local = "../../../message-libs/uln-common" }
+
+[addresses]
+executor = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
