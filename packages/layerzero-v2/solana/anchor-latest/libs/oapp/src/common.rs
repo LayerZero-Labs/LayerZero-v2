@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::address_lookup_table::state::AddressLookupTable;
 use anchor_lang::Discriminator;
+use solana_address_lookup_table_interface::state::AddressLookupTable;
 
 pub const EXECUTION_CONTEXT_SEED: &[u8] = b"ExecutionContext";
 pub const EXECUTION_CONTEXT_VERSION_1: u8 = 1;

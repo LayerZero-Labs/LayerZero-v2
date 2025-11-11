@@ -1,6 +1,6 @@
 use crate::*;
-use anchor_lang::solana_program::keccak::hash;
 use cpi_helper::CpiContext;
+use solana_keccak_hasher::hash;
 
 #[event_cpi]
 #[derive(CpiContext, Accounts)]

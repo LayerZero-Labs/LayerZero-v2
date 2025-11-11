@@ -1,5 +1,5 @@
 use crate::*;
-use anchor_lang::solana_program::keccak::hashv;
+use solana_keccak_hasher::hashv;
 use cpi_helper::CpiContext;
 
 /// MESSAGING STEP 3. the oapp should pull the message out using clear()

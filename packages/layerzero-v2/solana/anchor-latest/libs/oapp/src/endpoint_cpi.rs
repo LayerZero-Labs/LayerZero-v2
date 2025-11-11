@@ -1,7 +1,5 @@
-use anchor_lang::{
-    prelude::*,
-    solana_program::{keccak::hash, system_program::ID as SYSTEM_ID},
-};
+use anchor_lang::{prelude::*, solana_program::system_program::ID as SYSTEM_ID};
+use solana_keccak_hasher::hash;
 
 use endpoint_interface::{
     self as endpoint,
