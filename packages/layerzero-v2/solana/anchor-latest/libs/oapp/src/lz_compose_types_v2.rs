@@ -1,5 +1,6 @@
 use crate::{common::AccountMetaRef, endpoint_cpi::EVENT_SEED};
-use anchor_lang::{prelude::*, solana_program::keccak::hash};
+use anchor_lang::{prelude::*};
+use solana_keccak_hasher::hash;
 use endpoint_interface::COMPOSED_MESSAGE_HASH_SEED;
 
 pub const LZ_COMPOSE_TYPES_VERSION: u8 = 2;

@@ -1,12 +1,10 @@
 use crate::common::{AccountMetaRef, AddressLocator};
 use crate::endpoint_cpi::EVENT_SEED;
-use anchor_lang::{
-    prelude::*,
-    solana_program::{keccak::hash, system_program::ID as SYSTEM_ID},
-};
+use anchor_lang::{prelude::*, solana_program::system_program::ID as SYSTEM_ID};
 use endpoint_interface::{
     COMPOSED_MESSAGE_HASH_SEED, ENDPOINT_SEED, NONCE_SEED, OAPP_SEED, PAYLOAD_HASH_SEED,
 };
+use solana_keccak_hasher::hash;
 
 pub const LZ_RECEIVE_TYPES_VERSION: u8 = 2;
 

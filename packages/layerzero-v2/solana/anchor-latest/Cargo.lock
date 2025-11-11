@@ -679,6 +679,8 @@ version = "0.2.0"
 dependencies = [
  "anchor-lang",
  "endpoint-interface",
+ "solana-address-lookup-table-interface",
+ "solana-keccak-hasher",
 ]
 
 [[package]]
@@ -909,6 +911,23 @@ dependencies = [
  "solana-program-error",
  "solana-program-memory",
  "solana-pubkey",
+]
+
+[[package]]
+name = "solana-address-lookup-table-interface"
+version = "2.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1673f67efe870b64a65cb39e6194be5b26527691ce5922909939961a6e6b395"
+dependencies = [
+ "bincode",
+ "bytemuck",
+ "serde",
+ "serde_derive",
+ "solana-clock",
+ "solana-instruction",
+ "solana-pubkey",
+ "solana-sdk-ids",
+ "solana-slot-hashes",
 ]
 
 [[package]]
