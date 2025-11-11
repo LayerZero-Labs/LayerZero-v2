@@ -25,7 +25,7 @@ anchor-lang = "0.32.1"
 anchor-spl = "0.32.1"
 solana-keccak-hasher = "2.2.1"
 solana-helper = "0.1.0"
-solana-address-lookup-table-interface = "2.2.1"
+solana-address-lookup-table-interface = "2.2.2"
 oapp = { path = "libs/oapp", package = "oapp-latest" }
 cpi-helper = { path = "../programs/libs/cpi-helper" }
 messagelib-helper = { path = "libs/messagelib-helper", package = "messagelib-helper-latest" }
