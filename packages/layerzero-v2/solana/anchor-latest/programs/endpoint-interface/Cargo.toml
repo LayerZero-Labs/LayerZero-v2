@@ -25,3 +25,4 @@ solana-helper = { workspace = true }
 cpi-helper = { workspace = true }
 utils = { workspace = true }
 messagelib-interface = { workspace = true, features = ["cpi"] }
+solana-keccak-hasher = { workspace = true }

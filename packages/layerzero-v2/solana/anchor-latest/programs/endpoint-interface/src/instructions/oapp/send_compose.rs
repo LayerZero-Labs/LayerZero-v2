@@ -1,6 +1,6 @@
 use crate::*;
-use anchor_lang::solana_program::keccak::hash;
 use cpi_helper::CpiContext;
+use solana_keccak_hasher::hash;
 
 #[event_cpi]
 #[derive(CpiContext, Accounts)]
@@ -26,7 +26,6 @@ pub struct SendCompose<'info> {
     pub compose_message: Account<'info, ComposeMessageState>,
     pub system_program: Program<'info, System>,
 }
-
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct SendComposeParams {
