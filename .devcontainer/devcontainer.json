@@ -1,103 +1,104 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/debian
 {
-	"name": "Debian",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"name": "LayerZero Development Environment (Debian)",
+	// Base image containing all necessary tools (Solidity, Rust, Move, C++ toolchain)
 	"image": "docker.io/layerzerolabs/devcon:1.0.9",
-  
-	"features": {
-	  "ghcr.io/devcontainers/features/common-utils:2": {
-		"installZsh": "true",
-		"configureZshAsDefaultShell": "true",
-		"installOhMyZsh": "true",
-		// username should be root and installOhMyZshConfig should be false to avoid overwriting .zshrc in the base image
-		"username": "root",
-		"installOhMyZshConfig": "false"
-	  },
-	  "ghcr.io/devcontainers/features/docker-in-docker:2": {
-		// Docker Compose v2 is required for or compatible with the repository
-		"dockerDashComposeVersion": "v2",
-		// https://github.com/devcontainers/features/issues/573#issuecomment-1593854983
-		"moby": false
-	  }
-	},
-  
-	// Configure tool-specific properties.
-	"customizations": {
-	  "vscode": {
-		"extensions": [
-		  // Theme
-		  "PKief.material-icon-theme",
-		  // git
-		  "GitHub.remotehub",
-		  "GitHub.copilot",
-		  "GitHub.vscode-pull-request-github",
-		  "eamodio.gitlens",
-		  "vivaxy.vscode-conventional-commits",
-		  // Editor
-		  "oderwat.indent-rainbow",
-		  "iliazeus.vscode-ansi",
-		  "editorconfig.editorconfig",
-		  // Spell checker
-		  "streetsidesoftware.code-spell-checker",
-		  // Zip
-		  "arcanis.vscode-zipfs",
-		  // PDF viewer
-		  "tomoki1207.pdf",
-		  // YAML
-		  "redhat.vscode-yaml",
-		  // Docker
-		  "ms-azuretools.vscode-docker",
-		  // Javascript and Typescript
-		  "dbaeumer.vscode-eslint",
-		  "esbenp.prettier-vscode",
-		  // Solidity
-		  "NomicFoundation.hardhat-solidity",
-		  // Rust
-		  "rust-lang.rust-analyzer",
-		  // Move
-		  "damirka.move-syntax",
-		  "hashicorp.terraform",
-		  // Live share
-		  "ms-vsliveshare.vsliveshare",
-		  // Mermaid
-		  "bierner.markdown-mermaid"
-		],
-		"settings": {
-		  "remote.autoForwardPorts": false,
-		  "terminal.integrated.defaultProfile.linux": "zsh",
-		  "terminal.integrated.profiles.linux": {
-			"bash": {
-			  "path": "/usr/bash"
-			},
-			"zsh": {
-			  "path": "/usr/bin/zsh"
-			}
-		  }
-		}
-	  }
-	},
-  
-	"initializeCommand": {
-	  "mkdir-aws": "mkdir -p ${localEnv:HOME}/.aws",
-	  "touch-zsh-history": "touch ${localEnv:HOME}/.zsh_history"
-	},
-  
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "PLUGIN_PATH=~/.oh-my-zsh/custom/plugins/zsh-autosuggestions; if [ ! -d $PLUGIN_PATH ]; then git clone https://github.com/zsh-users/zsh-autosuggestions $PLUGIN_PATH; fi && sed -i'' -e 's/^plugins.*)/plugins=(git zsh-autosuggestions)/' ~/.zshrc",
-  
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	
+	// Ensure user context is set to root to match configurations in features and mounts
 	"remoteUser": "root",
-  
+	
+	"features": {
+		// Common utility features for enhanced shell environment
+	  "ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": "true",
+			"configureZshAsDefaultShell": "true",
+			"installOhMyZsh": "true",
+			// Configuration ensures settings apply to the 'root' user without overwriting base image configs
+			"username": "root",
+			"installOhMyZshConfig": "false" 
+	  },
+	  // Docker-in-Docker setup for running other containers (e.g., tests, local nodes)
+	  "ghcr.io/devcontainers/features/docker-in-docker:2": {
+			"dockerDashComposeVersion": "v2",
+			"moby": false
+	  }
+	},
+	
+	// --- Local Initialization (Runs on Host before container creation) ---
+	"initializeCommand": {
+	  // Ensures .aws directory exists for mounting credentials
+	  "mkdir-aws": "mkdir -p ${localEnv:HOME}/.aws", 
+	  // Ensures .zsh_history exists for mounting shell history
+	  "touch-zsh-history": "touch ${localEnv:HOME}/.zsh_history" 
+	},
+	
+	// --- Mounts (Binding Local Directories to Container) ---
+	"mounts": [
+	  // Bind mount local AWS credentials (Security sensitive!)
+	  "source=${localEnv:HOME}/.aws,target=/root/.aws,type=bind", 
+	  // Bind mount ZSH history for persistence across container restarts
+	  "source=${localEnv:HOME}/.zsh_history,target=/root/.zsh_history,type=bind" 
+	],
+	
+	// --- Environment Variables ---
+	// Forward critical tokens from the local environment to the remote container
 	"remoteEnv": {
 	  "NPM_TOKEN": "${localEnv:NPM_TOKEN}",
 	  "GH_TOKEN": "${localEnv:GH_TOKEN}",
 	  "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
 	},
-  
-	"mounts": [
-	  "source=${localEnv:HOME}/.aws,target=/root/.aws,type=bind",
-	  "source=${localEnv:HOME}/.zsh_history,target=/root/.zsh_history,type=bind"
-	]
-  }
-  
+	
+	// --- Post-Creation Setup (Runs inside Container after creation) ---
+	"postCreateCommand": "PLUGIN_PATH=~/.oh-my-zsh/custom/plugins/zsh-autosuggestions; if [ ! -d $PLUGIN_PATH ]; then git clone https://github.com/zsh-users/zsh-autosuggestions $PLUGIN_PATH; fi && sed -i'' -e 's/^plugins.*)/plugins=(git zsh-autosuggestions)/' ~/.zshrc",
+	
+	// --- VS Code Customizations ---
+	"customizations": {
+	  "vscode": {
+			"extensions": [
+				// Code Quality & Review
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"streetsidesoftware.code-spell-checker",
+				
+				// Blockhain Development Tools
+				"NomicFoundation.hardhat-solidity",
+				"rust-lang.rust-analyzer",
+				"damirka.move-syntax",
+				
+				// Git & Collaboration
+				"GitHub.copilot",
+				"GitHub.remotehub",
+				"GitHub.vscode-pull-request-github",
+				"eamodio.gitlens",
+				"vivaxy.vscode-conventional-commits",
+				"ms-vsliveshare.vsliveshare",
+
+				// File & Misc
+				"PKief.material-icon-theme",
+				"editorconfig.editorconfig",
+				"redhat.vscode-yaml",
+				"ms-azuretools.vscode-docker",
+				"arcanis.vscode-zipfs",
+				"tomoki1207.pdf",
+				"bierner.markdown-mermaid",
+				
+				// Editor Aids
+				"oderwat.indent-rainbow",
+				"iliazeus.vscode-ansi",
+				"hashicorp.terraform"
+			],
+			"settings": {
+				// Prevent automatic port forwarding (common for complex blockchain setups)
+				"remote.autoForwardPorts": false, 
+				"terminal.integrated.defaultProfile.linux": "zsh",
+				"terminal.integrated.profiles.linux": {
+					"bash": {
+						"path": "/usr/bash"
+					},
+					"zsh": {
+						"path": "/usr/bin/zsh"
+					}
+				}
+			}
+	  }
+	}
+}
