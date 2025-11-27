@@ -1,14 +1,38 @@
+# --- Cargo.toml: Package Manifest for OFTCommon (Omnichain Fungible Token Common) ---
+
 [package]
 name = "OFTCommon"
+# Initial version of the package.
 version = "0.0.1"
-edition = "2024.beta"
+# Uses the experimental 2024 beta edition, likely required by a specific framework.
+edition = "2024.beta" 
+# Recommended: Add a clear description.
+description = "Common structures and utilities for Omnichain Fungible Token (OFT) implementations."
+# Recommended: Define the project license.
+license = "MIT"
+# Recommended: Define the authors.
+authors = ["Your Name <email@example.com>"]
+# Recommended: Link to the project repository.
+repository = "https://github.com/project/oft-common"
+
+
+# --- Dependencies ---
 
 [dependencies]
-Call = { local = "../../../dynamic-call/call" }
+# A local path dependency pointing to a module within the workspace/monorepo.
+# This is typically used for inter-module communication in a large project.
+Call = { path = "../../../dynamic-call/call" }
+
+# --- Custom Framework Addresses (Non-Standard) ---
+# These sections are not part of standard Cargo but are used by custom build tools
+# (e.g., blockchain frameworks) to store deployment addresses or custom metadata.
 
 [addresses]
+# Placeholder address for the OFT common contract/program.
 oft_common = "0x0"
 
 [dev-dependencies]
+# Empty section for development-specific dependencies.
 
 [dev-addresses]
+# Empty section for development/test network addresses.
