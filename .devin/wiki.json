@@ -1,13 +1,13 @@
 {
   "repo_notes": [
     {
-      "content": "LayerZero V2 is an omnichain interoperability protocol implemented across 6 blockchain platforms: EVM (Solidity), Solana (Rust/Anchor), Aptos (Move), Sui (Move), TON (FunC), and Initia (Move). Each chain implementation follows the same architecture with an Endpoint V2 protocol layer, ULN 302 message library, DVN and Executor workers, and OApp/OFT application standards. Code is located in packages/layerzero-v2/{chain}/ directories."
+      "content": "LayerZero V2 is an omnichain interoperability protocol implemented across 7 blockchain platforms: EVM (Solidity), Solana (Rust/Anchor), Aptos (Move), Sui (Move), TON (FunC), Initia (Move), and IOTA (Move). Each chain implementation follows the same architecture with an Endpoint V2 protocol layer, ULN 302 message library, DVN and Executor workers, and OApp/OFT application standards. Code is located in packages/layerzero-v2/{chain}/ directories."
     }
   ],
   "pages": [
     {
       "title": "Overview",
-      "purpose": "Introduce LayerZero V2 as an omnichain messaging protocol, explaining its architecture across EVM, Solana, Aptos, Sui, TON, and Initia. Cover the core concepts: Endpoint V2 (messaging interface), MessageLibs (verification), Workers (DVN/Executor), and OApp standards.",
+      "purpose": "Introduce LayerZero V2 as an omnichain messaging protocol, explaining its architecture across EVM, Solana, Aptos, Sui, TON, Initia, and IOTA. Cover the core concepts: Endpoint V2 (messaging interface), MessageLibs (verification), Workers (DVN/Executor), and OApp standards.",
       "page_notes": [
         {
           "content": "Focus on the shared architecture pattern across all chains. Reference packages/layerzero-v2/ as the root for all implementations."
@@ -110,6 +110,15 @@
       "page_notes": [
         {
           "content": "Focus on initia/contracts/ directory. Note similarities to Aptos implementation while highlighting Initia-specific adaptations."
+        }
+      ]
+    },
+    {
+      "title": "IOTA Implementation",
+      "purpose": "Document the Move implementation for IOTA blockchain, including developer documentation, Move examples, TypeScript SDK, and Rust integration.",
+      "page_notes": [
+        {
+          "content": "Focus on iota/ directory at repo root. Cover iota/docs/content/developer/ for Move development guides, iota/docs/examples/move/ for contract examples, iota/docs/content/developer/ts-sdk/ for TypeScript SDK, and iota/docs/examples/rust/ for Rust integration. IOTA uses a Move variant similar to Sui with object-centric programming model."
         }
       ]
     }
