@@ -1,0 +1,15 @@
+[package]
+name = "BlockedMsglibPtbBuilder"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+EndpointPtbBuilder = { local = "../../endpoint-ptb-builder" }
+BlockedMessageLib = { local = "../../../message-libs/blocked-message-lib" }
+
+[addresses]
+blocked_msglib_ptb_builder = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

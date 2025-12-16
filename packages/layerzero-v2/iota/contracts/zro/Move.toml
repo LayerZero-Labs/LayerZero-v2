@@ -1,0 +1,13 @@
+[package]
+name = "Zro"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+version = "0.0.1"
+
+[dependencies]
+
+[addresses]
+zro = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

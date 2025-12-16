@@ -1,0 +1,16 @@
+[package]
+name = "PackageWhitelistValidator"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+BlockedMessageLib = { local = "../../../message-libs/blocked-message-lib" }
+SimpleMessageLib = { local = "../../../message-libs/simple-message-lib" }
+Uln302PtbBuilder = { local = "../../msglib-ptb-builders/uln-302-ptb-builder" }
+
+[addresses]
+package_whitelist_validator = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

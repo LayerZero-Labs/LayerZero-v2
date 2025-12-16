@@ -1,0 +1,20 @@
+[package]
+name = "Dvn"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+WorkerCommon = { local = "../../worker-common" }
+WorkerRegistry = { local = "../../worker-registry" }
+MessageLibCommon = { local = "../../../message-libs/message-lib-common" }
+UlnCommon = { local = "../../../message-libs/uln-common" }
+MsglibPtbBuilderCallTypes = { local = "../../../ptb-builders/msglib-ptb-builders/msglib-ptb-builder-call-types" }
+DvnCallType = { local = "../dvn-call-type" }
+MultiCall = { local = "../../../dynamic-call/multi-call" }
+
+[addresses]
+dvn = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]

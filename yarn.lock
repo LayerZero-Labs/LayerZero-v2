@@ -1406,6 +1406,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@layerzerolabs/layerzero-v2-iotal1@workspace:packages/layerzero-v2/iota/contracts":
+  version: 0.0.0-use.local
+  resolution: "@layerzerolabs/layerzero-v2-iotal1@workspace:packages/layerzero-v2/iota/contracts"
+  dependencies:
+    glob: "npm:^10.3.10"
+    zx: "npm:^8.1.3"
+  languageName: unknown
+  linkType: soft
+
 "@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs":
   version: 0.0.0-use.local
   resolution: "@layerzerolabs/layerzero-v2-solana@workspace:packages/layerzero-v2/solana/programs"

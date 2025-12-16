@@ -1,0 +1,16 @@
+[package]
+name = "EndpointV2"
+version = "0.0.1"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+
+[dependencies]
+Zro = { local = "../zro" }
+Call = { local = "../dynamic-call/call" }
+
+[addresses]
+endpoint_v2 = "0x0"
+
+[dev-dependencies]
+
+
+[dev-addresses]

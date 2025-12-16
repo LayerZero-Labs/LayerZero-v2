@@ -1,0 +1,17 @@
+[package]
+name = "ExecutorPtbBuilder"
+edition = "2024.beta"
+version = "0.0.1"
+
+[dependencies]
+Executor = { local = "../../../workers/executors/executor" }
+ExecutorFeeLib = { local = "../../../workers/executors/executor-fee-lib" }
+PriceFeed = { local = "../../../workers/price-feed" }
+Uln302PtbBuilder = { local = "../../../ptb-builders/msglib-ptb-builders/uln-302-ptb-builder" }
+
+[addresses]
+executor_ptb_builder = "0x0"
+
+[dev-dependencies]
+
+[dev-addresses]
