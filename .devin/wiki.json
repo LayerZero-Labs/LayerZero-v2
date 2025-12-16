@@ -1,0 +1,118 @@
+{
+  "repo_notes": [
+    {
+      "content": "LayerZero V2 is an omnichain interoperability protocol implemented across 6 blockchain platforms: EVM (Solidity), Solana (Rust/Anchor), Aptos (Move), Sui (Move), TON (FunC), and Initia (Move). Each chain implementation follows the same architecture with an Endpoint V2 protocol layer, ULN 302 message library, DVN and Executor workers, and OApp/OFT application standards. Code is located in packages/layerzero-v2/{chain}/ directories."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce LayerZero V2 as an omnichain messaging protocol, explaining its architecture across EVM, Solana, Aptos, Sui, TON, and Initia. Cover the core concepts: Endpoint V2 (messaging interface), MessageLibs (verification), Workers (DVN/Executor), and OApp standards.",
+      "page_notes": [
+        {
+          "content": "Focus on the shared architecture pattern across all chains. Reference packages/layerzero-v2/ as the root for all implementations."
+        }
+      ]
+    },
+    {
+      "title": "Endpoint V2 Protocol",
+      "purpose": "Document the core Endpoint V2 protocol that handles cross-chain message sending, receiving, and verification. This is the immutable messaging interface.",
+      "page_notes": [
+        {
+          "content": "Cover: EVM (evm/protocol/contracts/EndpointV2.sol), Solana (solana/programs/programs/endpoint/), Sui (sui/contracts/endpoint-v2/), Aptos (aptos/contracts/endpoint_v2/), TON (ton/src/protocol/endpoint/), Initia (initia/contracts/endpoint_v2/). Include interfaces like ILayerZeroEndpointV2, message channels, composers."
+        }
+      ]
+    },
+    {
+      "title": "Message Libraries",
+      "purpose": "Document the MessageLib system including ULN 302 (Ultra Light Node), ReadLib, SimpleMessageLib, and BlockedMessageLib implementations across all chains.",
+      "page_notes": [
+        {
+          "content": "Cover: EVM (evm/messagelib/contracts/uln/), Solana (solana/programs/programs/uln/), Sui (sui/contracts/message-libs/uln-302/), Aptos (aptos/contracts/msglib/), TON (ton/src/protocol/msglibs/ultralightnode/). Focus on packet encoding, verification flow, and DVN integration."
+        }
+      ]
+    },
+    {
+      "title": "Workers - DVN and Executor",
+      "purpose": "Document the off-chain worker infrastructure: DVN (Decentralized Verifier Networks) for message verification and Executors for destination chain execution.",
+      "page_notes": [
+        {
+          "content": "Cover DVN implementations: EVM (evm/messagelib/contracts/uln/dvn/), Solana (solana/programs/programs/dvn/), Sui (sui/contracts/workers/dvns/), Aptos (aptos/contracts/workers/dvn/), TON (ton/src/workers/dvn/). Cover Executor: EVM (evm/messagelib/contracts/Executor.sol), Solana (solana/programs/programs/executor/), Sui (sui/contracts/workers/executors/), Aptos (aptos/contracts/workers/executor/), TON (ton/src/workers/executor/)."
+        }
+      ]
+    },
+    {
+      "title": "OApp Standard",
+      "purpose": "Document the OApp (Omnichain Application) standard that provides the base contract for building cross-chain applications.",
+      "page_notes": [
+        {
+          "content": "Cover: EVM (evm/oapp/contracts/oapp/), Sui (sui/contracts/oapps/oapp/), Aptos (aptos/contracts/oapps/). Include send/receive patterns, peer configuration, and delegate management."
+        }
+      ]
+    },
+    {
+      "title": "OFT Standard",
+      "purpose": "Document the OFT (Omnichain Fungible Token) standard for cross-chain token transfers without wrapping.",
+      "page_notes": [
+        {
+          "content": "Cover: EVM (evm/oapp/contracts/oft/), Solana (solana/programs/programs/oft/), Sui (sui/contracts/oapps/oft/), Aptos (aptos/contracts/oapps/oft_common/). Include message codecs, fee handling, and rate limiting."
+        }
+      ]
+    },
+    {
+      "title": "EVM Implementation",
+      "purpose": "Deep dive into the Solidity implementation including protocol, messagelib, and oapp packages.",
+      "page_notes": [
+        {
+          "content": "Focus on evm/protocol/, evm/messagelib/, evm/oapp/. Cover Foundry test setup. Note that OApp reference implementations have moved to the devtools repo."
+        }
+      ]
+    },
+    {
+      "title": "Solana Implementation",
+      "purpose": "Deep dive into the Rust/Anchor implementation with programs for endpoint, ULN, DVN, executor, and OFT.",
+      "page_notes": [
+        {
+          "content": "Focus on solana/programs/programs/ directory structure. Cover Anchor framework usage, program-derived addresses (PDAs), and cross-program invocation patterns."
+        }
+      ]
+    },
+    {
+      "title": "Sui Implementation",
+      "purpose": "Deep dive into the Move implementation for Sui with PTB (Programmable Transaction Block) builders.",
+      "page_notes": [
+        {
+          "content": "Focus on sui/contracts/ including endpoint-v2, message-libs, oapps, ptb-builders, and workers. Cover Sui's object-centric model and Move patterns."
+        }
+      ]
+    },
+    {
+      "title": "Aptos Implementation",
+      "purpose": "Deep dive into the Move implementation for Aptos with deployer, endpoint, and msglib packages.",
+      "page_notes": [
+        {
+          "content": "Focus on aptos/contracts/ including endpoint_v2, msglib, oapps, workers. Cover Aptos-specific Move patterns and router architecture."
+        }
+      ]
+    },
+    {
+      "title": "TON Implementation",
+      "purpose": "Deep dive into the FunC implementation for TON blockchain with protocol, workers, and jetton support.",
+      "page_notes": [
+        {
+          "content": "Focus on ton/src/ including protocol/ (channel, controller, endpoint), workers/ (dvn, executor), and funC++/ abstractions. Cover TON's actor model and message passing."
+        }
+      ]
+    },
+    {
+      "title": "Initia Implementation",
+      "purpose": "Document the Move implementation for Initia, which shares patterns with Aptos.",
+      "page_notes": [
+        {
+          "content": "Focus on initia/contracts/ directory. Note similarities to Aptos implementation while highlighting Initia-specific adaptations."
+        }
+      ]
+    }
+  ]
+}
+
