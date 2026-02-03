@@ -19,7 +19,7 @@ struct SendParam {
 
 /**
  * @dev Struct representing OFT limit information.
- * @dev These amounts can change dynamically and are up the the specific oft implementation.
+ * @dev These amounts can change dynamically and are up to the specific oft implementation.
  */
 struct OFTLimit {
     uint256 minAmountLD; // Minimum amount in local decimals that can be sent to the recipient.
