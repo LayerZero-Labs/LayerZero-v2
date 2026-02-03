@@ -139,7 +139,7 @@ module executor_fee_lib_0::executor_fee_lib {
             ordered_execution_option,
         ) = executor_option::unpack_options(options);
 
-        // The total value to to be sent to the destination
+        // The total value to be sent to the destination
         let dst_amount: u128 = 0;
         // The total gas to be used for the transaction
         let lz_receive_gas: u128 = 0;
