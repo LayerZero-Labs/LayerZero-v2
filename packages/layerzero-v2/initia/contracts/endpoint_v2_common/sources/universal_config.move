@@ -1,5 +1,6 @@
-/// This module provides a groud truth for EID and ZRO Metadata address
+/// This module provides a ground truth for EID and ZRO Metadata address
 module endpoint_v2_common::universal_config {
+    use std::account;
     use std::event::emit;
     use std::fungible_asset::{Self, FungibleAsset, Metadata};
     use std::object::{Self, Object};
@@ -13,6 +14,8 @@ module endpoint_v2_common::universal_config {
     friend endpoint_v2_common::universal_config_tests;
 
     struct UniversalStore has key {
+        // The LayerZero admin account
+        layerzero_admin: address,
         // The EID for this endpoint
         eid: u32,
         // The ZRO metadata if it has been set
@@ -23,13 +26,15 @@ module endpoint_v2_common::universal_config {
 
     /// Initialize the UniversalStore must be called by endpoint_v2_common
     public entry fun initialize(admin: &signer, eid: u32) acquires UniversalStore {
-        assert_admin(address_of(move admin));
+        assert_layerzero_admin(address_of(move admin));
         assert!(universal_store().eid == 0, EALREADY_INITIALIZED);
         universal_store_mut().eid = eid;
     }
 
     fun init_module(account: &signer) {
         move_to(account, UniversalStore {
+            // The initial admin address is @layerzero_admin, which can be transferred
+            layerzero_admin: @layerzero_admin,
             eid: 0,
             zro_data: option::none(),
             zro_locked: false,
@@ -48,11 +53,20 @@ module endpoint_v2_common::universal_config {
         universal_store().eid
     }
 
+    /// Transfer the LayerZero admin to a new LayerZero admin address
+    public entry fun transfer_layerzero_admin(account: &signer, new_admin: address) acquires UniversalStore {
+        assert_layerzero_admin(address_of(move account));
+        assert!(account::exists_at(new_admin), EINVALID_ACCOUNT_ADDRESS);
+        assert!(new_admin != universal_store().layerzero_admin, ENO_CHANGE);
+        universal_store_mut().layerzero_admin = new_admin;
+        emit(LayerZeroAdminTransferred { new_admin });
+    }
+
     /// Set the ZRO address
     /// @param account: The layerzero admin account signer
     /// @param zro_address: The address of the ZRO metadata (@0x0 to unset)
     public entry fun set_zro_address(account: &signer, zro_address: address) acquires UniversalStore {
-        assert_admin(address_of(move account));
+        assert_layerzero_admin(address_of(move account));
         assert!(!universal_store().zro_locked, EZRO_ADDRESS_LOCKED);
 
         if (zro_address == @0x0) {
@@ -76,7 +90,7 @@ module endpoint_v2_common::universal_config {
 
     /// Lock the ZRO address so it can no longer be set or unset
     public entry fun lock_zro_address(account: &signer) acquires UniversalStore {
-        assert_admin(address_of(move account));
+        assert_layerzero_admin(address_of(move account));
         assert!(!universal_store().zro_locked, ENO_CHANGE);
         assert!(option::is_some(&universal_store().zro_data), EZRO_ADDRESS_NOT_SET);
 
@@ -123,11 +137,16 @@ module endpoint_v2_common::universal_config {
         metadata == get_zro_metadata()
     }
 
-    // ==================================================== Helpers ===================================================
-
-    inline fun assert_admin(admin: address) {
-        assert!(admin == @layerzero_admin, EUNAUTHORIZED);
+    #[view]
+    public fun layerzero_admin(): address acquires UniversalStore {
+        universal_store().layerzero_admin
     }
+
+    public fun assert_layerzero_admin(admin: address) acquires UniversalStore {
+        assert!(admin == universal_store().layerzero_admin, EUNAUTHORIZED);
+    }
+
+    // ==================================================== Helpers ===================================================
 
     inline fun universal_store(): &UniversalStore { borrow_global(@endpoint_v2_common) }
 
@@ -139,12 +158,22 @@ module endpoint_v2_common::universal_config {
     // ==================================================== Events ====================================================
 
     #[event]
+    struct LayerZeroAdminTransferred has drop, store {
+        new_admin: address,
+    }
+
+    #[event]
     struct ZroMetadataSet has drop, store {
         zro_address: address,
     }
 
     #[event]
     struct ZroMetadataLocked has drop, store {}
+
+    #[test_only]
+    public fun layerzero_admin_transferred_event(new_admin: address): LayerZeroAdminTransferred {
+        LayerZeroAdminTransferred { new_admin }
+    }
 
     #[test_only]
     public fun zro_metadata_set(zro_address: address): ZroMetadataSet {
@@ -160,8 +189,9 @@ module endpoint_v2_common::universal_config {
 
     const EALREADY_INITIALIZED: u64 = 1;
     const EUNAUTHORIZED: u64 = 2;
-    const EINVALID_ZRO_ADDRESS: u64 = 3;
-    const ENO_CHANGE: u64 = 4;
-    const EZRO_ADDRESS_NOT_SET: u64 = 5;
-    const EZRO_ADDRESS_LOCKED: u64 = 6;
+    const EINVALID_ACCOUNT_ADDRESS: u64 = 3;
+    const EINVALID_ZRO_ADDRESS: u64 = 4;
+    const ENO_CHANGE: u64 = 5;
+    const EZRO_ADDRESS_NOT_SET: u64 = 6;
+    const EZRO_ADDRESS_LOCKED: u64 = 7;
 }
