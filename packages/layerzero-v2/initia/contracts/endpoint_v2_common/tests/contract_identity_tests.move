@@ -31,7 +31,7 @@ module endpoint_v2_common::contract_identity_tests {
         let account = create_signer_for_test(@1234);
         let contract_signer = contract_identity::create_contract_signer(&account);
         let call_ref = contract_identity::make_dynamic_call_ref(&contract_signer, @5555, b"general");
-        // shoud be @5555
+        // should be @5555
         contract_identity::get_dynamic_call_ref_caller(&call_ref, @6666, b"general");
         irrecoverably_destroy_contract_signer(contract_signer);
     }
