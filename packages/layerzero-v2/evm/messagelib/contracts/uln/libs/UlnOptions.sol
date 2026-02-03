@@ -50,7 +50,7 @@ library UlnOptions {
 
                     // workerId must equal to the lastWorkerId for the first option
                     // so it is always skipped in the first option
-                    // this operation slices out options whenever the the scan finds a different workerId
+                    // this operation slices out options whenever the scan finds a different workerId
                     if (lastWorkerId == 0) {
                         lastWorkerId = workerId;
                     } else if (workerId != lastWorkerId) {
