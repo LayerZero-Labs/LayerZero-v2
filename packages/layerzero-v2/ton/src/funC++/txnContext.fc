@@ -92,12 +92,12 @@ cell getMsgData() impure inline {
 
     ;; the inMsgBody parsing is technically compatible with the reference jetton implementation
     ;; where donationNanos == the amount of tokens received
-    ;; and and the origin will contain garbage data
+    ;; and the origin will contain garbage data
     ifnot (inMsgBody.slice_empty?()) {
         opcode = inMsgBody~load_uint(32);
         query_id = inMsgBody~load_uint(64);
         donationNanos = inMsgBody~load_coins();
-        ;; if the origin is explicitly overriden in the body, use that
+        ;; if the origin is explicitly overridden in the body, use that
         if (inMsgBody.slice_bits() >= 267) {
             origin = inMsgBody.preload_bits_offset(11, 256).preload_uint(256);
         }
