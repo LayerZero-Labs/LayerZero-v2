@@ -24,7 +24,7 @@ With LayerZero V2, developers have the power to create applications that can sea
 
 Refer to the [LayerZero V2 Docs](https://docs.layerzero.network/v2) for implementing, handling, and debugging LayerZero contracts.
 
-Join the `#dev-general` channel on [Discord](https://discord-layerzero.netlify.app/discord) to discuss technical issues.
+Join the `#dev-general` channel on [Discord](https://discord.com/invite/ktbvm8Nkcr) to discuss technical issues.
 
 [Audit Reports](https://github.com/LayerZero-Labs/Audits)
 
