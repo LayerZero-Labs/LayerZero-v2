@@ -1,6 +1,12 @@
+# Package configuration for the LayerZero Views module.
+
 [package]
 name = "layerzero_views"
 version = "1.0.0"
+
+# --- Deployment Addresses ---
+# Addresses defined here use the placeholder "_" which must be substituted 
+# at compile/deployment time (e.g., by the CLI or deployment script).
 
 [addresses]
 layerzero_views = "_"
@@ -28,6 +34,9 @@ dvn_fee_lib_router_1 = "_"
 executor_fee_lib_0 = "_"
 dvn_fee_lib_0 = "_"
 
+# --- Development Addresses ---
+# Explicit addresses used primarily for testing, unit tests, and local development setup.
+
 [dev-addresses]
 layerzero_views = "0x1010123"
 dvn = "0x3001"
@@ -54,16 +63,24 @@ dvn_fee_lib_router_1 = "0x30002a"
 executor_fee_lib_0 = "0x3000"
 dvn_fee_lib_0 = "0x3000a"
 
+# --- Dependencies ---
+
+# Git Dependency: Initia Standard Library
+# Pinned to a specific commit hash (rev) for security and immutability.
 [dependencies.InitiaStdlib]
 git = "https://github.com/initia-labs/move-natives.git"
 rev = "77d5f3e140143bdaa41f850115b3035c134193e3"
 subdir = "initia_stdlib"
 
+# Local Dependencies (Monorepo structure)
+# These components are part of the same project repository.
 [dependencies]
-endpoint_v2_common = { local = "../endpoint_v2_common" }
-endpoint_v2 = { local = "../endpoint_v2" }
-uln_302 = { local = "../msglib/libs/uln_302" }
+endpoint_v2_common = { local = "../endpoint_v2_common", version = "1.0.0" }
+endpoint_v2 = { local = "../endpoint_v2", version = "1.0.0" }
+uln_302 = { local = "../msglib/libs/uln_302", version = "1.0.0" }
+
+# --- Development Dependencies ---
 
 [dev-dependencies]
-dvn = { local = "../workers/dvn" }
-treasury = { local = "../treasury" }
+dvn = { local = "../workers/dvn", version = "1.0.0" }
+treasury = { local = "../treasury", version = "1.0.0" }
