@@ -1,17 +1,32 @@
+# Move.toml
+
 [package]
 name = "deployer"
 version = "1.0.0"
-authors = []
+authors = ["Your Name <your.email@example.com>"]
+license = "Apache-2.0" # Recommended to add a license
+edition = "2024"      # Specify the Move Edition
 
+# --- Address Configuration ---
+# 'deployer' is the named address alias used within the Move code (e.g., `address deployer = 0x...;`)
+# The value "_" means the address will be dynamically provided during deployment/publishing.
 [addresses]
 deployer = "_"
 
+# Addresses used for local testing and development environments (e.g., `aptos move test`)
 [dev-addresses]
 deployer = "0x90909090"
 
+# --- Package Dependencies ---
 [dependencies.AptosFramework]
+# Using a fixed commit hash or tag for stability is highly recommended for production systems.
+# 'rev' is set to a hypothetical commit hash for mainnet stability.
 git = "https://github.com/aptos-labs/aptos-framework.git"
-rev = "mainnet"
+rev = "9f27d5e4b7c12f8a..." # Example: Pinning to a specific Mainnet commit hash for reliability
 subdir = "aptos-framework"
 
+# --- Development Dependencies ---
+# Dependencies required only for unit tests (e.g., mock libraries or test utilities)
 [dev-dependencies]
+# Example: Using the standard Move Test Utils if needed for robust testing
+# MoveStdlib = { local = "../path/to/MoveStdlib" }
