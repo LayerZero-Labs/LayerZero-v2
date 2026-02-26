@@ -1,13 +1,32 @@
-[profile.default]
-solc = '0.8.22'
-verbosity = 3
-src = "contracts"
-test = "test"
-out = "out"
-cache_path = "cache"
-optimizer = true
-optimizer_runs = 20_000
+# foundry.toml
 
+[profile.default]
+# --- Core Configuration ---
+solc = '0.8.22'  # The required Solidity compiler version.
+src = "contracts" # Source directory for Solidity files.
+test = "test"     # Source directory for Solidity tests.
+out = "out"       # Directory for compiler artifacts (ABI, bytecode).
+cache_path = "cache" # Directory for caching build results.
+
+# --- Performance and Optimization ---
+optimizer = true          # Enable the Solidity optimizer. (Highly recommended for production)
+optimizer_runs = 20_000   # Set a high number of optimization runs for better gas efficiency.
+
+# --- Output and Debugging ---
+verbosity = 3 # Verbosity level (e.g., 3 for detailed output and debugging). 
+
+# --- Dependency Management ---
+
+# Libraries paths for dependency resolution. 
+# Foundry automatically attempts to find remappings in these paths (e.g., node_modules, lib).
+# If dependencies are installed via a package manager like Yarn PnP, explicit remappings are needed.
+libs = [
+    # Assuming Yarn PnP or a monorepo setup requiring a deep path to the 'lib' directory
+    '../../../../lib',
+]
+
+# Paths allowed for the compiler to read from. 
+# If using Yarn PnP, these explicit paths might be necessary.
 allow_paths = [
     "../../../../.yarn/unplugged",
     "../../../../node_modules",
@@ -15,19 +34,17 @@ allow_paths = [
     "../messagelib"
 ]
 
-libs = [
-    '../../../../lib',
-]
-
+# Explicit Re-mappings (Necessary for package managers that don't place source files 
+# directly in the lib/ folder, or for Yarn PnP)
 remappings = [
-    # note: map to package level only, required for pnp-berry to work with foundry
-    # ok - solidity-stringutils/=node_modules/solidity-stringutils/
-    # not ok - solidity-stringutils/=node_modules/solidity-stringutils/src/
+    # General Dependencies
     '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
     '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
     'solidity-bytes-utils/=node_modules/solidity-bytes-utils/',
     'hardhat-deploy/=node_modules/hardhat-deploy/',
+    
+    # LayerZero Dependencies
     '@layerzerolabs/lz-evm-protocol-v2/=node_modules/@layerzerolabs/lz-evm-protocol-v2/',
     '@layerzerolabs/lz-evm-messagelib-v2/=node_modules/@layerzerolabs/lz-evm-messagelib-v2/',
-    '@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/'
+    '@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/' # Legacy or specific version
 ]
