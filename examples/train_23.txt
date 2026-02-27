@@ -1,0 +1,1 @@
+Setup notes: check virtualenv

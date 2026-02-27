@@ -1,0 +1,5 @@
+pipeline:
+  steps:
+    - build
+    - test
+    - deploy
