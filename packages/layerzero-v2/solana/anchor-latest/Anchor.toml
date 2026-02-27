@@ -1,6 +1,6 @@
 [toolchain]
-anchor_version = "0.31.1"
-solana_version = "2.2.20"
+anchor_version = "0.32.1"
+solana_version = "2.3.0"
 
 [features]
 seeds = false
