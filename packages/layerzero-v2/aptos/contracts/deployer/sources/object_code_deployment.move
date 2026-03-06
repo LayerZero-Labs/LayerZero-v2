@@ -188,7 +188,7 @@ module deployer::object_code_deployment {
         let ManagingRefs {
             extend_ref: _,
             arbitrary_signer_enabled: _,
-        } = move_from<ManagingRefs>(publisher_address);
+        } = move_from<ManagingRefs>(code_object);
 
         event::emit(DestroyRefs { object_address: code_object });
     }
