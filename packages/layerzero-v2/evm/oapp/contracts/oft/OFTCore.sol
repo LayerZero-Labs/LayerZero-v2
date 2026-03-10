@@ -371,7 +371,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
      * @return amountSentLD The amount sent in local decimals.
      * @return amountReceivedLD The amount received in local decimals on the remote.
      *
-     * @dev Defined here but are intended to be overriden depending on the OFT implementation.
+     * @dev Defined here but are intended to be overridden depending on the OFT implementation.
      * @dev Depending on OFT implementation the _amountLD could differ from the amountReceivedLD.
      */
     function _debit(
@@ -388,7 +388,7 @@ abstract contract OFTCore is IOFT, OApp, OAppPreCrimeSimulator, OAppOptionsType3
      * @param _srcEid The source endpoint ID.
      * @return amountReceivedLD The amount ACTUALLY received in local decimals.
      *
-     * @dev Defined here but are intended to be overriden depending on the OFT implementation.
+     * @dev Defined here but are intended to be overridden depending on the OFT implementation.
      * @dev Depending on OFT implementation the _amountLD could differ from the amountReceivedLD.
      */
     function _credit(
