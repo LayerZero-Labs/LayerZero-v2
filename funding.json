@@ -1,5 +1,16 @@
 {
+  /*
+   * Configuration block for the "opRetro" service or component.
+   * This is likely used to connect the current application/project
+   * to an external service specializing in retroactive/optimistic data handling 
+   * within a blockchain or decentralized system.
+   */
   "opRetro": {
+    /*
+     * The unique identifier (Project ID) used by the opRetro service.
+     * This ID is a hexadecimal string, typically representing a contract address, 
+     * a specific resource hash, or a registration key for the project.
+     */
     "projectId": "0x3230536d9c471231698a0fe66daeeda963282f2b594ce5a47d3dbfa53ac9d4a5"
   }
 }
