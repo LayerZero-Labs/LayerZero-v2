@@ -100,6 +100,24 @@ library OptionsBuilder {
     }
 
     /**
+     * @dev Adds an executor LZ read option to the existing options.
+     * @param _options The existing options container.
+     * @param _gas The gasLimit used for the lzRead operation.
+     * @param _calldataSize The size limit for the lzRead operation.
+     * @param _value The msg.value passed for the lzRead operation.
+     * @return options The updated options container.
+     */
+    function addExecutorLzReadOption(
+        bytes memory _options,
+        uint128 _gas,
+        uint32 _calldataSize,
+        uint128 _value
+    ) internal pure onlyType3(_options) returns (bytes memory) {
+        bytes memory option = ExecutorOptions.encodeLzReadOption(_gas, _calldataSize, _value);
+        return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_LZREAD, option);
+    }
+
+    /**
      * @dev Adds an executor ordered execution option to the existing options.
      * @param _options The existing options container.
      * @return options The updated options container.
