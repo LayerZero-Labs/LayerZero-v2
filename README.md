@@ -56,3 +56,11 @@ The contracts related to the append-only, on-chain [MessageLibs](https://docs.la
 
 ## Verify Contracts
 - [Solana](./packages/layerzero-v2/solana/programs/verify-contracts.md)
+
+## 💰 Bounty Contribution
+
+- **Task:** Post-contest deep-dive: LayerZero Stellar endpoint — 0 H/M on 01K C4 contest
+- **Reward:** $89760
+- **Source:** GitHub-Paid
+- **Date:** 2026-04-27
+
