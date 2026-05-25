@@ -14,7 +14,7 @@
 		"username": "root",
 		"installOhMyZshConfig": "false"
 	  },
-	  "ghcr.io/devcontainers/features/docker-in-docker:2": {
+	  "ghcr.io/devcontainers/features/docker-in-docker:3": {
 		// Docker Compose v2 is required for or compatible with the repository
 		"dockerDashComposeVersion": "v2",
 		// https://github.com/devcontainers/features/issues/573#issuecomment-1593854983
