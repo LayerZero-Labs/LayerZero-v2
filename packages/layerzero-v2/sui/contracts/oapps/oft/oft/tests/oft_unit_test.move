@@ -71,8 +71,8 @@ fun test_create_oft_edge_local_decimals() {
     transfer::public_transfer(migration_cap, ALICE);
 
     // Note: oft_cap was consumed by create_oft
-    test_utils::destroy(coin_metadata);
-    test_utils::destroy(endpoint);
+    std::unit_test::destroy(coin_metadata);
+    std::unit_test::destroy(endpoint);
     scenario.end();
 }
 
@@ -116,8 +116,8 @@ fun test_create_oft_invalid_local_decimals() {
     transfer::public_transfer(migration_cap, ALICE);
 
     // Note: oft_cap was consumed by create_oft
-    test_utils::destroy(coin_metadata);
-    test_utils::destroy(endpoint);
+    std::unit_test::destroy(coin_metadata);
+    std::unit_test::destroy(endpoint);
     scenario.end();
 }
 
@@ -300,7 +300,7 @@ fun test_fee_recipient_receives_fee() {
 
     test_scenario::return_to_address(fee_recipient, fee_recipient_balance);
     cleanup_oft_context(ctx);
-    test_utils::destroy(coin);
+    std::unit_test::destroy(coin);
     scenario.end();
 }
 
@@ -410,9 +410,9 @@ public fun setup_oft_with_decimals(
 /// Cleanup OFT test context
 public fun cleanup_oft_context<T>(ctx: OFTTestContext<T>) {
     let OFTTestContext { oapp, oft, admin_cap, coin_metadata, endpoint } = ctx;
-    test_utils::destroy(oapp);
-    test_utils::destroy(oft);
-    test_utils::destroy(admin_cap);
-    test_utils::destroy(coin_metadata);
-    test_utils::destroy(endpoint);
+    std::unit_test::destroy(oapp);
+    std::unit_test::destroy(oft);
+    std::unit_test::destroy(admin_cap);
+    std::unit_test::destroy(coin_metadata);
+    std::unit_test::destroy(endpoint);
 }

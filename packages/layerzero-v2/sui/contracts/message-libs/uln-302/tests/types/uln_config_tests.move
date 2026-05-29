@@ -12,7 +12,7 @@ fun generate_dvn_vector(count: u64): vector<address> {
         // Generate addresses from 0x1 to 0x{count}
         if (i <= 255) {
             let mut addr_bytes = vector[];
-            let mut j = 0;
+            let mut j = 0u64;
             while (j < 31) {
                 addr_bytes.push_back(0);
                 j = j + 1;

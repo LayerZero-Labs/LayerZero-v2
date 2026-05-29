@@ -77,7 +77,7 @@ fun test_sequential_multi_call_creation_and_destruction() {
 
     let empty_calls_ret = empty_sequential_multi_call.destroy(&caller_cap);
     assert!(empty_calls_ret.length() == 0, 3);
-    test_utils::destroy(empty_calls_ret);
+    std::unit_test::destroy(empty_calls_ret);
 
     // Test sequential multi-call with multiple calls
     let call1 = create_test_call(
@@ -114,11 +114,11 @@ fun test_sequential_multi_call_creation_and_destruction() {
         call_to_destroy.complete(appropriate_cap, TestResult { computed: 0 });
         let (_, _, _) = call_to_destroy.destroy(appropriate_cap);
     };
-    test_utils::destroy(calls_ret);
+    std::unit_test::destroy(calls_ret);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee1_cap);
-    test_utils::destroy(callee2_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee1_cap);
+    std::unit_test::destroy(callee2_cap);
     clean(scenario);
 }
 
@@ -202,9 +202,9 @@ fun test_sequential_processing_with_duplicate_callees() {
     assert!(param3.value == 30, 13);
     assert!(result3.computed == 60, 14);
 
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -271,10 +271,10 @@ fun test_sequential_processing_mixed_callees() {
     let (_, _, _) = call2_completed.destroy(&callee2_cap);
     let (_, _, _) = call3_completed.destroy(&callee1_cap);
 
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee1_cap);
-    test_utils::destroy(callee2_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee1_cap);
+    std::unit_test::destroy(callee2_cap);
     clean(scenario);
 }
 
@@ -301,10 +301,10 @@ fun test_unauthorized_destroy() {
     // Try to destroy with wrong capability - should fail with EUnauthorized
     let calls_ret = sequential_multi_call.destroy(&wrong_cap);
 
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(wrong_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(wrong_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -337,9 +337,9 @@ fun test_borrow_next_when_no_more_calls() {
     let mut calls_ret = sequential_multi_call.destroy(&caller_cap);
     let call_ret = calls_ret.pop_back();
     let (_, _, _) = call_ret.destroy(&callee_cap);
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -368,10 +368,10 @@ fun test_borrow_next_unauthorized_callee() {
     let mut call_ret = calls_ret.pop_back();
     call_ret.complete(&callee_cap, TestResult { computed: 0 });
     let (_, _, _) = call_ret.destroy(&callee_cap);
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_callee_cap);
     clean(scenario);
 }
 
@@ -412,10 +412,10 @@ fun test_wrong_callee_in_sequence() {
     call2_ret.complete(&callee2_cap, TestResult { computed: 0 });
     let (_, _, _) = call1_ret.destroy(&callee1_cap);
     let (_, _, _) = call2_ret.destroy(&callee2_cap);
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee1_cap);
-    test_utils::destroy(callee2_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee1_cap);
+    std::unit_test::destroy(callee2_cap);
     clean(scenario);
 }
 
@@ -455,9 +455,9 @@ fun test_sequential_multi_call_single_call() {
     assert!(param.value == 777, 4);
     assert!(result.computed == 2331, 5);
 
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -503,8 +503,8 @@ fun test_borrow_next_without_increment_multiple_times() {
     let mut calls_ret = multi_call.destroy(&caller_cap);
     let call_completed = calls_ret.pop_back();
     let (_, _, _) = call_completed.destroy(&callee_cap);
-    test_utils::destroy(calls_ret);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(calls_ret);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }

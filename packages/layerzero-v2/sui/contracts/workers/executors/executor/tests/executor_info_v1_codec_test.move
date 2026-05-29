@@ -39,7 +39,7 @@ fun test_encode_decode_empty_data() {
 #[expected_failure(abort_code = executor_info_v1::EInvalidVersion)]
 fun test_decode_invalid_version() {
     // Create invalid encoded data with wrong version
-    let mut invalid_encoded = vector::empty<u8>();
+    let mut invalid_encoded = vector[];
     vector::push_back(&mut invalid_encoded, 0u8); // Invalid version (2, big-endian high byte)
     vector::push_back(&mut invalid_encoded, 2u8); // Invalid version (2, big-endian low byte)
     // Add some BCS-encoded address data
@@ -53,7 +53,7 @@ fun test_decode_invalid_version() {
 #[expected_failure(abort_code = executor_info_v1::EInvalidData)]
 fun test_decode_invalid_data() {
     // Create encoded data with valid version but invalid BCS data (trailing bytes)
-    let mut invalid_encoded = vector::empty<u8>();
+    let mut invalid_encoded = vector[];
     vector::push_back(&mut invalid_encoded, 0u8); // Version 1 (big-endian high byte)
     vector::push_back(&mut invalid_encoded, 1u8); // Version 1 (big-endian low byte)
     // Add valid BCS-encoded address plus extra trailing bytes

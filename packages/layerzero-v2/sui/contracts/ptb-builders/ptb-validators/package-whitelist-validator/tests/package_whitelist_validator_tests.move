@@ -42,7 +42,7 @@ fun test_add_whitelist_with_valid_witness() {
         assert!(whitelist.is_whitelisted(package_addr), 0);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -58,7 +58,7 @@ fun test_add_whitelist_with_invalid_witness_fails() {
         whitelist.add_whitelist(invalid_witness);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -81,7 +81,7 @@ fun test_is_whitelisted() {
         assert!(whitelist.is_whitelisted(PACKAGE_ADDR), 1);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -107,7 +107,7 @@ fun test_validate_all_whitelisted() {
         assert!(whitelist.validate(packages), 0);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -132,7 +132,7 @@ fun test_validate_some_not_whitelisted() {
         assert!(!whitelist.validate(packages), 0);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -149,7 +149,7 @@ fun test_validate_empty_list() {
         assert!(whitelist.validate(empty_packages), 0);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }
 
@@ -192,6 +192,6 @@ fun test_validate_single_package() {
         assert!(!whitelist.validate(non_whitelisted_packages), 1);
     };
 
-    test_utils::destroy(whitelist);
+    std::unit_test::destroy(whitelist);
     ts::end(scenario);
 }

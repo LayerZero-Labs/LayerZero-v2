@@ -348,7 +348,7 @@ public fun build_set_config_ptb(self: &EndpointPtbBuilder, oapp: address, lib: a
 /// Used to create consistent call object references across PTBs
 public fun endpoint_quote_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<Call<EndpointQuoteParam, MessagingFee>>().into_string().as_bytes(),
+        type_name::with_original_ids<Call<EndpointQuoteParam, MessagingFee>>().into_string().as_bytes(),
     )
 }
 
@@ -356,7 +356,7 @@ public fun endpoint_quote_call_id(): Bytes32 {
 /// Used to create consistent call object references across PTBs
 public fun endpoint_send_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<Call<EndpointSendParam, MessagingReceipt>>().into_string().as_bytes(),
+        type_name::with_original_ids<Call<EndpointSendParam, MessagingReceipt>>().into_string().as_bytes(),
     )
 }
 
@@ -364,7 +364,7 @@ public fun endpoint_send_call_id(): Bytes32 {
 /// Used to create consistent call object references across PTBs
 public fun message_lib_quote_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<Call<MessageLibQuoteParam, MessagingFee>>().into_string().as_bytes(),
+        type_name::with_original_ids<Call<MessageLibQuoteParam, MessagingFee>>().into_string().as_bytes(),
     )
 }
 
@@ -372,14 +372,14 @@ public fun message_lib_quote_call_id(): Bytes32 {
 /// Used to create consistent call object references across PTBs
 public fun message_lib_send_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<Call<MessageLibSendParam, MessageLibSendResult>>().into_string().as_bytes(),
+        type_name::with_original_ids<Call<MessageLibSendParam, MessageLibSendResult>>().into_string().as_bytes(),
     )
 }
 
 /// Generate deterministic call ID for message library set_config calls
 /// Used to create consistent call object references across PTBs
 public fun message_lib_set_config_call_id(): Bytes32 {
-    hash::keccak256!(type_name::get_with_original_ids<Call<MessageLibSetConfigParam, Void>>().into_string().as_bytes())
+    hash::keccak256!(type_name::with_original_ids<Call<MessageLibSetConfigParam, Void>>().into_string().as_bytes())
 }
 
 // === View Functions ===

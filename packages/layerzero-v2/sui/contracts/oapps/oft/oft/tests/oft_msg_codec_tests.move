@@ -89,7 +89,7 @@ fun test_empty_compose_msg() {
     let send_to = bytes32::from_address(BOB);
     let amount_sd = DEFAULT_AMOUNT_SD;
     let compose_from = ALICE;
-    let compose_msg = vector::empty<u8>();
+    let compose_msg = vector[];
 
     // Test encoding with empty compose message - should still create composed message
     let encoded = oft_msg_codec::encode(

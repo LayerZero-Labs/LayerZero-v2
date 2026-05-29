@@ -101,7 +101,7 @@ public fun is_whitelisted(self: &Validator, package: address): bool {
 
 /// Validates that a witness type matches the expected pattern
 fun assert_witness_pattern<T>() {
-    let witness_type = type_name::get<T>();
+    let witness_type = type_name::with_defining_ids<T>();
 
     // Reject primitive types (u8, u64, bool, address, etc.)
     assert!(!witness_type.is_primitive(), EInvalidWitness);

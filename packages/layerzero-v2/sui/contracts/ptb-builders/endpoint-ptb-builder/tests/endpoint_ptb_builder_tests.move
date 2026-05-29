@@ -59,7 +59,7 @@ fun setup(): (ts::Scenario, AdminCap, EndpointAdminCap, EndpointPtbBuilder, Endp
     );
     // Set default send library for the endpoint (use the already registered library)
     endpoint.set_default_send_library(&endpoint_admin_cap, EID, MESSAGE_LIB_ADDRESS);
-    test_utils::destroy(msg_lib_cap);
+    std::unit_test::destroy(msg_lib_cap);
 
     clock.destroy_for_testing();
     (scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap)
@@ -77,14 +77,14 @@ fun clean(
     ts::return_shared(endpoint);
     scenario.return_to_sender(admin_cap);
     scenario.return_to_sender(endpoint_admin_cap);
-    test_utils::destroy(oapp_cap);
+    std::unit_test::destroy(oapp_cap);
     ts::end(scenario);
 }
 
 /// Create a test MoveCall for PTB templates
 fun create_test_move_call(function_name: ascii::String): MoveCall {
     let arguments = vector[argument::create_object(@0x1), argument::create_id(bytes32::from_address(@0x2))];
-    let type_arguments = vector[type_name::get<u64>()];
+    let type_arguments = vector[type_name::with_defining_ids<u64>()];
 
     move_call::create(
         @0xabc,
@@ -393,7 +393,7 @@ fun test_set_default_msglib_ptb_builder_wrong_library() {
         PTB_BUILDER_ADDRESS, // Builder supports MESSAGE_LIB_ADDRESS, not different_lib_address
     );
 
-    test_utils::destroy(msg_lib_cap2);
+    std::unit_test::destroy(msg_lib_cap2);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -445,7 +445,7 @@ fun test_set_default_msglib_ptb_builder_multiple_libraries() {
     assert!(default1 == PTB_BUILDER_ADDRESS, 0);
     assert!(default2 == second_builder_address, 1);
 
-    test_utils::destroy(msg_lib_cap2);
+    std::unit_test::destroy(msg_lib_cap2);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -779,7 +779,7 @@ fun test_build_quote_ptb_by_call() {
     let fourth_call = &quote_ptb[3];
     assert!(fourth_call.function().function_name() == ascii::string(b"confirm_quote"), 5);
 
-    test_utils::destroy(quote_call);
+    std::unit_test::destroy(quote_call);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -837,7 +837,7 @@ fun test_build_send_ptb_by_call_with_refund() {
     let fourth_call = &send_ptb[3];
     assert!(fourth_call.function().function_name() == ascii::string(b"refund"), 5);
 
-    test_utils::destroy(send_call);
+    std::unit_test::destroy(send_call);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -893,7 +893,7 @@ fun test_build_send_ptb_by_call_without_refund() {
 
     // Verify no refund call (only 3 calls total)
 
-    test_utils::destroy(send_call);
+    std::unit_test::destroy(send_call);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -1009,7 +1009,7 @@ fun test_set_msglib_ptb_builder_unauthorized_caller() {
         PTB_BUILDER_ADDRESS,
     );
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }
 
@@ -1050,6 +1050,6 @@ fun test_set_msglib_ptb_builder_with_oapp_delegate() {
     let effective_builder = endpoint_ptb_builder.get_effective_msglib_ptb_builder(oapp_address, MESSAGE_LIB_ADDRESS);
     assert!(effective_builder == PTB_BUILDER_ADDRESS, 2);
 
-    test_utils::destroy(delegate_cap);
+    std::unit_test::destroy(delegate_cap);
     clean(scenario, admin_cap, endpoint_admin_cap, endpoint_ptb_builder, endpoint, oapp_cap);
 }

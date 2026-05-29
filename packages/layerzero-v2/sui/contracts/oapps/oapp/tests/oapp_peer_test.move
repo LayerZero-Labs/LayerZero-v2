@@ -34,7 +34,7 @@ fun test_set_peer() {
         assert!(oapp_peer::has_peer(&peer, DST_EID_1), 1);
         assert!(oapp_peer::get_peer(&peer, DST_EID_1) == peer_addr, 2);
 
-        test_utils::destroy(peer);
+        std::unit_test::destroy(peer);
     };
 
     test_scenario::end(scenario);
@@ -65,7 +65,7 @@ fun test_set_multiple_peers() {
         assert!(oapp_peer::get_peer(&peer, DST_EID_2) == peer_addr_2, 4);
         assert!(oapp_peer::get_peer(&peer, DST_EID_3) == peer_addr_3, 5);
 
-        test_utils::destroy(peer);
+        std::unit_test::destroy(peer);
     };
 
     test_scenario::end(scenario);
@@ -89,7 +89,7 @@ fun test_update_peer() {
         oapp_peer::set_peer(&mut peer, OAPP_ADDRESS, DST_EID_1, new_peer_addr);
         assert!(oapp_peer::get_peer(&peer, DST_EID_1) == new_peer_addr, 1);
 
-        test_utils::destroy(peer);
+        std::unit_test::destroy(peer);
     };
 
     test_scenario::end(scenario);
@@ -107,7 +107,7 @@ fun test_get_peer_not_found() {
         // Try to get a peer that doesn't exist - should abort
         let _ = oapp_peer::get_peer(&peer, DST_EID_1);
 
-        test_utils::destroy(peer);
+        std::unit_test::destroy(peer);
     };
 
     test_scenario::end(scenario);
@@ -133,7 +133,7 @@ fun test_has_peer() {
         assert!(oapp_peer::has_peer(&peer, DST_EID_1), 2);
         assert!(!oapp_peer::has_peer(&peer, DST_EID_2), 3);
 
-        test_utils::destroy(peer);
+        std::unit_test::destroy(peer);
     };
 
     test_scenario::end(scenario);

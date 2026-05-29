@@ -89,15 +89,15 @@ fun test_create_worker() {
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     assert!(!worker.is_admin(&user1_cap), 7);
     assert!(!worker.is_admin(&user2_cap), 8);
-    test_utils::destroy(user1_cap);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user1_cap);
+    std::unit_test::destroy(user2_cap);
     ts::return_to_sender(&scenario, admin_cap);
 
     // Verify admins function returns correct admin set
     let admin_set = worker.admins();
     assert!(admin_set.contains(&ADMIN), 9);
     assert!(!admin_set.contains(&USER1), 10);
-    assert!(admin_set.size() == 1, 11);
+    assert!(admin_set.length() == 1, 11);
 
     // Verify empty lists initially
     assert!(worker.allowlist_size() == 0, 12);
@@ -107,8 +107,8 @@ fun test_create_worker() {
     // Verify worker capability
     assert!(worker.worker_cap_address() != @0x0, 15);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -136,8 +136,8 @@ fun test_create_worker_basic() {
     assert!(worker.is_admin(&admin_cap), 1);
     ts::return_to_sender(&scenario, admin_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -146,7 +146,7 @@ fun test_create_worker_basic() {
 fun test_create_worker_with_empty_admins() {
     let mut scenario = setup();
 
-    let empty_admins = vector::empty<address>();
+    let empty_admins = vector[];
     let supported_message_libs = vector[]; // Empty supported message libs for test
     let worker_cap = call::call_cap::new_package_cap_for_test(scenario.ctx());
     let (worker, owner_cap) = worker_common::create_worker(
@@ -160,8 +160,8 @@ fun test_create_worker_with_empty_admins() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -186,11 +186,11 @@ fun test_set_admin() {
     let admin_set = worker.admins();
     assert!(admin_set.contains(&ADMIN), 4);
     assert!(admin_set.contains(&USER1), 5);
-    assert!(admin_set.size() == 2, 6);
+    assert!(admin_set.length() == 2, 6);
 
     // Verify SetAdminEvent was emitted
     let expected_add_event = worker_common::create_set_admin_event(&worker, USER1, true);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetAdminEvent>()[1], expected_add_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetAdminEvent>()[1], expected_add_event);
 
     // Remove USER1 as admin
     worker.set_admin(&owner_cap, USER1, false, scenario.ctx());
@@ -201,17 +201,17 @@ fun test_set_admin() {
     // Verify admins function reflects the removal
     let admin_set_after_removal = worker.admins();
     assert!(admin_set_after_removal.contains(&ADMIN), 8);
-    assert!(admin_set_after_removal.size() == 1, 9);
+    assert!(admin_set_after_removal.length() == 1, 9);
 
     // Verify ADMIN is still an admin (not the only one removed)
     assert!(worker.is_admin_address(ADMIN), 10);
 
     // Verify SetAdminEvent was emitted for removal
     let expected_remove_event = worker_common::create_set_admin_event(&worker, USER1, false);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetAdminEvent>()[2], expected_remove_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetAdminEvent>()[2], expected_remove_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -224,8 +224,8 @@ fun test_set_admin_add_existing() {
     // Try to add ADMIN again (already exists)
     worker.set_admin(&owner_cap, ADMIN, true, scenario.ctx());
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -238,8 +238,8 @@ fun test_set_admin_remove_nonexistent() {
     // Try to remove USER2 (not an admin)
     worker.set_admin(&owner_cap, USER2, false, scenario.ctx());
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -254,8 +254,8 @@ fun test_set_admin_remove_only_admin() {
     // Try to remove the only admin
     worker.set_admin(&owner_cap, ADMIN, false, scenario.ctx());
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -270,8 +270,8 @@ fun test_assert_admin_success() {
     worker.assert_admin(&admin_cap);
     ts::return_to_sender(&scenario, admin_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -286,10 +286,10 @@ fun test_assert_admin_failure() {
     // Should abort for non-admin
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.assert_admin(&user2_cap);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user2_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -313,7 +313,7 @@ fun test_set_allowlist() {
 
     // Verify SetAllowlistEvent was emitted for addition
     let expected_add_event = worker_common::create_set_allowlist_event(&worker, USER1, true);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetAllowlistEvent>()[0], expected_add_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetAllowlistEvent>()[0], expected_add_event);
 
     // Remove USER1 from allowlist
     worker.set_allowlist(&owner_cap, USER1, false);
@@ -324,10 +324,10 @@ fun test_set_allowlist() {
 
     // Verify SetAllowlistEvent was emitted for removal
     let expected_remove_event = worker_common::create_set_allowlist_event(&worker, USER1, false);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetAllowlistEvent>()[1], expected_remove_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetAllowlistEvent>()[1], expected_remove_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -343,8 +343,8 @@ fun test_set_allowlist_add_existing() {
     // Try to add USER1 again
     worker.set_allowlist(&owner_cap, USER1, true);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -357,8 +357,8 @@ fun test_set_allowlist_remove_nonexistent() {
     // Try to remove USER1 (not on allowlist)
     worker.set_allowlist(&owner_cap, USER1, false);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -378,7 +378,7 @@ fun test_set_denylist() {
 
     // Verify SetDenylistEvent was emitted for addition
     let expected_add_event = worker_common::create_set_denylist_event(&worker, USER1, true);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetDenylistEvent>()[0], expected_add_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetDenylistEvent>()[0], expected_add_event);
 
     // Remove USER1 from denylist
     worker.set_denylist(&owner_cap, USER1, false);
@@ -388,10 +388,10 @@ fun test_set_denylist() {
 
     // Verify SetDenylistEvent was emitted for removal
     let expected_remove_event = worker_common::create_set_denylist_event(&worker, USER1, false);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetDenylistEvent>()[1], expected_remove_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetDenylistEvent>()[1], expected_remove_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -407,8 +407,8 @@ fun test_set_denylist_add_existing() {
     // Try to add USER1 again
     worker.set_denylist(&owner_cap, USER1, true);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -421,8 +421,8 @@ fun test_set_denylist_remove_nonexistent() {
     // Try to remove USER1 (not on denylist)
     worker.set_denylist(&owner_cap, USER1, false);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -444,7 +444,7 @@ fun test_set_supported_message_lib() {
 
     // Verify SetSupportedMessageLibEvent was emitted for addition
     let expected_add_event = worker_common::create_set_supported_message_lib_event(&worker, MESSAGE_LIB_ADDR, true);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetSupportedMessageLibEvent>()[0], expected_add_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetSupportedMessageLibEvent>()[0], expected_add_event);
 
     // Remove MESSAGE_LIB_ADDR from supported message libs
     worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, false);
@@ -454,13 +454,13 @@ fun test_set_supported_message_lib() {
 
     // Verify SetSupportedMessageLibEvent was emitted for removal
     let expected_remove_event = worker_common::create_set_supported_message_lib_event(&worker, MESSAGE_LIB_ADDR, false);
-    test_utils::assert_eq(
+    std::unit_test::assert_eq!(
         event::events_by_type<worker_common::SetSupportedMessageLibEvent>()[1],
         expected_remove_event,
     );
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -476,8 +476,8 @@ fun test_set_supported_message_lib_add_existing() {
     // Try to add MESSAGE_LIB_ADDR again
     worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, true);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -490,8 +490,8 @@ fun test_set_supported_message_lib_remove_nonexistent() {
     // Try to remove MESSAGE_LIB_ADDR (not supported)
     worker.set_supported_message_lib(&owner_cap, MESSAGE_LIB_ADDR, false);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -508,10 +508,10 @@ fun test_set_supported_message_lib_unauthorized() {
     // Try to use worker2's owner cap on worker1 (should fail)
     worker1.set_supported_message_lib(&owner_cap2, new_message_lib, true);
 
-    test_utils::destroy(worker1);
-    test_utils::destroy(worker2);
-    test_utils::destroy(owner_cap1);
-    test_utils::destroy(owner_cap2);
+    std::unit_test::destroy(worker1);
+    std::unit_test::destroy(worker2);
+    std::unit_test::destroy(owner_cap1);
+    std::unit_test::destroy(owner_cap2);
     clean(scenario);
 }
 
@@ -531,8 +531,8 @@ fun test_has_acl_empty_lists() {
     worker.assert_acl(USER2);
     worker.assert_acl(USER3);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -551,8 +551,8 @@ fun test_has_acl_denylist_priority() {
     // USER2 not on any list, but allowlist exists, so denied
     assert!(!worker.has_acl(USER2), 2);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -570,8 +570,8 @@ fun test_has_acl_allowlist_only() {
     // USER2 not on allowlist, so denied
     assert!(!worker.has_acl(USER2), 2);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -589,8 +589,8 @@ fun test_has_acl_denylist_only() {
     // USER2 not on denylist and allowlist is empty, so allowed
     assert!(worker.has_acl(USER2), 2);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -606,8 +606,8 @@ fun test_assert_acl_failure() {
     // Should abort for denied user
     worker.assert_acl(USER1);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -628,10 +628,10 @@ fun test_set_deposit_address() {
 
     // Verify SetDepositAddressEvent was emitted
     let expected_event = worker_common::create_set_deposit_address_event(&worker, new_deposit);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetDepositAddressEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetDepositAddressEvent>()[0], expected_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -647,9 +647,9 @@ fun test_set_deposit_address_unauthorized() {
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.set_deposit_address(&user2_cap, new_deposit);
 
-    test_utils::destroy(user2_cap);
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(user2_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -667,10 +667,10 @@ fun test_set_price_feed() {
 
     // Verify SetPriceFeedEvent was emitted
     let expected_event = worker_common::create_set_price_feed_event(&worker, new_price_feed);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetPriceFeedEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetPriceFeedEvent>()[0], expected_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -685,10 +685,10 @@ fun test_set_price_feed_unauthorized() {
     let new_price_feed = @0xfeed2;
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.set_price_feed(&user2_cap, new_price_feed);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user2_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -706,10 +706,10 @@ fun test_set_default_multiplier_bps() {
 
     // Verify SetDefaultMultiplierBpsEvent was emitted
     let expected_event = worker_common::create_set_default_multiplier_bps_event(&worker, new_multiplier);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetDefaultMultiplierBpsEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetDefaultMultiplierBpsEvent>()[0], expected_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -724,10 +724,10 @@ fun test_set_default_multiplier_bps_unauthorized() {
     let new_multiplier = 2000u16;
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.set_default_multiplier_bps(&user2_cap, new_multiplier);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user2_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -745,10 +745,10 @@ fun test_set_worker_fee_lib() {
 
     // Verify SetWorkerFeeLibEvent was emitted
     let expected_event = worker_common::create_set_worker_fee_lib_event(&worker, new_fee_lib);
-    test_utils::assert_eq(event::events_by_type<worker_common::SetWorkerFeeLibEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetWorkerFeeLibEvent>()[0], expected_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -763,10 +763,10 @@ fun test_set_worker_fee_lib_unauthorized() {
     let new_fee_lib = @0xfee2;
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.set_worker_fee_lib(&user2_cap, new_fee_lib);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user2_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -793,10 +793,10 @@ fun test_set_supported_option_types() {
         dst_eid,
         vector[1u8, 2u8, 3u8],
     );
-    test_utils::assert_eq(event::events_by_type<worker_common::SetSupportedOptionTypesEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::SetSupportedOptionTypesEvent>()[0], expected_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -812,10 +812,10 @@ fun test_set_supported_option_types_unauthorized() {
     let option_types = vector[1u8, 2u8, 3u8];
     let user2_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     worker.set_supported_option_types(&user2_cap, dst_eid, option_types);
-    test_utils::destroy(user2_cap);
+    std::unit_test::destroy(user2_cap);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -828,10 +828,10 @@ fun test_get_supported_option_types_empty() {
     let retrieved_types = worker.get_supported_option_types(dst_eid);
 
     // Should return empty vector for non-existent EID
-    assert!(retrieved_types == vector::empty<u8>(), 5);
+    assert!(retrieved_types == vector[], 5);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -853,7 +853,7 @@ fun test_set_paused() {
 
     // Verify PausedEvent was emitted
     let expected_pause_event = worker_common::create_paused_event(&worker);
-    test_utils::assert_eq(event::events_by_type<worker_common::PausedEvent>()[0], expected_pause_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::PausedEvent>()[0], expected_pause_event);
 
     // Unpause the worker
     worker.set_paused(&owner_cap, false);
@@ -863,10 +863,10 @@ fun test_set_paused() {
 
     // Verify UnpausedEvent was emitted
     let expected_unpause_event = worker_common::create_unpaused_event(&worker);
-    test_utils::assert_eq(event::events_by_type<worker_common::UnpausedEvent>()[0], expected_unpause_event);
+    std::unit_test::assert_eq!(event::events_by_type<worker_common::UnpausedEvent>()[0], expected_unpause_event);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -883,8 +883,8 @@ fun test_set_paused_no_state_change_true() {
     // Try to pause again (should fail - no state change)
     worker.set_paused(&owner_cap, true);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -897,8 +897,8 @@ fun test_set_paused_no_state_change_false() {
     // Worker starts unpaused, try to unpause again (should fail - no state change)
     worker.set_paused(&owner_cap, false);
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -910,8 +910,8 @@ fun test_assert_worker_unpaused_success() {
     // Should not abort for unpaused worker
     worker.assert_worker_unpaused();
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -927,8 +927,8 @@ fun test_assert_worker_unpaused_failure() {
     // Should abort for paused worker
     worker.assert_worker_unpaused();
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }
 
@@ -995,7 +995,7 @@ fun test_complex_acl_scenario() {
     assert!(worker.has_acl(USER2), 20); // Allowlist empty, not on denylist -> allow
     assert!(!worker.has_acl(USER3), 21); // On denylist -> deny
 
-    test_utils::destroy(worker);
-    test_utils::destroy(owner_cap);
+    std::unit_test::destroy(worker);
+    std::unit_test::destroy(owner_cap);
     clean(scenario);
 }

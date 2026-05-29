@@ -46,7 +46,7 @@ fun test_new_individual_cap() {
     // Verify package_address returns None for individual caps
     assert!(individual_cap.package_address().is_none(), 4);
 
-    test_utils::destroy(individual_cap);
+    std::unit_test::destroy(individual_cap);
     clean(scenario);
 }
 
@@ -61,8 +61,8 @@ fun test_multiple_individual_caps_have_different_ids() {
     assert!(individual_cap1.id() != individual_cap2.id(), 0);
     assert!(object::id_address(&individual_cap1) != object::id_address(&individual_cap2), 1);
 
-    test_utils::destroy(individual_cap1);
-    test_utils::destroy(individual_cap2);
+    std::unit_test::destroy(individual_cap1);
+    std::unit_test::destroy(individual_cap2);
     clean(scenario);
 }
 
@@ -91,7 +91,7 @@ fun test_new_package_cap() {
     assert!(package_cap.id() != object::id_address(&package_cap), 5);
     assert!(package_cap.id() == package::package_of_type<CALL_CAP_TESTS>(), 6);
 
-    test_utils::destroy(package_cap);
+    std::unit_test::destroy(package_cap);
     clean(scenario);
 }
 
@@ -113,8 +113,8 @@ fun test_same_package_caps_have_same_logical_id() {
     // Both should have the same package address
     assert!(package_cap1.package_address() == package_cap2.package_address(), 2);
 
-    test_utils::destroy(package_cap1);
-    test_utils::destroy(package_cap2);
+    std::unit_test::destroy(package_cap1);
+    std::unit_test::destroy(package_cap2);
     clean(scenario);
 }
 
@@ -131,7 +131,7 @@ fun test_new_package_cap_with_non_one_time_witness() {
     let package_cap = call_cap::new_package_cap(&fake_witness, scenario.ctx());
 
     // These lines should never be reached due to the expected failure
-    test_utils::destroy(package_cap);
+    std::unit_test::destroy(package_cap);
     clean(scenario);
 }
 
@@ -146,7 +146,7 @@ fun test_new_package_cap_with_regular_type() {
     let package_cap = call_cap::new_package_cap(&fake_witness, scenario.ctx());
 
     // These lines should never be reached due to the expected failure
-    test_utils::destroy(package_cap);
+    std::unit_test::destroy(package_cap);
     clean(scenario);
 }
 
@@ -161,6 +161,6 @@ fun test_new_package_cap_with_string() {
     let package_cap = call_cap::new_package_cap(&fake_witness, scenario.ctx());
 
     // These lines should never be reached due to the expected failure
-    test_utils::destroy(package_cap);
+    std::unit_test::destroy(package_cap);
     clean(scenario);
 }

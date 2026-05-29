@@ -64,7 +64,7 @@ fun test_invalid_header_length() {
 #[expected_failure(abort_code = packet_v1_codec::EInvalidPacketVersion)] // EInvalidPacketVersion
 fun test_invalid_packet_version() {
     // Create a header with correct length but wrong version
-    let mut invalid_header = vector::empty<u8>();
+    let mut invalid_header = vector[];
     let mut i = 0;
     while (i < 81) {
         invalid_header.push_back(0x00);
@@ -107,7 +107,7 @@ fun test_encode_header_roundtrip() {
 #[test]
 fun test_empty_message() {
     let _ctx = &tx_context::dummy();
-    let empty_message = vector::empty<u8>();
+    let empty_message = vector[];
 
     let outbound_packet = outbound_packet::create_for_test(
         TEST_NONCE,
@@ -132,7 +132,7 @@ fun test_large_message() {
     let _ctx = &tx_context::dummy();
 
     // Create a large message (1KB)
-    let mut large_message = vector::empty<u8>();
+    let mut large_message = vector[];
     let mut i = 0;
     while (i < 1024) {
         large_message.push_back((i % 256) as u8);

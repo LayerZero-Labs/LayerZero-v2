@@ -354,25 +354,25 @@ public fun build_set_config_ptb(uln: &Uln302): vector<MoveCall> {
 
 /// Generates the type ID for executor fee calculation calls
 public fun executor_get_fee_call_id(): Bytes32 {
-    hash::keccak256!(type_name::get_with_original_ids<Call<ExecutorGetFeeParam, u64>>().into_string().as_bytes())
+    hash::keccak256!(type_name::with_original_ids<Call<ExecutorGetFeeParam, u64>>().into_string().as_bytes())
 }
 
 /// Generates the type ID for DVN fee calculation multi-calls
 public fun dvn_get_fee_multi_call_id(): Bytes32 {
-    hash::keccak256!(type_name::get_with_original_ids<MultiCall<DvnGetFeeParam, u64>>().into_string().as_bytes())
+    hash::keccak256!(type_name::with_original_ids<MultiCall<DvnGetFeeParam, u64>>().into_string().as_bytes())
 }
 
 /// Generates the type ID for executor job assignment calls
 public fun executor_assign_job_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<Call<ExecutorAssignJobParam, FeeRecipient>>().into_string().as_bytes(),
+        type_name::with_original_ids<Call<ExecutorAssignJobParam, FeeRecipient>>().into_string().as_bytes(),
     )
 }
 
 /// Generates the type ID for DVN job assignment multi-calls
 public fun dvn_assign_job_multi_call_id(): Bytes32 {
     hash::keccak256!(
-        type_name::get_with_original_ids<MultiCall<DvnAssignJobParam, FeeRecipient>>().into_string().as_bytes(),
+        type_name::with_original_ids<MultiCall<DvnAssignJobParam, FeeRecipient>>().into_string().as_bytes(),
     )
 }
 

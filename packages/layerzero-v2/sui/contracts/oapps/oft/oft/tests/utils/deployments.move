@@ -34,7 +34,7 @@ public fun new(ctx: &mut TxContext): Deployments {
 /// Set deployment address for a specific type and endpoint
 public fun set_deployment<T>(self: &mut Deployments, eid: u32, address: address) {
     let key = DeploymentKey {
-        type_name: std::type_name::get<T>().into_string(),
+        type_name: std::type_name::with_defining_ids<T>().into_string(),
         eid,
     };
 
@@ -48,7 +48,7 @@ public fun set_deployment<T>(self: &mut Deployments, eid: u32, address: address)
 /// Get deployment address for a specific type and endpoint
 public fun get_deployment<T>(self: &Deployments, eid: u32): address {
     let key = DeploymentKey {
-        type_name: std::type_name::get<T>().into_string(),
+        type_name: std::type_name::with_defining_ids<T>().into_string(),
         eid,
     };
     *self.deployments.borrow(key)
@@ -57,7 +57,7 @@ public fun get_deployment<T>(self: &Deployments, eid: u32): address {
 /// Check if deployment exists for a specific type and endpoint
 public fun has_deployment<T>(self: &Deployments, eid: u32): bool {
     let key = DeploymentKey {
-        type_name: std::type_name::get<T>().into_string(),
+        type_name: std::type_name::with_defining_ids<T>().into_string(),
         eid,
     };
     self.deployments.contains(key)
@@ -87,6 +87,6 @@ public fun destroy(self: Deployments) {
 #[test_only]
 public fun destroy_for_testing(self: Deployments) {
     let Deployments { id, deployments } = self;
-    test_utils::destroy(id);
-    test_utils::destroy(deployments);
+    std::unit_test::destroy(id);
+    std::unit_test::destroy(deployments);
 }

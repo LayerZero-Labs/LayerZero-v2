@@ -51,15 +51,15 @@ fun setup(): (Scenario, MessageLibManager, address, address, address) {
     let receive_lib_address = receive_lib_cap.id();
     manager.register_library(receive_lib_address, message_lib_type::receive());
 
-    test_utils::destroy(blocked_lib_cap);
-    test_utils::destroy(send_lib_cap);
-    test_utils::destroy(receive_lib_cap);
+    std::unit_test::destroy(blocked_lib_cap);
+    std::unit_test::destroy(send_lib_cap);
+    std::unit_test::destroy(receive_lib_cap);
     (scenario, manager, blocked_lib_address, send_lib_address, receive_lib_address)
 }
 
 // Helper function to clean up test scenario and manager
 fun clean(scenario: Scenario, manager: MessageLibManager) {
-    test_utils::destroy(manager);
+    std::unit_test::destroy(manager);
     scenario.end();
 }
 
@@ -74,7 +74,7 @@ fun test_registered_libraries_empty_registry() {
     let libs = manager.registered_libraries(0, 10);
     assert!(libs.length() == 0, 0);
 
-    test_utils::destroy(manager);
+    std::unit_test::destroy(manager);
     scenario.end();
 }
 
@@ -139,7 +139,7 @@ fun test_register_library() {
     let events = event::events_by_type<LibraryRegisteredEvent>();
     assert!(events.length() > 0, 7); // Just verify an event was emitted
 
-    test_utils::destroy(new_lib_cap);
+    std::unit_test::destroy(new_lib_cap);
     clean(scenario, manager);
 }
 
@@ -192,7 +192,7 @@ fun test_set_default_send_library() {
         blocked_lib_address,
     );
     let events = event::events_by_type<DefaultSendLibrarySetEvent>();
-    test_utils::assert_eq(events[0], expected_event);
+    std::unit_test::assert_eq!(events[0], expected_event);
 
     clean(scenario, manager);
 }
@@ -263,8 +263,8 @@ fun test_set_default_receive_library() {
     );
     let events1 = event::events_by_type<DefaultReceiveLibrarySetEvent>();
     let events2 = event::events_by_type<DefaultReceiveLibraryTimeoutSetEvent>();
-    test_utils::assert_eq(events1[0], expected_event1);
-    test_utils::assert_eq(events2[0], expected_event2);
+    std::unit_test::assert_eq!(events1[0], expected_event1);
+    std::unit_test::assert_eq!(events2[0], expected_event2);
 
     clock.destroy_for_testing();
     clean(scenario, manager);
@@ -367,7 +367,7 @@ fun test_set_default_receive_library_timeout() {
         receive_lib_address,
         0, // expiry is 0 when disabling timeout
     );
-    test_utils::assert_eq(timeout_events[3], expected_timeout_event); // Check the last event (disable timeout)
+    std::unit_test::assert_eq!(timeout_events[3], expected_timeout_event); // Check the last event (disable timeout)
 
     clock.destroy_for_testing();
     clean(scenario, manager);
@@ -425,8 +425,8 @@ fun test_set_send_library() {
         dst_eid,
         @0x0, // Setting back to default
     );
-    test_utils::assert_eq(send_lib_events[0], expected_event1);
-    test_utils::assert_eq(send_lib_events[1], expected_event2);
+    std::unit_test::assert_eq!(send_lib_events[0], expected_event1);
+    std::unit_test::assert_eq!(send_lib_events[1], expected_event2);
 
     clean(scenario, manager);
 }
@@ -532,8 +532,8 @@ fun test_set_receive_library() {
         src_eid,
         @0x0, // Setting back to default
     );
-    test_utils::assert_eq(receive_lib_events[0], expected_event1);
-    test_utils::assert_eq(receive_lib_events[1], expected_event2);
+    std::unit_test::assert_eq!(receive_lib_events[0], expected_event1);
+    std::unit_test::assert_eq!(receive_lib_events[1], expected_event2);
 
     clock.destroy_for_testing();
     clean(scenario, manager);
@@ -632,7 +632,7 @@ fun test_set_receive_library_timeout() {
         receive_lib_address, // old_lib
         1500, // expiry
     );
-    test_utils::assert_eq(timeout_events[2], expected_timeout_event); // Check the last timeout event
+    std::unit_test::assert_eq!(timeout_events[2], expected_timeout_event); // Check the last timeout event
 
     clock.destroy_for_testing();
     clean(scenario, manager);

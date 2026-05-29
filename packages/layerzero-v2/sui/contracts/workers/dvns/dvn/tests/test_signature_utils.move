@@ -14,9 +14,9 @@ const PAST_EXPIRATION: u64 = 1000;
 
 /// Generate a test keypair from an index (1, 2, 3, etc.)
 public fun generate_test_keypair(index: u8): KeyPair {
-    let mut seed = vector::empty<u8>();
+    let mut seed = vector[];
     // Pad with zeros (31 bytes)
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 31) {
         vector::push_back(&mut seed, 0u8);
         i = i + 1;
@@ -63,7 +63,7 @@ public fun sign_payload(keypair: &KeyPair, payload: vector<u8>): vector<u8> {
 
 /// Generate multiple signatures for a payload
 public fun sign_payload_with_multiple(payload: vector<u8>, keypair_indices: vector<u8>): vector<u8> {
-    let mut signatures = vector::empty();
+    let mut signatures = vector[];
     let mut i = 0;
     while (i < keypair_indices.length()) {
         let keypair = generate_test_keypair(keypair_indices[i]);

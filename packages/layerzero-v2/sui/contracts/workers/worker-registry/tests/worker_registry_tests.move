@@ -28,7 +28,7 @@ fun setup(): (Scenario, WorkerRegistry) {
 }
 
 fun clean(scenario: Scenario, registry: WorkerRegistry) {
-    test_utils::destroy(registry);
+    std::unit_test::destroy(registry);
     ts::end(scenario);
 }
 
@@ -48,12 +48,12 @@ fun test_set_worker_info_new_worker() {
 
     // Verify WorkerInfoSetEvent was emitted
     let expected_event = worker_registry::create_worker_info_set_event(worker_address, worker_info);
-    test_utils::assert_eq(event::events_by_type<WorkerInfoSetEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<WorkerInfoSetEvent>()[0], expected_event);
 
     // Verify worker info was set
     assert!(*registry.get_worker_info(worker_address) == worker_info, 0);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     clean(scenario, registry);
 }
 
@@ -79,16 +79,16 @@ fun test_set_worker_info_update_existing() {
 
     // Check first event
     let expected_event1 = worker_registry::create_worker_info_set_event(worker_address, initial_info);
-    test_utils::assert_eq(events[0], expected_event1);
+    std::unit_test::assert_eq!(events[0], expected_event1);
 
     // Check second event (update)
     let expected_event2 = worker_registry::create_worker_info_set_event(worker_address, updated_info);
-    test_utils::assert_eq(events[1], expected_event2);
+    std::unit_test::assert_eq!(events[1], expected_event2);
 
     // Verify worker info was updated
     assert!(*registry.get_worker_info(worker_address) == updated_info, 0);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     clean(scenario, registry);
 }
 
@@ -115,15 +115,15 @@ fun test_set_worker_info_multiple_workers() {
     // Check events for both workers
     let expected_event1 = worker_registry::create_worker_info_set_event(worker_address_1, worker_info_1);
     let expected_event2 = worker_registry::create_worker_info_set_event(worker_address_2, worker_info_2);
-    test_utils::assert_eq(events[0], expected_event1);
-    test_utils::assert_eq(events[1], expected_event2);
+    std::unit_test::assert_eq!(events[0], expected_event1);
+    std::unit_test::assert_eq!(events[1], expected_event2);
 
     // Verify worker info was set
     assert!(*registry.get_worker_info(worker_address_1) == worker_info_1, 0);
     assert!(*registry.get_worker_info(worker_address_2) == worker_info_2, 1);
 
-    test_utils::destroy(worker_cap_1);
-    test_utils::destroy(worker_cap_2);
+    std::unit_test::destroy(worker_cap_1);
+    std::unit_test::destroy(worker_cap_2);
     clean(scenario, registry);
 }
 
@@ -142,12 +142,12 @@ fun test_set_worker_info_empty_data() {
 
     // Verify WorkerInfoSetEvent was emitted with empty data
     let expected_event = worker_registry::create_worker_info_set_event(worker_address, empty_info);
-    test_utils::assert_eq(event::events_by_type<WorkerInfoSetEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<WorkerInfoSetEvent>()[0], expected_event);
 
     // Verify worker info was set
     assert!(*registry.get_worker_info(worker_address) == empty_info, 0);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     clean(scenario, registry);
 }
 

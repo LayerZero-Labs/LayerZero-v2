@@ -33,7 +33,7 @@ fun setup_manager(): (test_scenario::Scenario, OFTComposerManager) {
 }
 
 fun create_test_guid(value: u64): Bytes32 {
-    let mut bytes = vector::empty<u8>();
+    let mut bytes = vector[];
     // Fill first 24 bytes with zeros
     let mut i = 0;
     while (i < 24) {
@@ -87,7 +87,7 @@ fun test_set_deposit_address_and_emit_event() {
     assert!(events.length() == 1, 0);
 
     // Clean up
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }
@@ -109,7 +109,7 @@ fun test_update_deposit_address() {
     assert!(manager.get_deposit_address(composer_cap.id()) == DEPOSIT_ADDRESS_2, 0);
 
     // Clean up
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }
@@ -127,7 +127,7 @@ fun test_set_invalid_deposit_address_should_fail() {
     manager.set_deposit_address(&composer_cap, @0x0);
 
     // Clean up (this line should not be reached)
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }
@@ -174,8 +174,8 @@ fun test_send_to_composer() {
     // Events were emitted (verified by successful execution)
 
     // Clean up
-    test_utils::destroy(from_cap);
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(from_cap);
+    std::unit_test::destroy(composer_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }
@@ -198,8 +198,8 @@ fun test_send_to_composer_without_deposit_address_should_fail() {
     manager.send_to_composer(&from_cap, guid, composer_cap.id(), test_coin, ctx);
 
     // Clean up (this line should not be reached)
-    test_utils::destroy(from_cap);
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(from_cap);
+    std::unit_test::destroy(composer_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }
@@ -218,7 +218,7 @@ fun test_get_nonexistent_compose_transfer_should_fail() {
     let _transfer_id = manager.get_compose_transfer(from_cap.id(), guid, COMPOSER_1);
 
     // Clean up (this line should not be reached)
-    test_utils::destroy(from_cap);
+    std::unit_test::destroy(from_cap);
     test_scenario::return_shared(manager);
     test_scenario::end(scenario);
 }

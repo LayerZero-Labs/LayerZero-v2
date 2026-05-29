@@ -51,7 +51,7 @@ fun invalid_signer(): vector<u8> {
 
 // Create real cryptographic signatures using provided keypairs
 fun create_test_signatures(payload: vector<u8>, keypairs: vector<KeyPair>): vector<u8> {
-    let mut signatures = vector::empty();
+    let mut signatures = vector[];
 
     let mut i = 0;
     while (i < keypairs.length()) {
@@ -114,7 +114,7 @@ fun test_new_signers() {
     );
     assert!(!multisig.is_signer(get_public_key(&non_existent_signer)), 9);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -127,7 +127,7 @@ fun test_new_fails_with_zero_quorum() {
     let signers = vector[get_public_key(&signer1)];
     let multisig = multisig::new(signers, 0);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -141,7 +141,7 @@ fun test_new_fails_when_quorum_exceeds_signers() {
     let signers = vector[get_public_key(&signer1), get_public_key(&signer2)];
     let multisig = multisig::new(signers, 3); // Quorum > signer count
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -154,7 +154,7 @@ fun test_new_fails_with_invalid_signer_length() {
     let signers = vector[get_public_key(&signer1), invalid_signer()];
     let multisig = multisig::new(signers, 1);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -168,7 +168,7 @@ fun test_new_fails_with_duplicate_signers() {
     let signers = vector[get_public_key(&signer1), get_public_key(&signer2), get_public_key(&signer1)];
     let multisig = multisig::new(signers, 2);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -194,7 +194,7 @@ fun test_set_signer_add_new() {
     // Check first signer addition event
     let events = event::events_by_type<UpdateSignerEvent>();
     let expected_event = multisig::create_update_signer_event(DVN_ADDRESS, get_public_key(&signer2), true);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
     // Add second new signer for comprehensive signer management sequence
     multisig.set_signer(DVN_ADDRESS, get_public_key(&signer3), true);
@@ -204,7 +204,7 @@ fun test_set_signer_add_new() {
     // Check second signer addition event
     let events = event::events_by_type<UpdateSignerEvent>();
     let expected_event = multisig::create_update_signer_event(DVN_ADDRESS, get_public_key(&signer3), true);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
     // Increase quorum as part of management sequence
     multisig.set_quorum(DVN_ADDRESS, 2);
@@ -213,7 +213,7 @@ fun test_set_signer_add_new() {
     // Check quorum update event
     let quorum_events = event::events_by_type<UpdateQuorumEvent>();
     let expected_quorum_event = multisig::create_update_quorum_event(DVN_ADDRESS, 2);
-    test_utils::assert_eq(quorum_events[quorum_events.length() - 1], expected_quorum_event);
+    std::unit_test::assert_eq!(quorum_events[quorum_events.length() - 1], expected_quorum_event);
 
     // Remove one signer (should still meet quorum)
     multisig.set_signer(DVN_ADDRESS, get_public_key(&signer3), false);
@@ -224,9 +224,9 @@ fun test_set_signer_add_new() {
     // Check signer removal event
     let events = event::events_by_type<UpdateSignerEvent>();
     let expected_event = multisig::create_update_signer_event(DVN_ADDRESS, get_public_key(&signer3), false);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -250,9 +250,9 @@ fun test_set_signer_remove_existing() {
     // Check signer removal event
     let events = event::events_by_type<UpdateSignerEvent>();
     let expected_event = multisig::create_update_signer_event(DVN_ADDRESS, get_public_key(&signer2), false);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -268,7 +268,7 @@ fun test_set_signer_fails_when_adding_existing() {
     // Try to add existing signer
     multisig.set_signer(DVN_ADDRESS, get_public_key(&signer1), true);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -285,7 +285,7 @@ fun test_set_signer_fails_when_removing_nonexistent() {
     // Try to remove non-existent signer
     multisig.set_signer(DVN_ADDRESS, get_public_key(&signer2), false);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -302,7 +302,7 @@ fun test_set_signer_fails_when_removal_breaks_quorum() {
     // Try to remove signer when it would break quorum requirement
     multisig.set_signer(DVN_ADDRESS, get_public_key(&signer2), false);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -332,9 +332,9 @@ fun test_set_quorum_valid() {
     // Check quorum update event
     let events = event::events_by_type<UpdateQuorumEvent>();
     let expected_event = multisig::create_update_quorum_event(DVN_ADDRESS, 3);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -351,7 +351,7 @@ fun test_set_quorum_fails_with_zero() {
     // Try to set quorum to zero
     multisig.set_quorum(DVN_ADDRESS, 0);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -368,7 +368,7 @@ fun test_set_quorum_fails_when_exceeds_signers() {
     // Try to set quorum greater than signer count
     multisig.set_quorum(DVN_ADDRESS, 3);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -390,7 +390,7 @@ fun test_assert_signatures_verified_fails_insufficient_signatures() {
     // This should fail due to insufficient signatures
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -413,7 +413,7 @@ fun test_assert_signatures_verified_exact_quorum() {
     let signatures = create_test_signatures(payload, vector[valid_signer_2(), valid_signer_1()]);
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -433,7 +433,7 @@ fun test_assert_signatures_verified_more_than_quorum() {
 
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -456,7 +456,7 @@ fun test_assert_signatures_verified_additional_wrong_signatures() {
 
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -477,7 +477,7 @@ fun test_signature_with_invalid_signature_length() {
     // This should fail during signature parsing/verification
     multisig.assert_signatures_verified(payload, &invalid_signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -499,7 +499,7 @@ fun test_signatures_with_wrong_signature() {
 
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }
 
@@ -520,6 +520,6 @@ fun test_signatures_with_duplicated_signers() {
 
     multisig.assert_signatures_verified(payload, &signatures);
 
-    test_utils::destroy(multisig);
+    std::unit_test::destroy(multisig);
     clean(scenario);
 }

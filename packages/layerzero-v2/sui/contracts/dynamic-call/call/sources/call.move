@@ -113,7 +113,7 @@ public fun create<Param, Result>(
         result: option::none(),
         parent_id: ROOT_CALL_PARENT_ID,
         batch_nonce: 0,
-        child_batch: vector::empty(),
+        child_batch: vector[],
         status: CallStatus::Active,
     }
 }
@@ -165,7 +165,7 @@ public fun create_child<ParentParam, ParentResult, ChildParam, ChildResult>(
         result: option::none(),
         parent_id: parent_call.id,
         batch_nonce: 0,
-        child_batch: vector::empty(),
+        child_batch: vector[],
         status: CallStatus::Active,
     }
 }
