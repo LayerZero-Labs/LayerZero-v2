@@ -1,19 +1,20 @@
 #[test_only]
 module uln_302::uln_302_tests;
 
-use call::{call::{Self, Call}, call_cap::{Self, CallCap}};
+use call::{call::{Self, Call, Void}, call_cap::{Self, CallCap}};
 use endpoint_v2::{
     endpoint_v2::{Self, EndpointV2, AdminCap as EndpointAdminCap},
     message_lib_quote,
     message_lib_send,
     message_lib_set_config,
+    message_lib_type,
     messaging_channel::{Self, MessagingChannel},
     messaging_fee,
     outbound_packet
 };
 use message_lib_common::{fee_recipient::{Self, FeeRecipient}, packet_v1_codec};
 use multi_call::multi_call;
-use sui::{bcs, clock, test_scenario, test_utils};
+use sui::{bcs, clock, test_scenario::{Self, Scenario}, test_utils};
 use treasury::treasury::{Self, Treasury};
 use uln_302::{executor_config, oapp_uln_config, receive_uln, uln_302::{Self, Uln302, AdminCap}, uln_config};
 use uln_common::{
@@ -39,6 +40,7 @@ const CUSTOM_CONFIRMATIONS: u64 = 35;
 const EXECUTOR_MAX_MESSAGE_SIZE: u64 = 50000;
 const CUSTOM_EXECUTOR_SIZE: u64 = 9999;
 const CUSTOM_EXECUTOR_ADDRESS: address = @0xabcd;
+const OAPP_ADDRESS: address = @0x123;
 
 /// Config types (matching uln_302::uln_302 private constants)
 const CONFIG_TYPE_EXECUTOR: u32 = 1;
@@ -83,6 +85,41 @@ fun create_oapp_uln_config_bytes(): vector<u8> {
         uln_config,
     );
     bcs::to_bytes(&oapp_config)
+}
+
+fun setup_endpoint_for_set_config(
+    scenario: &mut Scenario,
+    uln302: &Uln302,
+): (EndpointAdminCap, EndpointV2, CallCap) {
+    let endpoint_admin_cap = scenario.take_from_sender<EndpointAdminCap>();
+    let mut endpoint = scenario.take_shared<EndpointV2>();
+    endpoint.register_library(
+        &endpoint_admin_cap,
+        uln_302::get_call_cap(uln302).id(),
+        message_lib_type::send_and_receive(),
+    );
+    let oapp_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), OAPP_ADDRESS);
+    (endpoint_admin_cap, endpoint, oapp_cap)
+}
+
+fun create_endpoint_set_config_call(
+    endpoint: &EndpointV2,
+    oapp_cap: &CallCap,
+    uln302: &Uln302,
+    eid: u32,
+    config_type: u32,
+    config: vector<u8>,
+    ctx: &mut TxContext,
+): Call<message_lib_set_config::SetConfigParam, Void> {
+    endpoint.set_config(
+        oapp_cap,
+        OAPP_ADDRESS,
+        uln_302::get_call_cap(uln302).id(),
+        eid,
+        config_type,
+        config,
+        ctx,
+    )
 }
 
 // === MOCK WORKER STRUCTURES ===
@@ -274,37 +311,34 @@ fun test_commit_verification_invalid_eid_should_fail() {
 #[test, expected_failure(abort_code = uln_302::EUnsupportedEid)]
 fun test_set_config_unsupported_eid_should_fail() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Don't set up any configs for EID 999 - this makes it unsupported
 
     // Create a direct message_lib_set_config call with unsupported EID
     let config_bytes = b"test_config";
-    let set_config_param = message_lib_set_config::create_param_for_test(
-        @0x123, // oapp address
+    let message_lib_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         999, // unsupported EID
-        1, // valid config type
+        CONFIG_TYPE_EXECUTOR,
         config_bytes,
-    );
-
-    let message_lib_call = call::create(
-        &mock_endpoint_cap, // Mock endpoint creates the call
-        uln_302::get_call_cap(&uln302).id(), // To ULN-302's CallCap
-        true, // one_way
-        set_config_param,
         scenario.ctx(),
     );
 
     // This should fail with EUnsupportedEid because EID 999 has no default configs
     uln_302::set_config(&mut uln302, message_lib_call);
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }
@@ -312,13 +346,13 @@ fun test_set_config_unsupported_eid_should_fail() {
 #[test, expected_failure(abort_code = uln_302::EInvalidConfigType)]
 fun test_set_config_invalid_type_should_fail() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Set up configs for EID 2 to make it supported (need both send and receive configs)
     let uln_config = create_default_uln_config();
@@ -329,25 +363,22 @@ fun test_set_config_invalid_type_should_fail() {
 
     // Create a direct message_lib_set_config call with invalid config type
     let config_bytes = b"test_config";
-    let set_config_param = message_lib_set_config::create_param_for_test(
-        @0x123, // oapp address
+    let message_lib_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         2, // supported EID
         999, // INVALID config type (not 1, 2, or 3)
         config_bytes,
-    );
-
-    let message_lib_call = call::create(
-        &mock_endpoint_cap, // Mock endpoint creates the call
-        uln_302::get_call_cap(&uln302).id(), // To ULN-302's CallCap
-        true, // one_way
-        set_config_param,
         scenario.ctx(),
     );
 
     // This should fail with EInvalidConfigType because config type 999 is invalid
     uln_302::set_config(&mut uln302, message_lib_call);
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }
@@ -768,13 +799,13 @@ fun test_config_management() {
 #[test]
 fun test_set_config_executor_type() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Set up configs for EID 2 to make it supported
     let test_eid = 2;
@@ -787,18 +818,13 @@ fun test_set_config_executor_type() {
     // Create a message_lib_set_config call with CONFIG_TYPE_EXECUTOR (1)
     // Using valid BCS-encoded executor config
     let config_bytes = create_executor_config_bytes();
-    let set_config_param = message_lib_set_config::create_param_for_test(
-        @0x123, // oapp address
+    let message_lib_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
         CONFIG_TYPE_EXECUTOR,
         config_bytes,
-    );
-
-    let message_lib_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_config_param,
         scenario.ctx(),
     );
 
@@ -806,13 +832,15 @@ fun test_set_config_executor_type() {
     uln_302::set_config(&mut uln302, message_lib_call);
 
     // Verify the executor config was actually set by retrieving it
-    let retrieved_config = uln_302::get_effective_executor_config(&uln302, @0x123, test_eid);
+    let retrieved_config = uln_302::get_effective_executor_config(&uln302, OAPP_ADDRESS, test_eid);
     assert!(executor_config::max_message_size(&retrieved_config) == 9999, 0);
     assert!(executor_config::executor(&retrieved_config) == @0xabcd, 1);
 
     // Cleanup (message_lib_call is consumed by set_config)
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }
@@ -820,13 +848,13 @@ fun test_set_config_executor_type() {
 #[test]
 fun test_set_config_send_uln_type() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Set up configs for EID 2 to make it supported
     let test_eid = 2;
@@ -840,18 +868,13 @@ fun test_set_config_send_uln_type() {
     // Using valid BCS-encoded OApp ULN config
     let config_bytes = create_oapp_uln_config_bytes();
 
-    let set_config_param = message_lib_set_config::create_param_for_test(
-        @0x123, // oapp address
+    let message_lib_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
         CONFIG_TYPE_SEND_ULN,
         config_bytes,
-    );
-
-    let message_lib_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_config_param,
         scenario.ctx(),
     );
 
@@ -859,7 +882,7 @@ fun test_set_config_send_uln_type() {
     uln_302::set_config(&mut uln302, message_lib_call);
 
     // Verify the send ULN config was actually set by retrieving it
-    let retrieved_config = uln_302::get_effective_send_uln_config(&uln302, @0x123, test_eid);
+    let retrieved_config = uln_302::get_effective_send_uln_config(&uln302, OAPP_ADDRESS, test_eid);
     assert!(uln_config::confirmations(&retrieved_config) == 35, 0);
     let required_dvns = uln_config::required_dvns(&retrieved_config);
     assert!(required_dvns.length() == 2, 1);
@@ -868,8 +891,10 @@ fun test_set_config_send_uln_type() {
 
     // Cleanup
     // message_lib_call is consumed by set_config
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }
@@ -877,13 +902,13 @@ fun test_set_config_send_uln_type() {
 #[test]
 fun test_set_config_receive_uln_type() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Set up configs for EID 2 to make it supported
     let test_eid = 2;
@@ -897,18 +922,13 @@ fun test_set_config_receive_uln_type() {
     // Using valid BCS-encoded OApp ULN config
     let config_bytes = create_oapp_uln_config_bytes();
 
-    let set_config_param = message_lib_set_config::create_param_for_test(
-        @0x123, // oapp address
+    let message_lib_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
         CONFIG_TYPE_RECEIVE_ULN,
         config_bytes,
-    );
-
-    let message_lib_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_config_param,
         scenario.ctx(),
     );
 
@@ -916,7 +936,7 @@ fun test_set_config_receive_uln_type() {
     uln_302::set_config(&mut uln302, message_lib_call);
 
     // Verify the receive ULN config was actually set by retrieving it
-    let retrieved_config = uln_302::get_effective_receive_uln_config(&uln302, @0x123, test_eid);
+    let retrieved_config = uln_302::get_effective_receive_uln_config(&uln302, OAPP_ADDRESS, test_eid);
     assert!(uln_config::confirmations(&retrieved_config) == 35, 0);
     let required_dvns = uln_config::required_dvns(&retrieved_config);
     assert!(required_dvns.length() == 2, 1);
@@ -925,8 +945,10 @@ fun test_set_config_receive_uln_type() {
 
     // Cleanup
     // message_lib_call is consumed by set_config
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }
@@ -934,13 +956,13 @@ fun test_set_config_receive_uln_type() {
 #[test]
 fun test_oapp_specific_config_getters() {
     let mut scenario = test_scenario::begin(ADMIN);
+    endpoint_v2::init_for_test(scenario.ctx());
     uln_302::init_for_test(scenario.ctx());
     scenario.next_tx(ADMIN);
 
     let uln_admin_cap = scenario.take_from_sender<AdminCap>();
     let mut uln302 = scenario.take_shared<Uln302>();
-
-    let mock_endpoint_cap = call_cap::new_package_cap_with_address_for_test(scenario.ctx(), @0x0);
+    let (endpoint_admin_cap, endpoint, oapp_cap) = setup_endpoint_for_set_config(&mut scenario, &uln302);
 
     // Set up default configs for EID 2 to make it supported
     let test_eid = 2;
@@ -950,22 +972,17 @@ fun test_oapp_specific_config_getters() {
     uln_302::set_default_send_uln_config(&mut uln302, &uln_admin_cap, test_eid, default_uln_config);
     uln_302::set_default_executor_config(&mut uln302, &uln_admin_cap, test_eid, default_executor_config);
 
-    let oapp_address = @0x123;
+    let oapp_address = OAPP_ADDRESS;
 
     // === Test 1: Set and get OApp executor config ===
     let executor_config_bytes = create_executor_config_bytes();
-    let set_executor_param = message_lib_set_config::create_param_for_test(
-        oapp_address,
+    let executor_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
-        1, // CONFIG_TYPE_EXECUTOR
+        CONFIG_TYPE_EXECUTOR,
         executor_config_bytes,
-    );
-
-    let executor_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_executor_param,
         scenario.ctx(),
     );
 
@@ -978,18 +995,13 @@ fun test_oapp_specific_config_getters() {
 
     // === Test 2: Set and get OApp send ULN config ===
     let send_uln_config_bytes = create_oapp_uln_config_bytes();
-    let set_send_uln_param = message_lib_set_config::create_param_for_test(
-        oapp_address,
+    let send_uln_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
-        2, // CONFIG_TYPE_SEND_ULN
+        CONFIG_TYPE_SEND_ULN,
         send_uln_config_bytes,
-    );
-
-    let send_uln_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_send_uln_param,
         scenario.ctx(),
     );
 
@@ -1006,18 +1018,13 @@ fun test_oapp_specific_config_getters() {
 
     // === Test 3: Set and get OApp receive ULN config ===
     let receive_uln_config_bytes = create_oapp_uln_config_bytes();
-    let set_receive_uln_param = message_lib_set_config::create_param_for_test(
-        oapp_address,
+    let receive_uln_call = create_endpoint_set_config_call(
+        &endpoint,
+        &oapp_cap,
+        &uln302,
         test_eid,
-        3, // CONFIG_TYPE_RECEIVE_ULN
+        CONFIG_TYPE_RECEIVE_ULN,
         receive_uln_config_bytes,
-    );
-
-    let receive_uln_call = call::create(
-        &mock_endpoint_cap,
-        uln_302::get_call_cap(&uln302).id(),
-        true, // one_way
-        set_receive_uln_param,
         scenario.ctx(),
     );
 
@@ -1036,8 +1043,10 @@ fun test_oapp_specific_config_getters() {
     // executor_call is consumed by set_config
     // send_uln_call is consumed by set_config
     // receive_uln_call is consumed by set_config
-    std::unit_test::destroy(mock_endpoint_cap);
+    std::unit_test::destroy(oapp_cap);
+    scenario.return_to_sender(endpoint_admin_cap);
     scenario.return_to_sender(uln_admin_cap);
+    test_scenario::return_shared(endpoint);
     test_scenario::return_shared(uln302);
     scenario.end();
 }

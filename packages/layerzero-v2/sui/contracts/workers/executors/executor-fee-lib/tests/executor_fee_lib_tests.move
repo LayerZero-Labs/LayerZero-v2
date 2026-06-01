@@ -77,7 +77,7 @@ fun test_get_fee_basic() {
         // Create call
         let mut call = call::create(
             executor_fee_lib.get_call_cap(),
-            @0x0, // callee
+            executor_fee_lib.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -327,7 +327,7 @@ fun test_zero_lz_receive_base_gas_should_fail() {
 
         let mut call = call::create(
             executor_fee_lib.get_call_cap(),
-            @0x0,
+            executor_fee_lib.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),

@@ -70,7 +70,7 @@ fun test_get_fee_basic() {
         // Create call
         let mut call = call::create(
             dvn_fee_lib.get_call_cap(),
-            @0x0, // callee
+            dvn_fee_lib.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -222,7 +222,7 @@ fun test_get_fee_zero_gas_should_fail() {
 
         let mut call = call::create(
             dvn_fee_lib.get_call_cap(),
-            @0x0,
+            dvn_fee_lib.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
