@@ -62,7 +62,7 @@ fun setup(register_default_lib: bool): (Scenario, AdminCap, EndpointV2, Messagin
             0,
             &clock,
         );
-        test_utils::destroy(msg_lib);
+        std::unit_test::destroy(msg_lib);
     };
 
     clock.destroy_for_testing();
@@ -78,8 +78,8 @@ fun clean(
 ) {
     ts::return_shared(endpoint);
     scenario.return_to_sender(admin_cap);
-    test_utils::destroy(messaging_channel);
-    test_utils::destroy(oapp_cap);
+    std::unit_test::destroy(messaging_channel);
+    std::unit_test::destroy(oapp_cap);
     scenario.end();
 }
 
@@ -168,7 +168,7 @@ fun test_init_channel() {
     );
     assert!(endpoint_v2::is_channel_inited(&messaging_channel, another_remote_eid, another_remote_oapp), 7);
 
-    test_utils::destroy(delegate_cap);
+    std::unit_test::destroy(delegate_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -197,7 +197,7 @@ fun test_register_library() {
     assert!(endpoint.registered_libraries_count() == 1, 5);
     // Library package tracking functions have been removed
 
-    test_utils::destroy(msg_lib_cap);
+    std::unit_test::destroy(msg_lib_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -242,7 +242,7 @@ fun test_set_default_send_library() {
     assert!(lib == send_lib_address, 0);
     assert!(is_default, 1);
 
-    test_utils::destroy(send_lib_cap);
+    std::unit_test::destroy(send_lib_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -282,7 +282,7 @@ fun test_set_default_receive_library() {
     assert!(lib == receive_lib_address, 0);
     assert!(is_default, 1);
 
-    test_utils::destroy(receive_lib_cap);
+    std::unit_test::destroy(receive_lib_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -353,10 +353,10 @@ fun test_set_send_library() {
     assert!(delegate_lib == another_send_lib_address, 3);
     assert!(!delegate_is_default, 4);
 
-    test_utils::destroy(send_lib_cap);
-    test_utils::destroy(another_send_lib_cap);
-    test_utils::destroy(delegate_cap);
-    test_utils::destroy(test_oapp_cap);
+    std::unit_test::destroy(send_lib_cap);
+    std::unit_test::destroy(another_send_lib_cap);
+    std::unit_test::destroy(delegate_cap);
+    std::unit_test::destroy(test_oapp_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -425,10 +425,10 @@ fun test_set_receive_library() {
     assert!(delegate_lib == another_receive_lib_address, 5);
     assert!(!delegate_is_default, 6);
 
-    test_utils::destroy(receive_lib_cap);
-    test_utils::destroy(another_receive_lib_cap);
-    test_utils::destroy(delegate_cap);
-    test_utils::destroy(test_oapp_cap);
+    std::unit_test::destroy(receive_lib_cap);
+    std::unit_test::destroy(another_receive_lib_cap);
+    std::unit_test::destroy(delegate_cap);
+    std::unit_test::destroy(test_oapp_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -478,7 +478,7 @@ fun test_quote() {
     assert!(result.native_fee() == 100, 0);
     assert!(result.zro_fee() == 10, 1);
 
-    test_utils::destroy(msg_lib_cap);
+    std::unit_test::destroy(msg_lib_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -534,8 +534,8 @@ fun test_set_config() {
     // Destroy the completed delegate call
     let (_, _, _) = delegate_message_lib_call.destroy(&msg_lib_cap);
 
-    test_utils::destroy(delegate_cap);
-    test_utils::destroy(msg_lib_cap);
+    std::unit_test::destroy(delegate_cap);
+    std::unit_test::destroy(msg_lib_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -668,8 +668,8 @@ fun test_channel_operations() {
     );
     assert!(endpoint_v2::verifiable(&messaging_channel, REMOTE_EID, sender, 8), 25);
 
-    test_utils::destroy(delegate_cap);
-    test_utils::destroy(msg_lib_cap);
+    std::unit_test::destroy(delegate_cap);
+    std::unit_test::destroy(msg_lib_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -718,8 +718,8 @@ fun test_send_and_clear_compose() {
         4,
     );
 
-    test_utils::destroy(messaging_composer);
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(messaging_composer);
+    std::unit_test::destroy(composer_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -760,7 +760,7 @@ fun test_lz_compose_alert() {
         extra_data,
         reason,
     );
-    test_utils::assert_eq(event::events_by_type<LzComposeAlertEvent>()[0], lz_compose_alert_event);
+    std::unit_test::assert_eq!(event::events_by_type<LzComposeAlertEvent>()[0], lz_compose_alert_event);
 
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -806,7 +806,7 @@ fun test_lz_receive_alert() {
         extra_data,
         reason,
     );
-    test_utils::assert_eq(event::events_by_type<LzReceiveAlertEvent>()[0], lz_receive_alert_event);
+    std::unit_test::assert_eq!(event::events_by_type<LzReceiveAlertEvent>()[0], lz_receive_alert_event);
 
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -835,7 +835,7 @@ fun test_register_oapp() {
     assert!(endpoint.get_delegate(oapp_address) == @0x0, 4);
 
     // Clean up
-    test_utils::destroy(new_oapp_cap);
+    std::unit_test::destroy(new_oapp_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -875,7 +875,7 @@ fun test_register_composer() {
     assert!(compose_queue_address != @0x0, 3);
 
     // Clean up
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -893,7 +893,7 @@ fun test_register_composer_already_registered() {
     endpoint.register_composer(&composer_cap, b"different_info", scenario.ctx());
 
     // Clean up
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -997,8 +997,8 @@ fun test_send_workflow() {
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
     // message_lib_call is consumed by confirm_send
-    test_utils::destroy(endpoint_call);
-    test_utils::destroy(send_lib_cap);
+    std::unit_test::destroy(endpoint_call);
+    std::unit_test::destroy(send_lib_cap);
 
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1072,9 +1072,9 @@ fun test_lz_receive() {
     // Verify payload was cleared
     assert!(!endpoint_v2::verifiable(&messaging_channel, src_eid, sender, nonce), 2);
 
-    test_utils::destroy(lz_receive_call);
-    test_utils::destroy(receive_lib_cap);
-    test_utils::destroy(executor_cap);
+    std::unit_test::destroy(lz_receive_call);
+    std::unit_test::destroy(receive_lib_cap);
+    std::unit_test::destroy(executor_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1126,10 +1126,10 @@ fun test_lz_compose() {
     // Compose message was cleared but still exists
     assert!(endpoint_v2::has_compose_message_hash(&compose_queue, from, guid, index), 3);
 
-    test_utils::destroy(lz_compose_call);
-    test_utils::destroy(compose_queue);
-    test_utils::destroy(executor_cap);
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(lz_compose_call);
+    std::unit_test::destroy(compose_queue);
+    std::unit_test::destroy(executor_cap);
+    std::unit_test::destroy(composer_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1187,8 +1187,8 @@ fun test_set_default_receive_library_timeout() {
     let timeout_opt3 = endpoint.get_default_receive_library_timeout(src_eid);
     assert!(timeout_opt3.is_none(), 11);
 
-    test_utils::destroy(lib1_cap);
-    test_utils::destroy(lib2_cap);
+    std::unit_test::destroy(lib1_cap);
+    std::unit_test::destroy(lib2_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1233,8 +1233,8 @@ fun test_set_oapp_info() {
     endpoint.set_oapp_info(&delegate_cap, oapp_address, delegate_updated_info);
     assert!(endpoint.get_oapp_info(oapp_address) == delegate_updated_info, 6);
 
-    test_utils::destroy(test_oapp_cap);
-    test_utils::destroy(delegate_cap);
+    std::unit_test::destroy(test_oapp_cap);
+    std::unit_test::destroy(delegate_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1262,7 +1262,7 @@ fun test_set_composer_info() {
     assert!(endpoint.is_composer_registered(composer_address), 2);
     // Composer package tracking functions have been removed
 
-    test_utils::destroy(composer_cap);
+    std::unit_test::destroy(composer_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1341,10 +1341,10 @@ fun test_set_receive_library_timeout() {
     assert!(timeout3.expiry() == 2500, 11);
     assert!(timeout3.fallback_lib() == lib2_address, 12);
 
-    test_utils::destroy(lib1_cap);
-    test_utils::destroy(lib2_cap);
-    test_utils::destroy(delegate_cap);
-    test_utils::destroy(test_oapp_cap);
+    std::unit_test::destroy(lib1_cap);
+    std::unit_test::destroy(lib2_cap);
+    std::unit_test::destroy(delegate_cap);
+    std::unit_test::destroy(test_oapp_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1425,7 +1425,7 @@ fun test_unauthorized_set_oapp_info() {
     // Unauthorized caller should not be able to set oapp_info
     endpoint.set_oapp_info(&unauthorized_cap, oapp_address, updated_info);
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1445,7 +1445,7 @@ fun test_unauthorized_init_channel() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1460,7 +1460,7 @@ fun test_unauthorized_clear() {
     // Unauthorized caller should not be able to clear
     endpoint_v2::clear(&endpoint, &unauthorized_cap, &mut messaging_channel, REMOTE_EID, sender, 1, guid, message);
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1473,7 +1473,7 @@ fun test_unauthorized_skip() {
     // Unauthorized caller should not be able to skip
     endpoint_v2::skip(&endpoint, &unauthorized_cap, &mut messaging_channel, REMOTE_EID, sender, 1);
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1487,7 +1487,7 @@ fun test_unauthorized_burn() {
     // Unauthorized caller should not be able to burn
     endpoint_v2::burn(&endpoint, &unauthorized_cap, &mut messaging_channel, REMOTE_EID, sender, 1, payload_hash);
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1501,7 +1501,7 @@ fun test_unauthorized_nilify() {
     // Unauthorized caller should not be able to nilify
     endpoint_v2::nilify(&endpoint, &unauthorized_cap, &mut messaging_channel, REMOTE_EID, sender, 1, payload_hash);
 
-    test_utils::destroy(unauthorized_cap);
+    std::unit_test::destroy(unauthorized_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1519,8 +1519,8 @@ fun test_unauthorized_set_send_library() {
     // Unauthorized caller should not be able to set send library
     endpoint.set_send_library(&unauthorized_cap, oapp_address, REMOTE_EID, send_lib_address);
 
-    test_utils::destroy(unauthorized_cap);
-    test_utils::destroy(send_lib_cap);
+    std::unit_test::destroy(unauthorized_cap);
+    std::unit_test::destroy(send_lib_cap);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
 
@@ -1543,8 +1543,8 @@ fun test_unauthorized_set_receive_library() {
     // Unauthorized caller should not be able to set receive library
     endpoint.set_receive_library(&unauthorized_cap, oapp_address, REMOTE_EID, receive_lib_address, 0, &clock);
 
-    test_utils::destroy(unauthorized_cap);
-    test_utils::destroy(receive_lib_cap);
+    std::unit_test::destroy(unauthorized_cap);
+    std::unit_test::destroy(receive_lib_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1575,8 +1575,8 @@ fun test_unauthorized_set_receive_library_timeout() {
         &clock,
     );
 
-    test_utils::destroy(unauthorized_cap);
-    test_utils::destroy(receive_lib_cap);
+    std::unit_test::destroy(unauthorized_cap);
+    std::unit_test::destroy(receive_lib_cap);
     clock.destroy_for_testing();
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }
@@ -1604,8 +1604,8 @@ fun test_unauthorized_set_config() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(unauthorized_cap);
-    test_utils::destroy(msg_lib_cap);
-    test_utils::destroy(message_lib_call);
+    std::unit_test::destroy(unauthorized_cap);
+    std::unit_test::destroy(msg_lib_cap);
+    std::unit_test::destroy(message_lib_call);
     clean(scenario, admin_cap, endpoint, messaging_channel, oapp_cap);
 }

@@ -52,8 +52,8 @@ fun signer3(): vector<u8> { sig_utils::signer3() }
 
 // Clean up helper function for tests
 fun clean(dvn: DVN, admin_cap: WorkerAdminCap) {
-    test_utils::destroy(dvn);
-    test_utils::destroy(admin_cap);
+    std::unit_test::destroy(dvn);
+    std::unit_test::destroy(admin_cap);
 }
 
 // === Mock Objects ===
@@ -95,7 +95,7 @@ fun create_test_dvn(scenario: &mut Scenario): (DVN, WorkerAdminCap) {
         scenario.ctx(),
     );
 
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
 
     scenario.next_tx(OWNER);
     (test_scenario::take_shared<DVN>(scenario), test_scenario::take_from_address<WorkerAdminCap>(scenario, ADMIN))
@@ -181,7 +181,7 @@ fun test_create_dvn_with_multiple_admins() {
     // Share the DVN object for testing
     clean(dvn, admin_cap);
     test_scenario::return_to_address(ADMIN2, admin2_cap);
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
     scenario.end();
 }
 
@@ -218,8 +218,8 @@ fun test_create_dvn_will_set_worker_info() {
     let dvn_info = dvn_info_v1::decode(*worker_info_bytes);
     assert!(dvn_info.dvn_object() == dvn_object, 0);
 
-    test_utils::destroy(admin_cap_for(ADMIN, &mut scenario));
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(admin_cap_for(ADMIN, &mut scenario));
+    std::unit_test::destroy(worker_registry);
     scenario.end();
 }
 
@@ -268,7 +268,7 @@ fun test_set_admin_not_admin() {
     dvn.set_admin(&unauthorized_admin_cap, ADMIN2, true, scenario.ctx());
 
     clean(dvn, admin_cap);
-    test_utils::destroy(unauthorized_admin_cap);
+    std::unit_test::destroy(unauthorized_admin_cap);
     scenario.end();
 }
 
@@ -380,7 +380,7 @@ fun test_init_ptb_builder_move_calls() {
     let get_fee_arg1 = argument::create_pure(bcs::to_bytes(&ascii::string(b"DVN")));
     let get_fee_arg2 = argument::create_object(@0x123);
     let get_fee_args = vector[get_fee_arg1, get_fee_arg2];
-    let get_fee_type_args = vector[type_name::get<u64>()];
+    let get_fee_type_args = vector[type_name::with_defining_ids<u64>()];
 
     let get_fee_move_call = move_call::create(
         @0x1234567890abcdef,
@@ -429,7 +429,7 @@ fun test_init_ptb_builder_move_calls() {
     assert!(dvn.is_ptb_builder_initialized(), 5);
 
     // Clean up
-    test_utils::destroy(call);
+    std::unit_test::destroy(call);
 
     clean(dvn, admin_cap);
     scenario.end();
@@ -446,7 +446,7 @@ fun test_init_ptb_builder_move_calls_twice() {
     // Create mock MoveCall objects
     let get_fee_arg = argument::create_pure(bcs::to_bytes(&ascii::string(b"DVN")));
     let get_fee_args = vector[get_fee_arg];
-    let get_fee_type_args = vector[type_name::get<u64>()];
+    let get_fee_type_args = vector[type_name::with_defining_ids<u64>()];
 
     let get_fee_move_call = move_call::create(
         @0x1234567890abcdef,
@@ -482,7 +482,7 @@ fun test_init_ptb_builder_move_calls_twice() {
         assign_job_move_calls,
         scenario.ctx(),
     );
-    test_utils::destroy(call1);
+    std::unit_test::destroy(call1);
 
     // Second call should fail with EPtbBuilderAlreadyInitialized
     let call2 = dvn.init_ptb_builder_move_calls(
@@ -492,7 +492,7 @@ fun test_init_ptb_builder_move_calls_twice() {
         vector[],
         scenario.ctx(),
     );
-    test_utils::destroy(call2);
+    std::unit_test::destroy(call2);
 
     clean(dvn, admin_cap);
     scenario.end();
@@ -509,7 +509,7 @@ fun test_set_ptb_builder_move_calls() {
     let get_fee_arg1 = argument::create_pure(bcs::to_bytes(&ascii::string(b"DVN")));
     let get_fee_arg2 = argument::create_object(@0x123);
     let get_fee_args = vector[get_fee_arg1, get_fee_arg2];
-    let get_fee_type_args = vector[type_name::get<u64>()];
+    let get_fee_type_args = vector[type_name::with_defining_ids<u64>()];
 
     let get_fee_move_call = move_call::create(
         @0x1234567890abcdef,
@@ -559,7 +559,7 @@ fun test_set_ptb_builder_move_calls() {
     assert!(call.one_way(), 3); // One-way call since return type is Void
 
     // Clean up
-    test_utils::destroy(call);
+    std::unit_test::destroy(call);
     clock.destroy_for_testing();
 
     clean(dvn, admin_cap);
@@ -867,7 +867,7 @@ fun test_verify_with_signatures() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(verify_call);
+    std::unit_test::destroy(verify_call);
     clean(dvn, admin_cap);
     clock.destroy_for_testing();
     scenario.end();
@@ -1199,7 +1199,7 @@ fun test_invalid_signer_length() {
 
     // This test is expected to fail before DVN is created, so we won't reach here
     // But we need to consume the DVN to satisfy Move's type system
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
     scenario.end();
 }
 

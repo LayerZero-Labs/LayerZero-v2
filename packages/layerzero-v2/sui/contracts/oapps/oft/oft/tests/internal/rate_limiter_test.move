@@ -64,7 +64,7 @@ fun test_rate_limiter_basic_functionality() {
 
     // Clean up - objects are automatically destroyed when scenario ends
     clock::destroy_for_testing(test_clock);
-    test_utils::destroy(limiter);
+    std::unit_test::destroy(limiter);
     scenario.end();
 }
 
@@ -117,8 +117,8 @@ fun test_rate_limiter_time_decay() {
     assert!(limiter.rate_limit_capacity( dst_eid, &test_clock) == 20000, 2);
 
     // Clean up
-    test_utils::destroy(test_clock);
-    test_utils::destroy(limiter);
+    std::unit_test::destroy(test_clock);
+    std::unit_test::destroy(limiter);
     scenario.end();
 }
 
@@ -137,6 +137,6 @@ fun test_rate_limiter_capacity_exceeded() {
 
     // Clean up (won't be reached due to expected failure)
     clock::destroy_for_testing(test_clock);
-    test_utils::destroy(limiter);
+    std::unit_test::destroy(limiter);
     scenario.end();
 }

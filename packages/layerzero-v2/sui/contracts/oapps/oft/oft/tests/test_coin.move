@@ -1,4 +1,4 @@
-#[test_only]
+#[test_only, allow(deprecated_usage)]
 module oft::test_coin;
 
 use sui::coin::{Self, TreasuryCap, CoinMetadata};

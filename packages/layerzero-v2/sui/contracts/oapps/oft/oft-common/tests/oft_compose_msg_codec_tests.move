@@ -76,7 +76,7 @@ fun test_encode_empty_msg() {
     let src_eid = SRC_EID;
     let amount_ld = 1000000000000000000u64;
     let compose_from = bytes32::from_address(BOB);
-    let compose_msg = vector::empty<u8>();
+    let compose_msg = vector[];
 
     // Encode with empty compose message
     let encoded = oft_compose_msg_codec::encode(nonce, src_eid, amount_ld, compose_from, compose_msg);
@@ -125,7 +125,7 @@ fun test_zero_values() {
     let src_eid = 0u32;
     let amount_ld = 0u64;
     let compose_from = bytes32::from_address(ALICE);
-    let compose_msg = vector::empty<u8>();
+    let compose_msg = vector[];
 
     // Encode
     let encoded = oft_compose_msg_codec::encode(nonce, src_eid, amount_ld, compose_from, compose_msg);
@@ -168,7 +168,7 @@ fun test_compose_from_extraction_edge_cases() {
 
     // Test with different compose_from addresses
     let compose_from_bob = bytes32::from_address(BOB);
-    let empty_msg = vector::empty<u8>();
+    let empty_msg = vector[];
     let encoded_min = oft_compose_msg_codec::encode(nonce, src_eid, amount_ld, compose_from_bob, empty_msg);
     let decoded = oft_compose_msg_codec::decode(&encoded_min);
     let decoded_compose_from = oft_compose_msg_codec::compose_from(&decoded);
@@ -193,7 +193,7 @@ fun test_multiple_encode_decode_cycles() {
     let compose_from = bytes32::from_address(ALICE);
 
     // Test multiple encoding/decoding cycles
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 5) {
         let compose_msg = b"cycle test";
 
@@ -223,8 +223,8 @@ fun test_large_compose_message() {
     let compose_from = bytes32::from_address(BOB);
 
     // Create a large compose message
-    let mut large_msg = vector::empty<u8>();
-    let mut i = 0;
+    let mut large_msg = vector[];
+    let mut i = 0u64;
     while (i < 100) {
         large_msg.append(b"This is a test message to create a large compose payload. ");
         i = i + 1;

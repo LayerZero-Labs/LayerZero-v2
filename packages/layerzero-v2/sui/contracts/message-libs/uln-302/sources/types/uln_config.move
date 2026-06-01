@@ -43,8 +43,8 @@ public struct UlnConfig has copy, drop, store {
 public fun new(): UlnConfig {
     UlnConfig {
         confirmations: 0,
-        required_dvns: vector::empty(),
-        optional_dvns: vector::empty(),
+        required_dvns: vector[],
+        optional_dvns: vector[],
         optional_dvn_threshold: 0,
     }
 }

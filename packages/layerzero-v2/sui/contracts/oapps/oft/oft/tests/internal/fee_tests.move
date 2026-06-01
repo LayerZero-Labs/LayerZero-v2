@@ -48,7 +48,7 @@ fun test_create_send_fee_valid() {
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == fee_bps, E_INVALID_FEE_BPS);
     assert!(oft_fee::fee_deposit_address(&fee) == fee_deposit_address, E_INVALID_FEE_DEPOSIT_ADDRESS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fun test_create_send_fee_max_fee() {
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == MAX_FEE_BPS, E_INVALID_FEE_BPS);
     assert!(oft_fee::fee_deposit_address(&fee) == fee_deposit_address, E_INVALID_FEE_DEPOSIT_ADDRESS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -72,7 +72,7 @@ fun test_create_send_fee_invalid_fee_bps() {
 
     let fee = create_fee(fee_bps, fee_deposit_address, DST_EID_1);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 // === Fee Calculation Tests ===
@@ -89,7 +89,7 @@ fun test_apply_fee_basic() {
     let actual_after_fee = oft_fee::apply_fee(&fee, DST_EID_1, amount_ld);
     assert!(actual_after_fee == expected_after_fee, E_INVALID_FEE_AMOUNT);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -103,7 +103,7 @@ fun test_apply_fee_zero_amount() {
     let actual_after_fee = oft_fee::apply_fee(&fee, DST_EID_1, amount_ld);
     assert!(actual_after_fee == expected_after_fee, E_INVALID_FEE_AMOUNT);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -117,7 +117,7 @@ fun test_apply_fee_max_fee_rate() {
     let actual_after_fee = oft_fee::apply_fee(&fee, DST_EID_1, amount_ld);
     assert!(actual_after_fee == expected_after_fee, E_INVALID_FEE_AMOUNT);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -133,7 +133,7 @@ fun test_apply_fee_large_amounts() {
     let actual_after_fee = oft_fee::apply_fee(&fee, DST_EID_1, amount_ld);
     assert!(actual_after_fee == expected_after_fee, E_INVALID_FEE_AMOUNT);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 // === Setter and Getter Tests ===
@@ -147,7 +147,7 @@ fun test_set_fee_bps_valid() {
 
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == new_fee_bps, E_INVALID_FEE_BPS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -159,7 +159,7 @@ fun test_set_fee_bps_zero() {
 
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == new_fee_bps, E_INVALID_FEE_BPS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -171,7 +171,7 @@ fun test_set_fee_bps_max() {
 
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == new_fee_bps, E_INVALID_FEE_BPS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -182,7 +182,7 @@ fun test_set_fee_bps_invalid() {
     // This should fail because fee_bps > MAX_FEE_BPS
     oft_fee::set_fee_bps(&mut fee, DST_EID_1, INVALID_FEE_BPS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -194,7 +194,7 @@ fun test_set_fee_deposit_address() {
 
     assert!(oft_fee::fee_deposit_address(&fee) == new_address, E_INVALID_FEE_DEPOSIT_ADDRESS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -207,7 +207,7 @@ fun test_getter_functions() {
     assert!(oft_fee::fee_bps(&fee, DST_EID_1) == fee_bps, E_INVALID_FEE_BPS);
     assert!(oft_fee::fee_deposit_address(&fee) == fee_deposit_address, E_INVALID_FEE_DEPOSIT_ADDRESS);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 // === Edge Cases and Precision Tests ===
@@ -233,7 +233,7 @@ fun test_fee_calculations_precision() {
 
             assert!(result == expected_result, E_INVALID_FEE_AMOUNT);
 
-            test_utils::destroy(fee);
+            std::unit_test::destroy(fee);
             j = j + 1;
         };
 
@@ -268,8 +268,8 @@ fun test_fee_calculations_edge_values() {
     // For 10000 units with 99.99% fee: fee = 9999, so result = 1
     assert!(result_9999bp_large == 1, E_INVALID_FEE_AMOUNT);
 
-    test_utils::destroy(fee_1bp);
-    test_utils::destroy(fee_9999bp);
+    std::unit_test::destroy(fee_1bp);
+    std::unit_test::destroy(fee_9999bp);
 }
 
 // === New Tests for EID-specific and Enable/Disable Features ===
@@ -307,7 +307,7 @@ fun test_eid_specific_fees() {
     assert!(result_2 == 980u64, E_INVALID_FEE_AMOUNT); // 1000 - 20 (2%)
     assert!(result_3 == 995u64, E_INVALID_FEE_AMOUNT); // 1000 - 5 (0.5%)
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -354,7 +354,7 @@ fun test_fee_enable_disable() {
     assert!(oft_fee::effective_fee_bps(&fee, DST_EID_2) == 0, E_INVALID_FEE_BPS);
     assert!(!oft_fee::has_oft_fee(&fee, DST_EID_2), 2); // No fee
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 // === Unset Fee Tests ===
@@ -388,7 +388,7 @@ fun test_unset_fee_bps_valid() {
     let result = oft_fee::apply_fee(&fee, DST_EID_1, amount);
     assert!(result == 990u64, E_INVALID_FEE_AMOUNT); // 1000 - 10 (1% default)
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -402,7 +402,7 @@ fun test_unset_fee_bps_not_found() {
     // This should fail with ENotFound
     oft_fee::unset_fee_bps(&mut fee, DST_EID_1);
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 #[test]
@@ -428,7 +428,7 @@ fun test_unset_fee_bps_with_zero_default() {
     assert!(oft_fee::effective_fee_bps(&fee, DST_EID_1) == 0, E_INVALID_FEE_BPS);
     assert!(!oft_fee::has_oft_fee(&fee, DST_EID_1), 1); // No fee
 
-    test_utils::destroy(fee);
+    std::unit_test::destroy(fee);
 }
 
 // === Helper ===

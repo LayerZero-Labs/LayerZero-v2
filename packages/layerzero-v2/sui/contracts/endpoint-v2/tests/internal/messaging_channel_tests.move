@@ -45,7 +45,7 @@ fun setup(): (Scenario, MessagingChannel) {
 
 // Helper function to clean up test scenario and channel
 fun clean(scenario: Scenario, messaging_channel: MessagingChannel) {
-    test_utils::destroy(messaging_channel);
+    std::unit_test::destroy(messaging_channel);
     ts::end(scenario);
 }
 
@@ -120,7 +120,7 @@ fun test_skip() {
         LOCAL_OAPP,
         1,
     );
-    test_utils::assert_eq(event::events_by_type<InboundNonceSkippedEvent>()[0], skip_event);
+    std::unit_test::assert_eq!(event::events_by_type<InboundNonceSkippedEvent>()[0], skip_event);
 
     clean(scenario, messaging_channel);
 }
@@ -160,7 +160,7 @@ fun test_nilify() {
         1,
         bytes32::zero_bytes32(),
     );
-    test_utils::assert_eq(event::events_by_type<PacketNilifiedEvent>()[0], expected_event1);
+    std::unit_test::assert_eq!(event::events_by_type<PacketNilifiedEvent>()[0], expected_event1);
 
     // Nilify a verified but non-executed nonce should succeed
     messaging_channel.verify(REMOTE_EID, to_bytes32(REMOTE_OAPP), 1, payload_hash);
@@ -175,7 +175,7 @@ fun test_nilify() {
         1,
         payload_hash,
     );
-    test_utils::assert_eq(event::events_by_type<PacketNilifiedEvent>()[1], expected_event2);
+    std::unit_test::assert_eq!(event::events_by_type<PacketNilifiedEvent>()[1], expected_event2);
 
     // Nilify a non-executed nonce lower than lazyInboundNonce should succeed
     messaging_channel.verify(REMOTE_EID, to_bytes32(REMOTE_OAPP), 2, payload_hash);
@@ -198,7 +198,7 @@ fun test_nilify() {
         1,
         payload_hash,
     );
-    test_utils::assert_eq(event::events_by_type<PacketNilifiedEvent>()[2], expected_event3);
+    std::unit_test::assert_eq!(event::events_by_type<PacketNilifiedEvent>()[2], expected_event3);
 
     // Nilify should work on any nonce greater than lazy inbound nonce
     let max_nonce = std::u64::max_value!();
@@ -211,7 +211,7 @@ fun test_nilify() {
         max_nonce,
         bytes32::zero_bytes32(),
     );
-    test_utils::assert_eq(event::events_by_type<PacketNilifiedEvent>()[3], expected_event4);
+    std::unit_test::assert_eq!(event::events_by_type<PacketNilifiedEvent>()[3], expected_event4);
 
     clean(scenario, messaging_channel);
 }
@@ -288,7 +288,7 @@ fun test_burn() {
         1,
         payload_hash,
     );
-    test_utils::assert_eq(event::events_by_type<PacketBurntEvent>()[0], expected_burnt_event);
+    std::unit_test::assert_eq!(event::events_by_type<PacketBurntEvent>()[0], expected_burnt_event);
 
     // Check that payload hash is removed
     assert!(!messaging_channel.has_payload_hash(REMOTE_EID, to_bytes32(REMOTE_OAPP), 1), 1);
@@ -410,7 +410,7 @@ fun test_clear() {
         2,
         LOCAL_OAPP,
     );
-    test_utils::assert_eq(event::events_by_type<PacketDeliveredEvent>()[0], expected_event1);
+    std::unit_test::assert_eq!(event::events_by_type<PacketDeliveredEvent>()[0], expected_event1);
 
     // Verify nonce 3
     messaging_channel.verify(REMOTE_EID, to_bytes32(REMOTE_OAPP), 3, payload_hash);
@@ -423,7 +423,7 @@ fun test_clear() {
         4,
         LOCAL_OAPP,
     );
-    test_utils::assert_eq(event::events_by_type<PacketDeliveredEvent>()[1], expected_event2);
+    std::unit_test::assert_eq!(event::events_by_type<PacketDeliveredEvent>()[1], expected_event2);
 
     // Check that payload hashes are removed
     assert!(!messaging_channel.has_payload_hash(REMOTE_EID, to_bytes32(REMOTE_OAPP), 2), 0);
@@ -540,7 +540,7 @@ fun test_channel_initialization() {
         REMOTE_EID,
         to_bytes32(REMOTE_OAPP),
     );
-    test_utils::assert_eq(event::events_by_type<ChannelInitializedEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<ChannelInitializedEvent>()[0], expected_event);
 
     // Now should be registered
     assert!(messaging_channel.is_channel_inited(REMOTE_EID, to_bytes32(REMOTE_OAPP)), 1);
@@ -582,7 +582,7 @@ fun test_verify() {
         LOCAL_OAPP,
         payload_hash,
     );
-    test_utils::assert_eq(event::events_by_type<PacketVerifiedEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<PacketVerifiedEvent>()[0], expected_event);
 
     clean(scenario, messaging_channel);
 }
@@ -673,7 +673,7 @@ fun test_verify_overwrite_existing() {
         LOCAL_OAPP,
         payload_hash1,
     );
-    test_utils::assert_eq(events[0], expected_event1);
+    std::unit_test::assert_eq!(events[0], expected_event1);
 
     // Check second event
     let expected_event2 = messaging_channel::create_packet_verified_event(
@@ -683,7 +683,7 @@ fun test_verify_overwrite_existing() {
         LOCAL_OAPP,
         payload_hash2,
     );
-    test_utils::assert_eq(events[1], expected_event2);
+    std::unit_test::assert_eq!(events[1], expected_event2);
 
     clean(scenario, messaging_channel);
 }
@@ -759,7 +759,7 @@ fun test_prepare_send() {
     assert!(packet.receiver() == to_bytes32(REMOTE_OAPP), 3);
     assert!(packet.nonce() == 1, 4); // First outbound nonce should be 1
 
-    test_utils::destroy(send_param);
+    std::unit_test::destroy(send_param);
 
     clean(scenario, messaging_channel);
 }
@@ -821,13 +821,13 @@ fun test_confirm_send() {
         send_library,
         options,
     );
-    test_utils::assert_eq(events[0], expected_event);
+    std::unit_test::assert_eq!(events[0], expected_event);
 
     // Clean up
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(receipt);
-    test_utils::destroy(send_param);
+    std::unit_test::destroy(receipt);
+    std::unit_test::destroy(send_param);
 
     clean(scenario, messaging_channel);
 }
@@ -904,8 +904,8 @@ fun test_split_fee_insufficient_native_fee() {
     // Clean up (won't reach here due to expected failure)
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(send_param);
-    test_utils::destroy(_messagingChannel);
+    std::unit_test::destroy(send_param);
+    std::unit_test::destroy(_messagingChannel);
     scenario.end();
 }
 
@@ -948,8 +948,8 @@ fun test_split_fee_with_zro_fee() {
     // Clean up
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(send_param);
-    test_utils::destroy(_messagingChannel);
+    std::unit_test::destroy(send_param);
+    std::unit_test::destroy(_messagingChannel);
     scenario.end();
 }
 
@@ -984,8 +984,8 @@ fun test_split_fee_insufficient_zro_fee() {
     // Clean up (won't reach here due to expected failure)
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(send_param);
-    test_utils::destroy(_messagingChannel);
+    std::unit_test::destroy(send_param);
+    std::unit_test::destroy(_messagingChannel);
     scenario.end();
 }
 
@@ -1028,8 +1028,8 @@ fun test_split_fee_zero_zro_fee() {
     // Clean up
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(send_param);
-    test_utils::destroy(_messagingChannel);
+    std::unit_test::destroy(send_param);
+    std::unit_test::destroy(_messagingChannel);
     scenario.end();
 }
 
@@ -1071,7 +1071,7 @@ fun test_split_fee_no_zro_token() {
     // Clean up
     coin::burn_for_testing(paid_native);
     coin::burn_for_testing(paid_zro);
-    test_utils::destroy(send_param);
-    test_utils::destroy(_messagingChannel);
+    std::unit_test::destroy(send_param);
+    std::unit_test::destroy(_messagingChannel);
     scenario.end();
 }

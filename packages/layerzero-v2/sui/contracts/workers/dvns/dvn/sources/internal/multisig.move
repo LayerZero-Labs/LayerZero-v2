@@ -74,14 +74,14 @@ public(package) fun set_signer(self: &mut MultiSig, dvn: address, signer: vector
         assert!(self.signers.contains(&signer), ESignerNotFound);
         self.signers.remove(&signer);
     };
-    assert!(self.signers.size() >= self.quorum, ESignersSizeIsLessThanQuorum);
+    assert!(self.signers.length() >= self.quorum, ESignersSizeIsLessThanQuorum);
     event::emit(UpdateSignerEvent { dvn, signer, active });
 }
 
 /// Set quorum
 public(package) fun set_quorum(self: &mut MultiSig, dvn: address, quorum: u64) {
     assert!(quorum > 0, EQuorumIsZero);
-    assert!(quorum <= self.signers.size(), ESignersSizeIsLessThanQuorum);
+    assert!(quorum <= self.signers.length(), ESignersSizeIsLessThanQuorum);
     self.quorum = quorum;
     event::emit(UpdateQuorumEvent { dvn, quorum });
 }
@@ -95,7 +95,7 @@ public(package) fun assert_signatures_verified(self: &MultiSig, payload: vector<
 
     assert!(signature_count >= self.quorum, ESignaturesLessThanQuorum);
 
-    let mut used_signers: vector<vector<u8>> = vector::empty();
+    let mut used_signers: vector<vector<u8>> = vector[];
 
     let mut i = 0;
     while (i < self.quorum) {
@@ -122,7 +122,7 @@ public(package) fun is_signer(self: &MultiSig, signer: vector<u8>): bool {
 
 /// Get number of signers
 public(package) fun signer_count(self: &MultiSig): u64 {
-    self.signers.size()
+    self.signers.length()
 }
 
 /// Get all signers as a vector

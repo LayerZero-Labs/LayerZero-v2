@@ -38,7 +38,7 @@ fun setup(): (Scenario, ComposeQueue) {
     let compose_queue_addr = registry.get_compose_queue(TO);
     scenario.next_tx(@0x0);
     let composer = scenario.take_shared_by_id<ComposeQueue>(object::id_from_address(compose_queue_addr));
-    test_utils::destroy(registry);
+    std::unit_test::destroy(registry);
     (scenario, composer)
 }
 
@@ -49,12 +49,12 @@ fun setup_registry(): (Scenario, ComposerRegistry) {
 }
 
 fun clean(scenario: Scenario, composer: ComposeQueue) {
-    test_utils::destroy(composer);
+    std::unit_test::destroy(composer);
     ts::end(scenario);
 }
 
 fun clean_registry(scenario: Scenario, registry: ComposerRegistry) {
-    test_utils::destroy(registry);
+    std::unit_test::destroy(registry);
     ts::end(scenario);
 }
 
@@ -95,7 +95,7 @@ fun test_register_composer() {
     );
     let events = event::events_by_type<ComposerRegisteredEvent>();
     assert!(events.length() == 1, 4);
-    test_utils::assert_eq(events[0], expected_event);
+    std::unit_test::assert_eq!(events[0], expected_event);
 
     clean_registry(scenario, registry);
 }
@@ -135,8 +135,8 @@ fun test_register_same_package_different_composers() {
     );
     let events = event::events_by_type<ComposerRegisteredEvent>();
     assert!(events.length() == 2, 5);
-    test_utils::assert_eq(events[0], expected_event_1);
-    test_utils::assert_eq(events[1], expected_event_2);
+    std::unit_test::assert_eq!(events[0], expected_event_1);
+    std::unit_test::assert_eq!(events[1], expected_event_2);
 
     clean_registry(scenario, registry);
 }
@@ -159,7 +159,7 @@ fun test_register_composer_already_registered() {
 #[test]
 fun test_register_composer_empty_composer_info() {
     let (mut scenario, mut registry) = setup_registry();
-    let empty_info = vector::empty<u8>();
+    let empty_info = vector[];
 
     // Register composer with empty composer_info - should work
     registry.register_composer(COMPOSER_1, empty_info, scenario.ctx());
@@ -192,7 +192,7 @@ fun test_set_composer_info() {
     let events = event::events_by_type<ComposerInfoSetEvent>();
     // Should have 1 event (from set_composer_info, not from register_composer)
     assert!(events.length() >= 1, 1);
-    test_utils::assert_eq(events[events.length() - 1], expected_event);
+    std::unit_test::assert_eq!(events[events.length() - 1], expected_event);
 
     clean_registry(scenario, registry);
 }
@@ -212,7 +212,7 @@ fun test_set_composer_info_unregistered_composer() {
 fun test_set_empty_composer_info() {
     let (mut scenario, mut registry) = setup_registry();
     let initial_info = create_test_composer_info();
-    let empty_info = vector::empty<u8>();
+    let empty_info = vector[];
 
     // Register composer first
     registry.register_composer(COMPOSER_1, initial_info, scenario.ctx());
@@ -263,7 +263,7 @@ fun test_send_compose() {
         INDEX,
         message,
     );
-    test_utils::assert_eq(event::events_by_type<ComposeSentEvent>()[0], compose_sent_event);
+    std::unit_test::assert_eq!(event::events_by_type<ComposeSentEvent>()[0], compose_sent_event);
     assert!(composer.get_compose_queue_length() == 1, 1);
 
     // send another compose
@@ -278,7 +278,7 @@ fun test_send_compose() {
         INDEX+1,
         message_2,
     );
-    test_utils::assert_eq(event::events_by_type<ComposeSentEvent>()[1], compose_sent_event_2);
+    std::unit_test::assert_eq!(event::events_by_type<ComposeSentEvent>()[1], compose_sent_event_2);
     assert!(composer.get_compose_queue_length() == 2, 2);
 
     clean(scenario, composer);
@@ -309,7 +309,7 @@ fun test_send_compose_and_clear() {
         guid,
         INDEX,
     );
-    test_utils::assert_eq(
+    std::unit_test::assert_eq!(
         event::events_by_type<ComposeDeliveredEvent>()[0],
         compose_delivered_event,
     );
@@ -373,5 +373,5 @@ fun test_lz_compose_alert() {
         extra_data,
         reason,
     );
-    test_utils::assert_eq(event::events_by_type<LzComposeAlertEvent>()[0], lz_compose_alert_event);
+    std::unit_test::assert_eq!(event::events_by_type<LzComposeAlertEvent>()[0], lz_compose_alert_event);
 }

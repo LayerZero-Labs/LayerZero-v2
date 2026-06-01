@@ -33,7 +33,7 @@ fun setup(): (Scenario, OAppRegistry) {
 }
 
 fun clean(scenario: Scenario, registry: OAppRegistry) {
-    test_utils::destroy(registry);
+    std::unit_test::destroy(registry);
     test_scenario::end(scenario);
 }
 
@@ -55,7 +55,7 @@ fun test_full_oapp_lifecycle() {
         messaging_channel,
         initial_info,
     );
-    test_utils::assert_eq(event::events_by_type<OAppRegisteredEvent>()[0], expected_registered_event);
+    std::unit_test::assert_eq!(event::events_by_type<OAppRegisteredEvent>()[0], expected_registered_event);
 
     // Step 2: Verify initial state
     assert!(registry.is_registered(OAPP_1), 0);
@@ -71,7 +71,7 @@ fun test_full_oapp_lifecycle() {
         OAPP_1,
         updated_info,
     );
-    test_utils::assert_eq(event::events_by_type<OAppInfoSetEvent>()[0], expected_info_set_event);
+    std::unit_test::assert_eq!(event::events_by_type<OAppInfoSetEvent>()[0], expected_info_set_event);
 
     // Step 4: Verify updated state
     assert!(registry.is_registered(OAPP_1), 3);
@@ -119,7 +119,7 @@ fun test_set_oapp_info_new() {
         OAPP_1,
         updated_info,
     );
-    test_utils::assert_eq(event::events_by_type<OAppInfoSetEvent>()[0], expected_event);
+    std::unit_test::assert_eq!(event::events_by_type<OAppInfoSetEvent>()[0], expected_event);
 
     clean(scenario, registry);
 }
@@ -160,7 +160,7 @@ fun test_get_oapp_info_not_registered() {
 #[test]
 fun test_empty_oapp_info() {
     let (mut scenario, mut registry) = setup();
-    let empty_info = vector::empty<u8>();
+    let empty_info = vector[];
 
     // Register oapp with empty oapp_info - should work
     let messaging_channel = messaging_channel::create(OAPP_1, scenario.ctx());
@@ -196,8 +196,8 @@ fun test_same_package_different_oapps() {
         messaging_channel_2,
         oapp_info_2,
     );
-    test_utils::assert_eq(events[0], expected_event_1);
-    test_utils::assert_eq(events[1], expected_event_2);
+    std::unit_test::assert_eq!(events[0], expected_event_1);
+    std::unit_test::assert_eq!(events[1], expected_event_2);
 
     // Both should be registered successfully
     assert!(registry.is_registered(OAPP_1), 0);
@@ -231,7 +231,7 @@ fun test_set_delegate() {
 
     // Verify DelegateSetEvent was emitted
     let delegate_set_event = oapp_registry::create_delegate_set_event(OAPP_1, DELEGATE_1);
-    test_utils::assert_eq(event::events_by_type<DelegateSetEvent>()[0], delegate_set_event);
+    std::unit_test::assert_eq!(event::events_by_type<DelegateSetEvent>()[0], delegate_set_event);
 
     // Update delegate
     registry.set_delegate(OAPP_1, DELEGATE_2);
@@ -239,7 +239,7 @@ fun test_set_delegate() {
 
     // Verify second DelegateSetEvent was emitted
     let updated_delegate_event = oapp_registry::create_delegate_set_event(OAPP_1, DELEGATE_2);
-    test_utils::assert_eq(event::events_by_type<DelegateSetEvent>()[1], updated_delegate_event);
+    std::unit_test::assert_eq!(event::events_by_type<DelegateSetEvent>()[1], updated_delegate_event);
 
     // Set delegate to @0x0 (remove delegate)
     registry.set_delegate(OAPP_1, @0x0);
@@ -247,7 +247,7 @@ fun test_set_delegate() {
 
     // Verify final DelegateSetEvent was emitted with @0x0
     let remove_delegate_event = oapp_registry::create_delegate_set_event(OAPP_1, @0x0);
-    test_utils::assert_eq(event::events_by_type<DelegateSetEvent>()[2], remove_delegate_event);
+    std::unit_test::assert_eq!(event::events_by_type<DelegateSetEvent>()[2], remove_delegate_event);
 
     clean(scenario, registry);
 }

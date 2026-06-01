@@ -76,7 +76,7 @@ fun create_test_executor(scenario: &mut Scenario): (Executor, OwnerCap, AdminCap
     scenario.next_tx(OWNER);
     let executor = test_scenario::take_shared<Executor>(scenario);
     let owner_cap = test_scenario::take_from_sender<OwnerCap>(scenario);
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
 
     scenario.next_tx(ADMIN);
     let admin_cap = test_scenario::take_from_sender<AdminCap>(scenario);
@@ -95,7 +95,7 @@ fun create_test_dst_config(): executor_type::DstConfig {
 }
 
 fun create_test_native_drop_params(): vector<NativeDropParams> {
-    let mut params = vector::empty<NativeDropParams>();
+    let mut params = vector[];
     vector::push_back(
         &mut params,
         native_drop_type::new_native_drop_params(@0x1001, TEST_NATIVE_DROP_AMOUNT),
@@ -191,7 +191,7 @@ fun test_complete_executor_functionality() {
     assert!(executor.is_admin(&new_admin_cap), 18);
     executor.set_admin(&owner_cap, new_admin, false, scenario.ctx());
     assert!(!executor.is_admin(&new_admin_cap), 19);
-    test_utils::destroy(new_admin_cap);
+    std::unit_test::destroy(new_admin_cap);
 
     // Test set_allowlist
     executor.set_allowlist(&owner_cap, OAPP, true);
@@ -239,7 +239,7 @@ fun test_native_drop_invalid_amount() {
     let (executor, owner_cap, admin_cap) = create_test_executor(&mut scenario);
 
     scenario.next_tx(ADMIN);
-    let mut params = vector::empty<NativeDropParams>();
+    let mut params = vector[];
     vector::push_back(&mut params, native_drop_type::new_native_drop_params(@0x1001, 0)); // Invalid amount
     let payment_coin = coin::mint_for_testing<SUI>(1000000, scenario.ctx());
 
@@ -269,7 +269,7 @@ fun test_unauthorized_admin_access() {
     scenario.next_tx(unauthorized_user);
     let user_admin_cap = worker_common::create_admin_cap_for_test(scenario.ctx());
     executor.set_default_multiplier_bps(&user_admin_cap, 15000);
-    test_utils::destroy(user_admin_cap);
+    std::unit_test::destroy(user_admin_cap);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -297,7 +297,7 @@ fun test_unauthorized_admin_native_drop() {
         payment_coin,
         scenario.ctx(),
     );
-    test_utils::destroy(user_admin_cap);
+    std::unit_test::destroy(user_admin_cap);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -310,7 +310,7 @@ fun test_native_drop_edge_cases() {
     let (executor, owner_cap, admin_cap) = create_test_executor(&mut scenario);
 
     // Test 1: Empty params
-    let empty_params = vector::empty<NativeDropParams>();
+    let empty_params = vector[];
     let payment_coin1 = coin::mint_for_testing<SUI>(1000000, scenario.ctx());
     executor.native_drop(
         &admin_cap,
@@ -498,7 +498,7 @@ fun test_create_executor_with_empty_admins() {
     // Try to create executor with empty admins vector (should fail)
     scenario.next_tx(OWNER);
 
-    let empty_admins = vector::empty<address>();
+    let empty_admins = vector[];
     let supported_message_libs = vector[]; // Empty vector for test
     let worker_cap = call_cap::new_package_cap_for_test(scenario.ctx());
     let mut worker_registry = worker_registry::init_for_test(scenario.ctx());
@@ -517,7 +517,7 @@ fun test_create_executor_with_empty_admins() {
     );
 
     // This should never be reached due to expected failure
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
     scenario.end();
 }
 
@@ -552,7 +552,7 @@ fun test_create_executor_will_set_worker_info() {
     assert!(executor_info.executor_object() == executor_object, 0);
 
     // This should never be reached due to expected failure
-    test_utils::destroy(worker_registry);
+    std::unit_test::destroy(worker_registry);
     scenario.end();
 }
 
@@ -567,16 +567,16 @@ fun test_set_ptb_builder_move_calls_with_real_calls() {
     let target_ptb_builder = @0x1234567890abcdef1234567890abcdef12345678;
 
     // Create arguments for MoveCall
-    let mut arguments = vector::empty<Argument>();
+    let mut arguments = vector[];
     vector::push_back(&mut arguments, argument::create_object(@0x123));
     vector::push_back(&mut arguments, argument::create_pure(b"test_data"));
 
     // Create type arguments
-    let mut type_arguments = vector::empty<type_name::TypeName>();
-    vector::push_back(&mut type_arguments, type_name::get<u64>());
+    let mut type_arguments = vector[];
+    vector::push_back(&mut type_arguments, type_name::with_defining_ids<u64>());
 
     // Create result IDs
-    let mut result_ids = vector::empty<Bytes32>();
+    let mut result_ids = vector[];
     vector::push_back(&mut result_ids, bytes32::zero_bytes32());
 
     // Create first MoveCall for get_fee
@@ -591,7 +591,7 @@ fun test_set_ptb_builder_move_calls_with_real_calls() {
     );
 
     // Create arguments for assign_job call
-    let mut assign_arguments = vector::empty<Argument>();
+    let mut assign_arguments = vector[];
     vector::push_back(&mut assign_arguments, argument::create_object(@0x456));
     vector::push_back(&mut assign_arguments, argument::create_pure(b"assign_data"));
 
@@ -601,16 +601,16 @@ fun test_set_ptb_builder_move_calls_with_real_calls() {
         ascii::string(b"job_module"), // module_name
         ascii::string(b"assign_job_function"), // function_name
         assign_arguments,
-        vector::empty<type_name::TypeName>(),
+        vector[],
         true, // is_builder_call
-        vector::empty<Bytes32>(),
+        vector[],
     );
 
     // Create vectors of MoveCall objects
-    let mut get_fee_move_calls = vector::empty<MoveCall>();
+    let mut get_fee_move_calls = vector[];
     vector::push_back(&mut get_fee_move_calls, get_fee_call);
 
-    let mut assign_job_move_calls = vector::empty<MoveCall>();
+    let mut assign_job_move_calls = vector[];
     vector::push_back(&mut assign_job_move_calls, assign_job_call);
 
     // Call the actual function with real MoveCall objects
@@ -629,7 +629,7 @@ fun test_set_ptb_builder_move_calls_with_real_calls() {
     assert!(returned_call.one_way(), 3);
 
     // Clean up the returned call
-    test_utils::destroy(returned_call);
+    std::unit_test::destroy(returned_call);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -645,8 +645,8 @@ fun test_set_ptb_builder_move_calls_edge_cases_real() {
     let target_ptb_builder = @0xabcdef1234567890abcdef1234567890abcdef12;
 
     // Test 1: Empty MoveCall vectors
-    let empty_get_fee = vector::empty<MoveCall>();
-    let empty_assign_job = vector::empty<MoveCall>();
+    let empty_get_fee = vector[];
+    let empty_assign_job = vector[];
 
     let call_empty = executor.set_ptb_builder_move_calls(
         &owner_cap,
@@ -659,11 +659,11 @@ fun test_set_ptb_builder_move_calls_edge_cases_real() {
     // Verify empty case
     assert!(call_empty.callee() == target_ptb_builder, 0);
     assert!(call_empty.caller() == executor.worker_cap_address(), 1);
-    test_utils::destroy(call_empty);
+    std::unit_test::destroy(call_empty);
 
     // Test 2: MoveCall with nested results
     let nested_arg = argument::create_nested_result(0, 1);
-    let mut nested_arguments = vector::empty<Argument>();
+    let mut nested_arguments = vector[];
     vector::push_back(&mut nested_arguments, nested_arg);
 
     let nested_call = move_call::create(
@@ -671,56 +671,56 @@ fun test_set_ptb_builder_move_calls_edge_cases_real() {
         ascii::string(b"nested_module"),
         ascii::string(b"nested_function"),
         nested_arguments,
-        vector::empty<type_name::TypeName>(),
+        vector[],
         false,
-        vector::empty<Bytes32>(),
+        vector[],
     );
 
-    let mut nested_calls = vector::empty<MoveCall>();
+    let mut nested_calls = vector[];
     vector::push_back(&mut nested_calls, nested_call);
 
     let call_nested = executor.set_ptb_builder_move_calls(
         &owner_cap,
         target_ptb_builder,
         nested_calls,
-        vector::empty<MoveCall>(),
+        vector[],
         scenario.ctx(),
     );
 
     // Verify nested case
     assert!(call_nested.callee() == target_ptb_builder, 2);
-    test_utils::destroy(call_nested);
+    std::unit_test::destroy(call_nested);
 
     // Test 3: MoveCall with multiple type arguments
-    let mut multi_types = vector::empty<type_name::TypeName>();
-    vector::push_back(&mut multi_types, type_name::get<u64>());
-    vector::push_back(&mut multi_types, type_name::get<bool>());
-    vector::push_back(&mut multi_types, type_name::get<address>());
+    let mut multi_types = vector[];
+    vector::push_back(&mut multi_types, type_name::with_defining_ids<u64>());
+    vector::push_back(&mut multi_types, type_name::with_defining_ids<bool>());
+    vector::push_back(&mut multi_types, type_name::with_defining_ids<address>());
 
     let multi_type_call = move_call::create(
         @0x666,
         ascii::string(b"multi_module"),
         ascii::string(b"multi_function"),
-        vector::empty<Argument>(),
+        vector[],
         multi_types,
         true,
-        vector::empty<Bytes32>(),
+        vector[],
     );
 
-    let mut multi_calls = vector::empty<MoveCall>();
+    let mut multi_calls = vector[];
     vector::push_back(&mut multi_calls, multi_type_call);
 
     let call_multi = executor.set_ptb_builder_move_calls(
         &owner_cap,
         target_ptb_builder,
-        vector::empty<MoveCall>(),
+        vector[],
         multi_calls,
         scenario.ctx(),
     );
 
     // Verify multi-type case
     assert!(call_multi.callee() == target_ptb_builder, 3);
-    test_utils::destroy(call_multi);
+    std::unit_test::destroy(call_multi);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -808,7 +808,7 @@ fun test_event_emissions() {
     };
 
     // Test empty params event
-    let empty_params = vector::empty<NativeDropParams>();
+    let empty_params = vector[];
     let payment3 = coin::mint_for_testing<SUI>(1000000, scenario.ctx());
     executor.native_drop(
         &admin_cap,
@@ -822,7 +822,7 @@ fun test_event_emissions() {
         scenario.ctx(),
     );
     let drop_events3 = event::events_by_type<NativeDropAppliedEvent>();
-    let expected_empty_success = vector::empty<bool>();
+    let expected_empty_success = vector[];
     let expected_empty_event = executor_worker::create_native_drop_applied_event(
         executor_address,
         SRC_EID,
@@ -999,7 +999,7 @@ fun test_lz_receive_alert_unauthorized() {
         ascii::string(b"Test failure"),
     );
 
-    test_utils::destroy(user_admin_cap);
+    std::unit_test::destroy(user_admin_cap);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }
@@ -1028,7 +1028,7 @@ fun test_lz_compose_alert_unauthorized() {
         ascii::string(b"Test compose failure"),
     );
 
-    test_utils::destroy(user_admin_cap);
+    std::unit_test::destroy(user_admin_cap);
 
     clean(scenario, executor, owner_cap, admin_cap);
 }

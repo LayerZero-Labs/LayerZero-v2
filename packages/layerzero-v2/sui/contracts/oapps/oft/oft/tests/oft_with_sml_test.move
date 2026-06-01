@@ -63,7 +63,7 @@ fun test_oft_send_vanilla() {
         SEND_AMOUNT,
         native_fee,
         option::none<sui::coin::Coin<zro::zro::ZRO>>(),
-        vector::empty<u8>(),
+        vector[],
         false,
     );
 
@@ -124,7 +124,7 @@ fun test_oft_lz_receive_compose_without_compose_msg() {
         SRC_EID,
         DST_EID,
         SEND_AMOUNT,
-        vector::empty<u8>(),
+        vector[],
     );
 
     // try trigger lz_receive but apparently it will fail
@@ -221,5 +221,5 @@ fun get_test_coin_balance<T>(scenario: &mut Scenario, addr: address): u64 {
 fun clean(scenario: Scenario, clock: Clock, deployments: Deployments) {
     test_scenario::end(scenario);
     clock::destroy_for_testing(clock);
-    test_utils::destroy(deployments);
+    std::unit_test::destroy(deployments);
 }

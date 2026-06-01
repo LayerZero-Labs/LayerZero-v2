@@ -59,7 +59,7 @@ fun test_encode_decode_empty_payload() {
 #[expected_failure(abort_code = worker_info_v1::EInvalidVersion)]
 fun test_decode_invalid_version() {
     // Create invalid encoded data with wrong version
-    let mut invalid_encoded = vector::empty<u8>();
+    let mut invalid_encoded = vector[];
     invalid_encoded.push_back(0u8); // Invalid version (2, big-endian high byte)
     invalid_encoded.push_back(2u8); // Invalid version (2, big-endian low byte)
     invalid_encoded.push_back(TEST_WORKER_ID); // Worker type
@@ -77,7 +77,7 @@ fun test_decode_invalid_data() {
         create_empty_info(),
     );
     // Create invalid encoded data with valid version but invalid BCS data (trailing bytes)
-    let mut invalid_encoded = vector::empty<u8>();
+    let mut invalid_encoded = vector[];
     invalid_encoded.append(test_worker_info.encode());
     invalid_encoded.append(b"deadbeef"); // Extra trailing bytes
     worker_info_v1::decode(invalid_encoded);

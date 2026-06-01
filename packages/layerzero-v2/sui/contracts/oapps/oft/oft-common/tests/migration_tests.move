@@ -73,7 +73,7 @@ fun test_create_and_destroy_migration_ticket() {
     assert!(balance::value(&escrow) == 1000000, 0);
 
     // Clean up resources
-    sui::test_utils::destroy(recovered_oft_cap);
+    std::unit_test::destroy(recovered_oft_cap);
     option::destroy_none(recovered_treasury_cap); // Handle the None treasury option
     balance::destroy_for_testing(escrow);
     bag::destroy_empty(recovered_extra);
@@ -128,8 +128,8 @@ fun test_migration_ticket_with_extra_data() {
     assert!(config == b"test_config", 0);
 
     // Clean up resources
-    sui::test_utils::destroy(recovered_oft_cap);
-    sui::test_utils::destroy(recovered_treasury_cap);
+    std::unit_test::destroy(recovered_oft_cap);
+    std::unit_test::destroy(recovered_treasury_cap);
     option::destroy_none(recovered_escrow);
     bag::destroy_empty(recovered_extra);
     migration::destroy_migration_cap(migration_cap);
@@ -161,7 +161,7 @@ fun test_migration_ticket_with_both_treasury_and_escrow() {
         extra,
     );
 
-    sui::test_utils::destroy(migration_ticket);
+    std::unit_test::destroy(migration_ticket);
     migration::destroy_migration_cap(migration_cap);
 
     test_scenario::end(scenario);
@@ -189,7 +189,7 @@ fun test_migration_ticket_with_neither_treasury_nor_escrow() {
         extra,
     );
 
-    sui::test_utils::destroy(migration_ticket);
+    std::unit_test::destroy(migration_ticket);
     migration::destroy_migration_cap(migration_cap);
 
     test_scenario::end(scenario);
@@ -227,8 +227,8 @@ fun test_migration_ticket_with_invalid_migration_cap() {
         recovered_extra,
     ) = migration::destroy_migration_ticket(migration_ticket, &fake_migration_cap);
 
-    sui::test_utils::destroy(fake_migration_cap);
-    sui::test_utils::destroy(recovered_oft_cap);
+    std::unit_test::destroy(fake_migration_cap);
+    std::unit_test::destroy(recovered_oft_cap);
     option::destroy_none(recovered_treasury_cap);
     option::destroy_none(recovered_escrow);
     bag::destroy_empty(recovered_extra);

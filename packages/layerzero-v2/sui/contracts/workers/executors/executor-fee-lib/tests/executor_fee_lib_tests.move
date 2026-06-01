@@ -77,7 +77,7 @@ fun test_get_fee_basic() {
         // Create call
         let mut call = call::create(
             executor_fee_lib.get_call_cap(),
-            @0x0, // callee
+            executor_fee_lib.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -95,8 +95,8 @@ fun test_get_fee_basic() {
         // require a real price feed interaction
 
         // Clean up - destroy the child call and parent call
-        test_utils::destroy(price_feed_call);
-        test_utils::destroy(call);
+        std::unit_test::destroy(price_feed_call);
+        std::unit_test::destroy(call);
         ts::return_shared(executor_fee_lib);
     };
 
@@ -327,7 +327,7 @@ fun test_zero_lz_receive_base_gas_should_fail() {
 
         let mut call = call::create(
             executor_fee_lib.get_call_cap(),
-            @0x0,
+            executor_fee_lib.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -337,8 +337,8 @@ fun test_zero_lz_receive_base_gas_should_fail() {
         let price_feed_call = executor_fee_lib.get_fee(&mut call, scenario.ctx());
 
         // Clean up - these won't actually execute due to expected failure
-        test_utils::destroy(price_feed_call);
-        test_utils::destroy(call);
+        std::unit_test::destroy(price_feed_call);
+        std::unit_test::destroy(call);
         ts::return_shared(executor_fee_lib);
     };
 

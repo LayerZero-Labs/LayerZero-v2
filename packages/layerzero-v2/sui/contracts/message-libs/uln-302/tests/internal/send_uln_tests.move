@@ -93,7 +93,7 @@ fun test_new_send_uln() {
     // Verify initial state
     assert!(!send_uln.is_supported_eid(DST_EID), 0);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -119,7 +119,7 @@ fun test_set_default_executor_config() {
     let expected_event = send_uln::create_default_executor_config_set_event(DST_EID, config);
     assert!(events[0] == expected_event, 3);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -146,7 +146,7 @@ fun test_quote_basic() {
     assert!(executor_get_fee::sender(&executor_param) == ALICE, 5);
     assert!(executor_get_fee::dst_eid(&executor_param) == DST_EID, 6);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -179,7 +179,7 @@ fun test_quote_multiple_dvns() {
     assert!(dvns[2] == @0x5001, 5); // first optional DVN
     assert!(dvns[3] == @0x5002, 6); // second optional DVN
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -251,7 +251,7 @@ fun test_send_derives_from_quote() {
     assert!(send_dvns[1] == DVN2, 6); // second required
     assert!(send_dvns[2] == @0x5001, 7); // optional
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -300,7 +300,7 @@ fun test_effective_config_precedence() {
     let expected_default_uln_event = send_uln::create_default_uln_config_set_event(DST_EID, default_uln_config);
     assert!(default_uln_events[0] == expected_default_uln_event, 8);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -409,7 +409,7 @@ fun test_error_no_default_executor_config() {
     // Attempt to get executor config without setting it first
     let _config = send_uln.get_default_executor_config(DST_EID);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -422,7 +422,7 @@ fun test_error_no_default_uln_config() {
     // Attempt to get ULN config without setting it first
     let _config = send_uln.get_default_uln_config(DST_EID);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -435,7 +435,7 @@ fun test_error_no_oapp_uln_config() {
     // Attempt to get OApp ULN config without setting it first
     let _config = send_uln.get_oapp_uln_config(ALICE, DST_EID);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -448,7 +448,7 @@ fun test_error_no_oapp_executor_config() {
     // Attempt to get OApp executor config without setting it first
     let _config = send_uln.get_oapp_executor_config(ALICE, DST_EID);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -486,7 +486,7 @@ fun test_error_invalid_message_size_in_quote() {
     // fail with EInvalidMessageSize
     let (_executor, _executor_param, _dvns, _dvn_params) = send_uln.quote(&quote_param);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -509,7 +509,7 @@ fun test_supported_eid_combinations() {
     // Test different EID
     assert!(!send_uln.is_supported_eid(DST_EID + 1), 3); // Different EID not supported
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -561,7 +561,7 @@ fun test_set_uln_config_happy_flow() {
     let expected_uln_event = send_uln::create_uln_config_set_event(ALICE, DST_EID, oapp_uln_config);
     assert!(uln_events[0] == expected_uln_event, 7);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -579,7 +579,7 @@ fun test_get_oapp_executor_config() {
     assert!(retrieved_config.max_message_size() == 2000, 0);
     assert!(retrieved_config.executor() == @0x9001, 1);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -603,7 +603,7 @@ fun test_get_oapp_uln_config() {
     assert!(retrieved_config.uln_config().required_dvns() == &vector[@0xa001], 1);
     assert!(retrieved_config.uln_config().optional_dvns() == &vector[@0xb001], 2);
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 
@@ -642,7 +642,7 @@ fun test_get_effective_uln_config() {
     assert!(mixed_effective.required_dvns() == &vector[DVN1], 3); // From default
     assert!(mixed_effective.optional_dvns() == &vector[@0xc001], 4); // From custom
 
-    test_utils::destroy(send_uln);
+    std::unit_test::destroy(send_uln);
     test_scenario::end(scenario);
 }
 

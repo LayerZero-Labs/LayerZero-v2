@@ -285,8 +285,8 @@ public fun send(
     test_scenario::return_shared<MessagingChannel>(messaging_channel);
     scenario.return_to_sender<AdminCap>(admin_cap);
     utils::transfer_coin(coin_provided, sender); // return excessive coin back to sender
-    test_utils::destroy(composer_callcap);
-    test_utils::destroy(clock);
+    std::unit_test::destroy(composer_callcap);
+    std::unit_test::destroy(clock);
     (oft_sender, send_call, oft_send_context)
 }
 
@@ -331,7 +331,7 @@ public fun lz_receive(
         nonce,
         guid,
         message,
-        vector::empty<u8>(),
+        vector[],
         option::some(value),
         scenario.ctx(),
     );
@@ -367,8 +367,8 @@ public fun lz_receive(
     };
     option::destroy_none(composer_registry_opt);
 
-    test_utils::destroy(clock);
-    test_utils::destroy(executor_cap);
+    std::unit_test::destroy(clock);
+    std::unit_test::destroy(executor_cap);
 }
 
 public fun create_inbound_packet(
@@ -447,9 +447,9 @@ public fun create_send_param(dst_eid: u32, to: address, amount_ld: u64, compose_
         bytes32::from_address(to),
         amount_ld,
         ((amount_ld as u256) * 99 / 100) as u64, // min_amount_ld with 1% slippage
-        vector::empty<u8>(), // extra_options
+        vector[], // extra_options
         compose_msg,
-        vector::empty<u8>(), // oft_cmd
+        vector[], // oft_cmd
     )
 }
 

@@ -5,7 +5,7 @@ use utils::hash;
 
 #[test]
 fun test_blake2b256_empty_input() {
-    let empty_input = vector::empty<u8>();
+    let empty_input = vector[];
     let result = hash::blake2b256!(&empty_input);
     assert!(result.to_bytes() == x"0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8", 0);
 
@@ -16,7 +16,7 @@ fun test_blake2b256_empty_input() {
 
 #[test]
 fun test_keccak256_empty_input() {
-    let empty_input = vector::empty<u8>();
+    let empty_input = vector[];
     let result = hash::keccak256!(&empty_input);
     assert!(result.to_bytes() == x"c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", 0);
 

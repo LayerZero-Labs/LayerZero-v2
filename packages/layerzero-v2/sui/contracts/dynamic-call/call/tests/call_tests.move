@@ -43,7 +43,7 @@ fun test_new_cap() {
     // Verify cap was created successfully
     assert!(object::id_address(&cap) != @0x0, 0);
 
-    test_utils::destroy(cap);
+    std::unit_test::destroy(cap);
     clean(scenario);
 }
 
@@ -150,9 +150,9 @@ fun complete_call_lifecycle(oneway: bool) {
     assert!(param_ret.value == 300, 38); // Final modified value
     assert!(result_ret.computed == 84, 39);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -231,9 +231,9 @@ fun test_complete_call_create_single_child() {
     // Step 6: Destroy parent call (two-way, so caller destroys)
     let (_, _, _) = parent_call.destroy(&caller_cap);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -409,11 +409,11 @@ fun test_complete_call_lifecycle_with_child_calls() {
     assert!(parent_param.value == 100, 99);
     assert!(parent_result.computed == 200, 100);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child1_callee_cap);
-    test_utils::destroy(child2_callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child1_callee_cap);
+    std::unit_test::destroy(child2_callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -447,9 +447,9 @@ fun test_void_result_lifecycle() {
     // void_result is of type Void - just verify we can use it
     let _void_copy = copy void_result; // Void has copy, so this should work
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -492,8 +492,8 @@ fun test_mutable_param_enabled_allows_callee_modification() {
     // Verify final parameter reflects the modification
     assert!(final_param.value == 100, 3);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -529,8 +529,8 @@ fun test_complete_and_destroy_one_way_void_call() {
     // Call object should be consumed and destroyed at this point
     // No need to manually destroy since complete_and_destroy consumed it
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -559,9 +559,9 @@ fun test_param_mut_without_enable_mutable_param() {
     // Try to get mutable reference without enabling mutable param - should fail with EParameterNotMutable
     call.param_mut(&callee_cap);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -586,11 +586,11 @@ fun test_param_mut_unauthorized_caller() {
     // Try to access mutable parameters with caller capability - should fail
     call.param_mut(&caller_cap);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -637,12 +637,12 @@ fun test_unauthorized_complete() {
     // Try to complete with wrong capability - should fail with EUnauthorized
     call.complete(&wrong_cap, result);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_cap);
-    test_utils::destroy(recipient_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_cap);
+    std::unit_test::destroy(recipient_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -670,10 +670,10 @@ fun test_unauthorized_destroy() {
     // Try to destroy with wrong capability - should fail with EUnauthorized
     let (_, _, _) = call.destroy(&wrong_cap);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(recipient_cap);
-    test_utils::destroy(wrong_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(recipient_cap);
+    std::unit_test::destroy(wrong_cap);
     clean(scenario);
 }
 
@@ -709,13 +709,13 @@ fun test_unauthorized_create_child() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(child_call);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(child_call);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -755,12 +755,12 @@ fun test_unauthorized_destroy_child() {
     // Try to destroy child with wrong capability - should fail with EUnauthorized
     let (_, _, _) = call::destroy_child(&mut parent_call, &wrong_cap, child_call);
 
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -787,10 +787,10 @@ fun test_unauthorized_new_child_batch() {
     // Try to start child batch with wrong capability - should fail with EUnauthorized
     call.new_child_batch(&wrong_cap, 1);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(wrong_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(wrong_cap);
     clean(scenario);
 }
 
@@ -828,11 +828,11 @@ fun test_destroy_non_root_call() {
     // Try to destroy child call directly (not as child) - should fail with EInvalidParent
     let (_, _, _) = child_call.destroy(&callee_cap);
 
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -887,13 +887,13 @@ fun test_destroy_child_with_wrong_parent() {
     // Try to destroy child with wrong parent - should fail with EInvalidParent
     let (_, _, _) = call::destroy_child(&mut parent_call2, &callee_cap, child_call1);
 
-    test_utils::destroy(parent_call1);
-    test_utils::destroy(parent_call2);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(recipient_cap);
-    test_utils::destroy(child_call2);
+    std::unit_test::destroy(parent_call1);
+    std::unit_test::destroy(parent_call2);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(recipient_cap);
+    std::unit_test::destroy(child_call2);
     clean(scenario);
 }
 
@@ -947,16 +947,16 @@ fun destroy_uncompleted_call(is_batch_finalized: bool, destroy_child: bool) {
         child_call.complete(&child_callee_cap, create_test_result(42));
         call.destroy_child(&callee_cap, child_call);
     } else {
-        test_utils::destroy(child_call);
+        std::unit_test::destroy(child_call);
     };
 
     // Try to destroy without completing - should fail with ECallNotCompleted (callee destroys one-way calls)
     let (_, _, _) = call.destroy(&callee_cap);
 
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(recipient_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(recipient_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1006,11 +1006,11 @@ fun destroy_child_uncompleted(is_child_completed: bool, is_parent_batch_finalize
     // Try to destroy child without completing - should fail with ECallNotCompleted
     let (_, _, _) = call::destroy_child(&mut parent_call, &callee_cap, child_call);
 
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(recipient_cap);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(recipient_cap);
     clean(scenario);
 }
 
@@ -1046,11 +1046,11 @@ fun test_complete_creating_call() {
     // Try to complete while still in Creating status - should fail with ECallNotActive
     call.complete(&callee_cap, result);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(child_call);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(child_call);
     clean(scenario);
 }
 
@@ -1088,11 +1088,11 @@ fun test_complete_wating_call_with_undestroyed_child() {
     // Try to complete while still in Creating status - should fail with ECallNotActive
     call.complete(&callee_cap, result);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
-    test_utils::destroy(child_call);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
+    std::unit_test::destroy(child_call);
     clean(scenario);
 }
 
@@ -1133,11 +1133,11 @@ fun test_complete_completed_call() {
     // Try to complete already completed call - should fail with ECallNotActive
     call.complete(&callee_cap, result);
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(recipient_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(recipient_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1168,11 +1168,11 @@ fun test_create_child_when_parent_is_active() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(child_call);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(child_call);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1214,12 +1214,12 @@ fun test_create_child_when_parent_is_waiting() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(first_child);
-    test_utils::destroy(second_child);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(first_child);
+    std::unit_test::destroy(second_child);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1253,11 +1253,11 @@ fun test_create_child_when_parent_is_completed() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(child_call);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(child_call);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1307,12 +1307,12 @@ fun test_destroy_child_in_wrong_order() {
     // Try to destroy child2 first (should fail - must destroy in FIFO order: child1 first)
     let (_, _, _) = call::destroy_child(&mut parent_call, &callee_cap, child2_call);
 
-    test_utils::destroy(child1_call);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child1_callee_cap);
-    test_utils::destroy(child2_callee_cap);
+    std::unit_test::destroy(child1_call);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child1_callee_cap);
+    std::unit_test::destroy(child2_callee_cap);
     clean(scenario);
 }
 
@@ -1338,9 +1338,9 @@ fun test_new_child_batch_with_wrong_nonce() {
     // Try to start child batch with wrong nonce (should be 1, but provide 2)
     call.new_child_batch(&callee_cap, 2); // Should fail with EInvalidNonce
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -1368,10 +1368,10 @@ fun test_new_child_batch_when_creating() {
     // Try to start another child batch while in Creating status (should fail)
     call.new_child_batch(&callee_cap, 2); // Should fail with ECallNotActive
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1407,11 +1407,11 @@ fun test_new_child_batch_when_waiting() {
     // Try to start child batch while in Waiting status (should fail)
     call.new_child_batch(&callee_cap, 2); // Should fail with ECallNotActive
 
-    test_utils::destroy(call);
-    test_utils::destroy(child_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child_callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(child_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child_callee_cap);
     clean(scenario);
 }
 
@@ -1438,9 +1438,9 @@ fun test_new_child_batch_when_completed() {
     // Try to start child batch when call is Completed (should fail)
     call.new_child_batch(&callee_cap, 1); // Should fail with ECallNotActive
 
-    test_utils::destroy(call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
+    std::unit_test::destroy(call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
     clean(scenario);
 }
 
@@ -1490,11 +1490,11 @@ fun test_create_single_child_more_than_one_batch() {
         scenario.ctx(),
     );
 
-    test_utils::destroy(child2_call);
-    test_utils::destroy(parent_call);
-    test_utils::destroy(caller_cap);
-    test_utils::destroy(callee_cap);
-    test_utils::destroy(child1_callee_cap);
-    test_utils::destroy(child2_callee_cap);
+    std::unit_test::destroy(child2_call);
+    std::unit_test::destroy(parent_call);
+    std::unit_test::destroy(caller_cap);
+    std::unit_test::destroy(callee_cap);
+    std::unit_test::destroy(child1_callee_cap);
+    std::unit_test::destroy(child2_callee_cap);
     clean(scenario);
 }

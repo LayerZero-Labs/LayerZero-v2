@@ -42,7 +42,7 @@ fun test_set_enforced_options() {
         let expected = VALID_OPTIONS_1;
         assert!(retrieved == expected, 0);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -69,7 +69,7 @@ fun test_set_multiple_enforced_options() {
         assert!(enforced_options::get_enforced_options(&enforced, DST_EID_1, MSG_TYPE_2) == expected2, 1);
         assert!(enforced_options::get_enforced_options(&enforced, DST_EID_2, MSG_TYPE_1) == expected3, 2);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -93,7 +93,7 @@ fun test_update_enforced_options() {
         let expected_updated = VALID_OPTIONS_2;
         assert!(enforced_options::get_enforced_options(&enforced, DST_EID_1, MSG_TYPE_1) == expected_updated, 1);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -111,7 +111,7 @@ fun test_get_enforced_options_not_found() {
         // Try to get options that don't exist - should abort
         let _ = enforced_options::get_enforced_options(&enforced, DST_EID_1, MSG_TYPE_1);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -132,7 +132,7 @@ fun test_combine_options_with_enforced() {
         let combined = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, VALID_OPTIONS_1);
         assert!(combined == COMBINED_OPTIONS, 0);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -150,7 +150,7 @@ fun test_combine_options_no_enforced() {
         let result = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, VALID_OPTIONS_1);
         assert!(result == VALID_OPTIONS_1, 0);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -168,10 +168,10 @@ fun test_combine_options_empty_extra() {
         enforced_options::set_enforced_options(&mut enforced, OAPP_ADDRESS, DST_EID_1, MSG_TYPE_1, VALID_OPTIONS_1);
 
         // Combine with empty extra options - should return enforced options
-        let result = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, vector::empty());
+        let result = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, vector[]);
         assert!(result == VALID_OPTIONS_1, 0);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -186,10 +186,10 @@ fun test_combine_options_both_empty() {
         let enforced = enforced_options::new(test_scenario::ctx(&mut scenario));
 
         // Combine when both are empty - should return empty
-        let result = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, vector::empty());
-        assert!(result == vector::empty(), 0);
+        let result = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, vector[]);
+        assert!(result == vector[], 0);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -213,7 +213,7 @@ fun test_set_enforced_options_invalid_type() {
             INVALID_OPTIONS_WRONG_TYPE,
         );
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -237,7 +237,7 @@ fun test_set_enforced_options_too_short() {
             INVALID_OPTIONS_TOO_SHORT,
         );
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);
@@ -258,7 +258,7 @@ fun test_combine_options_invalid_extra() {
         // Try to combine with invalid extra options - should abort
         let _ = enforced_options::combine_options(&enforced, DST_EID_1, MSG_TYPE_1, INVALID_OPTIONS_WRONG_TYPE);
 
-        test_utils::destroy(enforced);
+        std::unit_test::destroy(enforced);
     };
 
     test_scenario::end(scenario);

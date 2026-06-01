@@ -99,7 +99,7 @@ fun setup_worker_for_integration(
     );
 
     builder.set_worker_ptbs(call);
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
 
     worker_address
 }
@@ -188,7 +188,7 @@ fun test_set_worker_ptbs_single_worker() {
     assert!(stored.get_fee_ptb().length() == 2, 1);
     assert!(stored.get_assign_job_ptb().length() == 3, 2);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     clean(scenario, builder);
 }
 
@@ -198,14 +198,14 @@ fun test_set_worker_ptbs_multiple_workers() {
 
     // Worker1 sets PTBs
     let (worker1_cap, worker1_address) = setup_worker_ptbs(&mut scenario, &mut builder, WORKER1, 2, 2);
-    test_utils::destroy(worker1_cap);
+    std::unit_test::destroy(worker1_cap);
     test_scenario::return_shared(builder);
 
     // Worker2 sets PTBs
     test_scenario::next_tx(&mut scenario, WORKER2);
     let mut builder = test_scenario::take_shared<Uln302PtbBuilder>(&scenario);
     let (worker2_cap, worker2_address) = setup_worker_ptbs(&mut scenario, &mut builder, WORKER2, 3, 4);
-    test_utils::destroy(worker2_cap);
+    std::unit_test::destroy(worker2_cap);
     test_scenario::return_shared(builder);
 
     // Verify both workers
@@ -236,7 +236,7 @@ fun test_set_worker_ptbs_update_existing() {
 
     // Initial set
     let (worker_cap, _) = setup_worker_ptbs(&mut scenario, &mut builder, WORKER1, 2, 3);
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     test_scenario::return_shared(builder);
 
     // Update with new values
@@ -249,7 +249,7 @@ fun test_set_worker_ptbs_update_existing() {
     assert!(updated.get_fee_ptb().length() == 5, 0);
     assert!(updated.get_assign_job_ptb().length() == 7, 1);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     test_scenario::return_shared(builder);
 
     test_scenario::end(scenario);
@@ -268,7 +268,7 @@ fun test_set_worker_ptbs_empty_vectors() {
     assert!(stored.get_fee_ptb().is_empty(), 1);
     assert!(stored.get_assign_job_ptb().is_empty(), 2);
 
-    test_utils::destroy(worker_cap);
+    std::unit_test::destroy(worker_cap);
     clean(scenario, builder);
 }
 
@@ -456,8 +456,8 @@ fun test_build_quote_ptb() {
         assert!(last_call.function().function_name() == ascii::string(b"confirm_quote"), 6);
         assert!(!last_call.is_builder_call(), 7);
 
-        test_utils::destroy(oapp_cap);
-        test_utils::destroy(quote_call);
+        std::unit_test::destroy(oapp_cap);
+        std::unit_test::destroy(quote_call);
         scenario.return_to_sender(endpoint_admin_cap);
         scenario.return_to_sender(uln_admin_cap);
         test_scenario::return_shared(builder);
@@ -559,8 +559,8 @@ fun test_build_send_ptb() {
         assert!(last_call.function().function_name() == ascii::string(b"confirm_send"), 6);
         assert!(!last_call.is_builder_call(), 7);
 
-        test_utils::destroy(oapp_cap);
-        test_utils::destroy(send_call);
+        std::unit_test::destroy(oapp_cap);
+        std::unit_test::destroy(send_call);
         scenario.return_to_sender(endpoint_admin_cap);
         scenario.return_to_sender(uln_admin_cap);
         test_scenario::return_shared(builder);
@@ -656,8 +656,8 @@ fun test_build_quote_ptb_without_set_worker_ptbs() {
         builder.build_quote_ptb(&uln302, &treasury, &quote_call);
 
         // Clean up (won't reach here due to expected failure)
-        test_utils::destroy(quote_call);
-        test_utils::destroy(oapp_cap);
+        std::unit_test::destroy(quote_call);
+        std::unit_test::destroy(oapp_cap);
         scenario.return_to_sender(endpoint_admin_cap);
         scenario.return_to_sender(uln_admin_cap);
         test_scenario::return_shared(builder);
@@ -730,8 +730,8 @@ fun test_build_send_ptb_without_set_worker_ptbs() {
         builder.build_send_ptb(&uln302, &treasury, &endpoint, &send_call);
 
         // Clean up (won't reach here due to expected failure)
-        test_utils::destroy(send_call);
-        test_utils::destroy(oapp_cap);
+        std::unit_test::destroy(send_call);
+        std::unit_test::destroy(oapp_cap);
         scenario.return_to_sender(endpoint_admin_cap);
         scenario.return_to_sender(uln_admin_cap);
         test_scenario::return_shared(builder);

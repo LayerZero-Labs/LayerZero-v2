@@ -26,7 +26,7 @@ fun clean(scenario: ts::Scenario) {
 /// Create a sample MoveCall for testing
 fun create_test_move_call(function_name: ascii::String): MoveCall {
     let arguments = vector[argument::create_object(@0x1), argument::create_id(bytes32::from_address(@0x2))];
-    let type_arguments = vector[type_name::get<u64>()];
+    let type_arguments = vector[type_name::with_defining_ids<u64>()];
 
     move_call::create(
         TEST_PACKAGE_ADDRESS,
@@ -86,6 +86,6 @@ fun test_create_msglib_ptb_builder_info() {
     assert!(info.send_ptb().length() == 3, 4);
     assert!(info.set_config_ptb().length() == 2, 5);
 
-    test_utils::destroy(info);
+    std::unit_test::destroy(info);
     clean(scenario);
 }

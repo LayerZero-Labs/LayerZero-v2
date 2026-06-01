@@ -58,7 +58,7 @@ fun test_get_fee_basic() {
             SENDER,
             V2_EID,
             CONFIRMATIONS,
-            vector::empty<u8>(), // empty options
+            vector[], // empty options
             QUORUM,
             PRICE_FEED,
             DEFAULT_MULTIPLIER_BPS,
@@ -70,7 +70,7 @@ fun test_get_fee_basic() {
         // Create call
         let mut call = call::create(
             dvn_fee_lib.get_call_cap(),
-            @0x0, // callee
+            dvn_fee_lib.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -84,8 +84,8 @@ fun test_get_fee_basic() {
         assert!(price_feed_call.callee() == PRICE_FEED, 1);
 
         // Clean up - destroy the child call and parent call
-        test_utils::destroy(price_feed_call);
-        test_utils::destroy(call);
+        std::unit_test::destroy(price_feed_call);
+        std::unit_test::destroy(call);
         ts::return_shared(dvn_fee_lib);
     };
 
@@ -101,7 +101,7 @@ fun test_fee_calculation_components() {
         SENDER,
         V2_EID,
         CONFIRMATIONS,
-        vector::empty<u8>(),
+        vector[],
         QUORUM,
         PRICE_FEED,
         DEFAULT_MULTIPLIER_BPS,
@@ -211,7 +211,7 @@ fun test_get_fee_zero_gas_should_fail() {
             SENDER,
             V2_EID,
             CONFIRMATIONS,
-            vector::empty<u8>(),
+            vector[],
             QUORUM,
             PRICE_FEED,
             DEFAULT_MULTIPLIER_BPS,
@@ -222,7 +222,7 @@ fun test_get_fee_zero_gas_should_fail() {
 
         let mut call = call::create(
             dvn_fee_lib.get_call_cap(),
-            @0x0,
+            dvn_fee_lib.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -232,8 +232,8 @@ fun test_get_fee_zero_gas_should_fail() {
         let price_feed_call = dvn_fee_lib.get_fee(&mut call, scenario.ctx());
 
         // Clean up - these won't actually execute due to expected failure
-        test_utils::destroy(price_feed_call);
-        test_utils::destroy(call);
+        std::unit_test::destroy(price_feed_call);
+        std::unit_test::destroy(call);
         ts::return_shared(dvn_fee_lib);
     };
 

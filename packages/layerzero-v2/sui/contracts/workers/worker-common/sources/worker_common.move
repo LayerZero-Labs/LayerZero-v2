@@ -222,7 +222,7 @@ public fun set_admin(worker: &mut Worker, owner_cap: &OwnerCap, admin: address, 
         let admin_cap_id = *registry.admin_to_admin_cap_id.borrow(admin);
         *registry.admin_cap_status.borrow_mut(admin_cap_id) = false;
 
-        assert!(registry.active_admins.size() > 0, EWorkerAttemptingToRemoveOnlyAdmin);
+        assert!(registry.active_admins.length() > 0, EWorkerAttemptingToRemoveOnlyAdmin);
     };
 
     event::emit(SetAdminEvent {
@@ -372,7 +372,7 @@ public fun assert_supported_message_lib(worker: &Worker, message_lib: address) {
 
 /// Get allowlist size
 public fun allowlist_size(worker: &Worker): u64 {
-    worker.allowlist.size()
+    worker.allowlist.length()
 }
 
 /// Get the default multiplier basis points
@@ -392,7 +392,7 @@ public fun get_native_decimals_rate(): u64 {
 
 /// Get supported option types for a destination EID
 public fun get_supported_option_types(worker: &Worker, dst_eid: u32): vector<u8> {
-    *table_ext::borrow_with_default!(&worker.supported_option_types, dst_eid, &vector::empty())
+    *table_ext::borrow_with_default!(&worker.supported_option_types, dst_eid, &vector[])
 }
 
 /// Check if an address has ACL permission
@@ -403,7 +403,7 @@ public fun get_supported_option_types(worker: &Worker, dst_eid: u32): vector<u8>
 public fun has_acl(worker: &Worker, sender: address): bool {
     if (worker.is_on_denylist(sender)) {
         false
-    } else if (worker.allowlist.size() == 0 || worker.is_on_allowlist(sender)) {
+    } else if (worker.allowlist.length() == 0 || worker.is_on_allowlist(sender)) {
         true
     } else {
         false

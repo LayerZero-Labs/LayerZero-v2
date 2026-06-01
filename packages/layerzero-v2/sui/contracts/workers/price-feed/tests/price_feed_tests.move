@@ -256,7 +256,7 @@ fun test_estimate_fee_by_eid_default_model() {
         let param = estimate_fee::create_param(101, 1000, 500);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0, // callee address (not used in this test)
+            price_feed.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -324,7 +324,7 @@ fun test_estimate_fee_with_arbitrum_model() {
         let param = estimate_fee::create_param(110, 1000, 500);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0, // callee address (not used in this test)
+            price_feed.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -392,7 +392,7 @@ fun test_estimate_fee_with_optimism_model() {
         let param = estimate_fee::create_param(111, 1000, 500);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0, // callee address (not used in this test)
+            price_feed.get_call_cap().id(),
             false, // one_way
             param,
             scenario.ctx(),
@@ -613,7 +613,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(30101, 50, 100);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -643,7 +643,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(10101, 50, 100);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -667,7 +667,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(84444, 50, 100);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -691,7 +691,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(60110, 50, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -715,7 +715,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(10143, 50, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -739,7 +739,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(25555, 50, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -763,7 +763,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(90111, 2100, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -787,7 +787,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(40132, 2100, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -811,7 +811,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(41000, 2100, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),
@@ -835,7 +835,7 @@ fun test_estimate_fee_on_send() {
         let param = estimate_fee::create_param(26666, 2100, 232);
         let mut call = call::create(
             price_feed.get_call_cap(),
-            @0x0,
+            price_feed.get_call_cap().id(),
             false,
             param,
             scenario.ctx(),

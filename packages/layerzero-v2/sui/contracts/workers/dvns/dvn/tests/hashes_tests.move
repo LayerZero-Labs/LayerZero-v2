@@ -139,7 +139,7 @@ fun test_create_set_ptb_builder_move_calls_hash_different_move_calls() {
     let get_fee_arg1 = argument::create_pure(bcs::to_bytes(&ascii::string(b"DVN1")));
     let get_fee_arg2 = argument::create_object(@0x123);
     let get_fee_args1 = vector[get_fee_arg1, get_fee_arg2];
-    let get_fee_type_args1 = vector[type_name::get<u64>()];
+    let get_fee_type_args1 = vector[type_name::with_defining_ids<u64>()];
 
     let get_fee_move_call1 = move_call::create(
         @0x1234567890abcdef,
@@ -171,7 +171,7 @@ fun test_create_set_ptb_builder_move_calls_hash_different_move_calls() {
     let get_fee_arg3 = argument::create_pure(bcs::to_bytes(&ascii::string(b"DVN2"))); // Different string
     let get_fee_arg4 = argument::create_object(@0x456); // Different object address
     let get_fee_args2 = vector[get_fee_arg3, get_fee_arg4];
-    let get_fee_type_args2 = vector[type_name::get<u128>()]; // Different type
+    let get_fee_type_args2 = vector[type_name::with_defining_ids<u128>()]; // Different type
 
     let get_fee_move_call2 = move_call::create(
         @0x1234567890abcdef,

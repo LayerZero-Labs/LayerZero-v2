@@ -57,7 +57,7 @@ fun create_test_payload_hash(): Bytes32 {
 }
 
 fun cleanup_test_environment(scenario: Scenario, receive_uln: ReceiveUln, verification: Verification) {
-    test_utils::destroy(receive_uln);
+    std::unit_test::destroy(receive_uln);
     ts::return_shared(verification);
     scenario.end();
 }
