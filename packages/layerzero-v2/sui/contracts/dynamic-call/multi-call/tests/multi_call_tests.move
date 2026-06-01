@@ -68,7 +68,7 @@ fun test_sequential_multi_call_creation_and_destruction() {
     let callee2_cap = call_cap::new_individual_cap(scenario.ctx());
 
     // Test empty sequential multi-call creation
-    let empty_calls = vector::empty<call::Call<TestParam, TestResult>>();
+    let empty_calls = vector<call::Call<TestParam, TestResult>>[];
     let empty_sequential_multi_call = multi_call::create(&caller_cap, empty_calls);
 
     assert!(empty_sequential_multi_call.caller() == object::id_address(&caller_cap), 0);

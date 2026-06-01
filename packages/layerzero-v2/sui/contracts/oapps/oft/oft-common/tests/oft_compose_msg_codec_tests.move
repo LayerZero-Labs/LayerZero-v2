@@ -193,7 +193,7 @@ fun test_multiple_encode_decode_cycles() {
     let compose_from = bytes32::from_address(ALICE);
 
     // Test multiple encoding/decoding cycles
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 5) {
         let compose_msg = b"cycle test";
 
@@ -224,7 +224,7 @@ fun test_large_compose_message() {
 
     // Create a large compose message
     let mut large_msg = vector[];
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 100) {
         large_msg.append(b"This is a test message to create a large compose payload. ");
         i = i + 1;

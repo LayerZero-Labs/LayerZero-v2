@@ -65,7 +65,7 @@ fun test_invalid_header_length() {
 fun test_invalid_packet_version() {
     // Create a header with correct length but wrong version
     let mut invalid_header = vector[];
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 81) {
         invalid_header.push_back(0x00);
         i = i + 1;
@@ -133,7 +133,7 @@ fun test_large_message() {
 
     // Create a large message (1KB)
     let mut large_message = vector[];
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 1024) {
         large_message.push_back((i % 256) as u8);
         i = i + 1;

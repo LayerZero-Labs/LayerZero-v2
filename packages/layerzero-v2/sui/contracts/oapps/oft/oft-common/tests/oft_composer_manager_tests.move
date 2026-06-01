@@ -35,7 +35,7 @@ fun setup_manager(): (test_scenario::Scenario, OFTComposerManager) {
 fun create_test_guid(value: u64): Bytes32 {
     let mut bytes = vector[];
     // Fill first 24 bytes with zeros
-    let mut i = 0;
+    let mut i = 0u64;
     while (i < 24) {
         bytes.push_back(0u8);
         i = i + 1;
